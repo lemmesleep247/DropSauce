@@ -169,7 +169,12 @@
     <string name="black_dark_theme_summary">Uses less power on AMOLED screens</string>
     <string name="backup_restore">Backup and restore</string>
     <string name="create_backup">Create data backup</string>
-    <string name="restore_backup">Restore from tachi backup</string>
+    <string name="restore_backup">Restore backup</string>
+    <string name="create_backup_summary">Save your library, history and settings to a file</string>
+    <string name="restore_from_tachiyomi">Restore from Tachiyomi/Mihon</string>
+    <string name="restore_tachiyomi_summary">Import a backup created by Tachiyomi or Mihon</string>
+    <string name="periodic_backups_summary">Automatically create backups on a schedule</string>
+    <string name="import_from_other_apps">Import from other apps</string>
     <string name="data_restored">Restored</string>
     <string name="preparing_">Preparing...</string>
     <string name="file_not_found">File not found</string>

@@ -710,6 +710,36 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			DocumentFile.fromTreeUri(context, it)?.takeIf { it.canWrite() }
 		}
 
+	val isPeriodicalBackupEnabled: Boolean
+		get() = prefs.getBoolean(KEY_BACKUP_PERIODICAL_ENABLED, false)
+
+	var periodicalBackupDirectory: Uri?
+		get() = prefs.getString(KEY_BACKUP_PERIODICAL_OUTPUT, null)?.toUriOrNull()
+		set(value) = prefs.edit {
+			if (value != null) putString(KEY_BACKUP_PERIODICAL_OUTPUT, value.toString())
+			else remove(KEY_BACKUP_PERIODICAL_OUTPUT)
+		}
+
+	val periodicalBackupFrequencyMillis: Long
+		get() {
+			if (!isPeriodicalBackupEnabled) return 0L
+			return when (prefs.getString(KEY_BACKUP_PERIODICAL_FREQ, "3")?.toIntOrNull() ?: 3) {
+				0 -> 6 * 60 * 60 * 1000L
+				1 -> 24 * 60 * 60 * 1000L
+				2 -> 2 * 24 * 60 * 60 * 1000L
+				3 -> 7 * 24 * 60 * 60 * 1000L
+				4 -> 14 * 24 * 60 * 60 * 1000L
+				5 -> 30 * 24 * 60 * 60 * 1000L
+				else -> 7 * 24 * 60 * 60 * 1000L
+			}
+		}
+
+	val periodicalBackupMaxCount: Int
+		get() {
+			if (!prefs.getBoolean(KEY_BACKUP_PERIODICAL_TRIM, true)) return Int.MAX_VALUE
+			return prefs.getInt(KEY_BACKUP_PERIODICAL_COUNT, 10).coerceAtLeast(1)
+		}
+
 	fun setPagesSaveDir(uri: Uri?) {
 		prefs.edit { putString(KEY_PAGES_SAVE_DIR, uri?.toString()) }
 	}
@@ -947,6 +977,14 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_STORAGE_USAGE = "storage_usage"
 		const val KEY_WEBVIEW_CLEAR = "webview_clear"
 		const val KEY_RESTORE_BACKUP = "restore_backup"
+		const val KEY_CREATE_BACKUP = "create_backup"
+		const val KEY_RESTORE_LOCAL_BACKUP = "restore_local_backup"
+		const val KEY_BACKUP_PERIODICAL_ENABLED = "backup_periodic"
+		const val KEY_BACKUP_PERIODICAL_OUTPUT = "backup_periodic_output"
+		const val KEY_BACKUP_PERIODICAL_FREQ = "backup_periodic_freq"
+		const val KEY_BACKUP_PERIODICAL_TRIM = "backup_periodic_trim"
+		const val KEY_BACKUP_PERIODICAL_COUNT = "backup_periodic_count"
+		const val KEY_BACKUP_PERIODICAL_LAST = "backup_periodic_last"
 
 		// old keys are for migration only
 		private const val KEY_IMAGES_PROXY_OLD = "images_proxy"

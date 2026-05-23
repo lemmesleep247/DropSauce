@@ -1,18 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory
-        android:key="backup_actions"
-        android:title="@string/backup_restore">
+	<PreferenceCategory
+		android:key="backup_actions"
+		android:title="@string/backup_restore">
 
-        <Preference
-            android:key="restore_backup"
-            android:icon="@drawable/ic_revert"
-            android:summary="@string/restore_summary"
-            android:title="@string/restore_backup" />
-    </PreferenceCategory>
+		<Preference
+			android:icon="@drawable/ic_save"
+			android:key="create_backup"
+			android:persistent="false"
+			android:summary="@string/create_backup_summary"
+			android:title="@string/create_backup" />
 
+		<Preference
+			android:icon="@drawable/ic_revert"
+			android:key="restore_local_backup"
+			android:persistent="false"
+			android:summary="@string/restore_summary"
+			android:title="@string/restore_backup" />
+
+		<androidx.preference.PreferenceScreen
+			android:fragment="org.koitharu.kotatsu.backup.local.ui.periodical.PeriodicalBackupSettingsFragment"
+			android:icon="@drawable/ic_backup_restore"
+			android:key="backup_periodic_screen"
+			android:summary="@string/periodic_backups_summary"
+			android:title="@string/periodic_backups" />
+
+	</PreferenceCategory>
+
+	<PreferenceCategory
+		android:key="backup_import"
+		android:title="@string/import_from_other_apps">
+
+		<Preference
+			android:icon="@drawable/ic_revert"
+			android:key="restore_backup"
+			android:persistent="false"
+			android:summary="@string/restore_tachiyomi_summary"
+			android:title="@string/restore_from_tachiyomi" />
+
+	</PreferenceCategory>
 
 </PreferenceScreen>
-
-

@@ -347,6 +347,62 @@
 			</intent-filter>
 		</receiver>
 
+		<!-- Home screen widgets -->
+		<receiver
+			android:name="org.koitharu.kotatsu.widget.continuereading.ContinueReadingWidget"
+			android:exported="true"
+			android:label="@string/widget_continue_reading">
+			<intent-filter>
+				<action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+				<action android:name="org.koitharu.kotatsu.widget.continuereading.REFRESH" />
+			</intent-filter>
+			<meta-data
+				android:name="android.appwidget.provider"
+				android:resource="@xml/appwidget_continue_reading" />
+		</receiver>
+
+		<receiver
+			android:name="org.koitharu.kotatsu.widget.stats.StatsWidget"
+			android:exported="true"
+			android:label="@string/widget_stats">
+			<intent-filter>
+				<action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+				<action android:name="org.koitharu.kotatsu.widget.stats.REFRESH" />
+			</intent-filter>
+			<meta-data
+				android:name="android.appwidget.provider"
+				android:resource="@xml/appwidget_stats" />
+		</receiver>
+
+		<receiver
+			android:name="org.koitharu.kotatsu.widget.favorites.FavoritesWidget"
+			android:exported="true"
+			android:label="@string/widget_favorites">
+			<intent-filter>
+				<action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+				<action android:name="org.koitharu.kotatsu.widget.favorites.REFRESH" />
+			</intent-filter>
+			<meta-data
+				android:name="android.appwidget.provider"
+				android:resource="@xml/appwidget_favorites" />
+		</receiver>
+
+		<activity
+			android:name="org.koitharu.kotatsu.widget.favorites.FavoritesWidgetConfigActivity"
+			android:exported="true"
+			android:label="@string/widget_favorites_config_title"
+			android:theme="@style/Theme.Kotatsu">
+			<intent-filter>
+				<action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+			</intent-filter>
+		</activity>
+
 		<meta-data
 			android:name="android.webkit.WebView.EnableSafeBrowsing"
 			android:value="false" />

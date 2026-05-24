@@ -19,7 +19,7 @@
 		android:title="@string/related_manga" />
 
 	<org.koitharu.kotatsu.settings.utils.SplitSwitchPreference
-		android:defaultValue="false"
+		android:defaultValue="true"
 		android:icon="@drawable/ic_timelapse"
 		android:key="stats_on"
 		android:title="@string/reading_stats"

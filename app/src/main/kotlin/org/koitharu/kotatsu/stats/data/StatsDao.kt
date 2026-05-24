@@ -32,6 +32,12 @@ abstract class StatsDao {
 	@Query("SELECT IFNULL(SUM(duration), 0) FROM stats")
 	abstract suspend fun getTotalReadDuration(): Long
 
+	@Query("SELECT IFNULL(SUM(duration), 0) FROM stats WHERE started_at >= :fromDate")
+	abstract suspend fun getTotalReadDurationSince(fromDate: Long): Long
+
+	@Query("SELECT started_at, duration FROM stats WHERE started_at >= :fromDate ORDER BY started_at")
+	abstract suspend fun getDurationEntriesSince(fromDate: Long): List<DurationEntry>
+
 	@Query("SELECT IFNULL(SUM(chapters * percent), 0) FROM history WHERE deleted_at = 0 AND percent > 0")
 	abstract suspend fun getTotalReadChaptersEstimate(): Float
 

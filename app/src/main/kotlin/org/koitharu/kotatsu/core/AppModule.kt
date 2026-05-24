@@ -156,8 +156,10 @@ interface AppModule {
 		@ElementsIntoSet
 		fun provideDatabaseObservers(
 			appShortcutManager: AppShortcutManager,
+			widgetRefreshObserver: org.koitharu.kotatsu.widget.common.WidgetRefreshObserver,
 		): Set<@JvmSuppressWildcards InvalidationTracker.Observer> = arraySetOf(
 			appShortcutManager,
+			widgetRefreshObserver,
 		)
 
 		@Provides

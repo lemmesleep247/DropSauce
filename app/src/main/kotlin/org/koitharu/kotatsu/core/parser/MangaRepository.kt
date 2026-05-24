@@ -9,6 +9,7 @@ import org.koitharu.kotatsu.core.model.MissingMangaSource
 import org.koitharu.kotatsu.core.model.MangaSourceInfo
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.local.data.LocalMangaRepository
+import org.koitharu.kotatsu.mihon.LazyMihonMangaRepository
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.mihon.MihonMangaRepository
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
@@ -69,26 +70,36 @@ interface MangaRepository {
 				UnknownMangaSource -> return EmptyMangaRepository(unwrapped)
 				is MihonMangaSource -> mihonExtensionManager.initialize()
 			}
-			cache[unwrapped]?.get()?.let { cached ->
-				if (!isExternalMissing || cached !is EmptyMangaRepository) {
-					return cached
+			if (isExternalMissing) {
+				// Don't reuse a stale `EmptyMangaRepository`: it would throw forever. The
+				// lazy proxy is reusable across resolutions and self-heals once extensions
+				// finish loading, so we keep it cached.
+				cache[unwrapped]?.get()?.let { cached ->
+					if (cached !is EmptyMangaRepository) return cached
+				}
+				return synchronized(cache) {
+					cache[unwrapped]?.get()?.let { cached ->
+						if (cached !is EmptyMangaRepository) return cached
+					}
+					val lazyRepo = LazyMihonMangaRepository(
+						source = unwrapped,
+						extensionManager = mihonExtensionManager,
+						cache = contentCache,
+					)
+					cache[unwrapped] = WeakReference(lazyRepo)
+					lazyRepo
 				}
 			}
+			cache[unwrapped]?.get()?.let { return it }
 			return synchronized(cache) {
-				cache[unwrapped]?.get()?.let { cached ->
-					if (!isExternalMissing || cached !is EmptyMangaRepository) {
-						return cached
-					}
-				}
+				cache[unwrapped]?.get()?.let { return it }
 				val repository = createRepository(unwrapped)
 				if (repository != null) {
 					cache[unwrapped] = WeakReference(repository)
 					repository
 				} else {
 					EmptyMangaRepository(unwrapped).also {
-						if (!isExternalMissing) {
-							cache[unwrapped] = WeakReference(it)
-						}
+						cache[unwrapped] = WeakReference(it)
 					}
 				}
 			}

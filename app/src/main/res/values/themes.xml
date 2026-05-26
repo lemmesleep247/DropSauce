@@ -38,14 +38,19 @@
 		<item name="colorOnErrorContainer">@color/onErrorContainer</item>
 		<item name="colorOutline">@color/kotatsu_outline</item>
 		<item name="colorOutlineVariant">@color/kotatsu_outline</item>
-		<item name="colorControlNormal">@color/kotatsu_onSurface</item>
-		<item name="colorControlActivated">@color/kotatsu_primary</item>
+		<item name="colorControlNormal">?attr/colorOnSurface</item>
+		<item name="colorControlActivated">?attr/colorPrimary</item>
 		<item name="colorControlHighlight">@color/selector_overlay</item>
-		<item name="android:colorControlNormal">@color/kotatsu_onSurface</item>
-		<item name="android:colorControlActivated">@color/kotatsu_primary</item>
+		<item name="android:colorControlNormal">?attr/colorOnSurface</item>
+		<item name="android:colorControlActivated">?attr/colorPrimary</item>
 		<item name="android:colorControlHighlight">@color/selector_overlay</item>
-		<item name="android:textColorPrimary">@color/kotatsu_onSurface</item>
-		<item name="android:textColorSecondary">@color/kotatsu_onSurfaceVariant</item>
+		<item name="android:textColorPrimary">?attr/colorOnSurface</item>
+		<item name="android:textColorSecondary">?attr/colorOnSurfaceVariant</item>
+
+		<!-- Shapes (PixelPlayer M3 scale: small=8dp, medium=16dp, large=24dp) -->
+		<item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Kotatsu.CornerSmall</item>
+		<item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Kotatsu.CornerMedium</item>
+		<item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Kotatsu.CornerLarge</item>
 
 		<!-- Typography -->
 		<item name="android:fontFamily">@font/gflex_body</item>
@@ -83,6 +88,7 @@
 		<!-- System components styles -->
 		<item name="android:alertDialogTheme">@style/ThemeOverlay.Kotatsu.AlertDialog</item>
 		<item name="alertDialogTheme">@style/ThemeOverlay.Kotatsu.AlertDialog</item>
+		<item name="materialAlertDialogTheme">@style/ThemeOverlay.Kotatsu.AlertDialog</item>
 		<item name="bottomSheetDialogTheme">@style/ThemeOverlay.Kotatsu.BottomSheetDialog</item>
 		<item name="sideSheetDialogTheme">@style/ThemeOverlay.Kotatsu.SideSheetDialog</item>
 		<item name="recyclerViewStyle">@style/Widget.Kotatsu.RecyclerView</item>

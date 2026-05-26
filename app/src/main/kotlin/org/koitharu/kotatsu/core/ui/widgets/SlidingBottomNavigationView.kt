@@ -32,7 +32,7 @@ private const val SLIDE_DOWN_ANIMATION_DURATION = 175L
 
 private const val MAX_ITEM_COUNT = 6
 
-class SlidingBottomNavigationView @JvmOverloads constructor(
+open class SlidingBottomNavigationView @JvmOverloads constructor(
 	context: Context,
 	attrs: AttributeSet? = null,
 	@AttrRes defStyleAttr: Int = materialR.attr.bottomNavigationStyle,
@@ -97,7 +97,13 @@ class SlidingBottomNavigationView @JvmOverloads constructor(
 		return measureSpec
 	}
 
-	override fun getMaxItemCount(): Int = MAX_ITEM_COUNT
+	override fun getMaxItemCount(): Int = maxItemCountOverride
+
+	// Use a getter (no backing field) so that subclasses' overrides return the right value
+	// even when called from NavigationBarView's super constructor, before subclass property
+	// initializers have run.
+	protected open val maxItemCountOverride: Int
+		get() = MAX_ITEM_COUNT
 
 	@SuppressLint("RestrictedApi")
 	override fun createNavigationBarMenuView(context: Context) = BottomNavigationMenuView(context)

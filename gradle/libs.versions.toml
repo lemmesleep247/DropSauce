@@ -50,6 +50,8 @@ webkit = "1.15.0"
 workRuntime = "2.11.2"
 workinspector = "1.2"
 window = "1.5.1"
+composeBom = "2024.12.01"
+composeActivity = "1.13.0"
 
 [libraries]
 acra-dialog = { module = "ch.acra:acra-dialog", version.ref = "acra" }
@@ -119,6 +121,15 @@ injekt-core = { module = "uy.kohesive.injekt:injekt-core", version.ref = "injekt
 ssiv = { module = "com.github.KotatsuApp:subsampling-scale-image-view", version.ref = "ssiv" }
 workinspector = { module = "com.github.Koitharu:WorkInspector", version.ref = "workinspector" }
 androidx-window = { module = "androidx.window:window", version.ref = "window" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
+androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
+androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
+androidx-compose-activity = { module = "androidx.activity:activity-compose", version.ref = "composeActivity" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "gradle" }
@@ -127,3 +138,4 @@ kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinPlugin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinPlugin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinPlugin" }

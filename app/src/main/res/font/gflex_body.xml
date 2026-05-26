@@ -3,7 +3,6 @@
 	<font
 		android:font="@font/gflex_variable"
 		android:fontStyle="normal"
-		android:fontWeight="550" />
+		android:fontWeight="400"
+		android:fontVariationSettings="'wght' 400, 'ROND' 100" />
 </font-family>
-
-

@@ -32,6 +32,7 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
+import org.koitharu.kotatsu.core.ui.widgets.FloatingBottomNavigationView
 import org.koitharu.kotatsu.core.ui.widgets.SlidingBottomNavigationView
 import org.koitharu.kotatsu.core.util.ext.buildBundle
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -117,6 +118,11 @@ class MainNavigationDelegate(
 		if (navBar.menu.isEmpty()) {
 			createMenu(settings.mainNavItems, navBar.menu)
 		}
+		(navBar as? FloatingBottomNavigationView)?.let { floating ->
+			floating.setComposeItems(settings.mainNavItems)
+			floating.setComposeLabeled(settings.isNavLabelsVisible)
+			floating.setComposeAmoled(settings.isAmoledTheme)
+		}
 		observeSettings(lifecycleOwner)
 		val fragment = primaryFragment
 		if (fragment != null) {
@@ -176,11 +182,13 @@ class MainNavigationDelegate(
 			}
 			badge.isVisible = true
 		}
+		(navBar as? FloatingBottomNavigationView)?.setComposeBadge(id, counter)
 	}
 
 	fun setItemVisibility(@IdRes itemId: Int, isVisible: Boolean) {
 		val item = navBar.menu.findItem(itemId) ?: return
 		item.isVisible = isVisible
+		(navBar as? FloatingBottomNavigationView)?.setComposeItemVisibility(itemId, isVisible)
 		if (item.isChecked && !isVisible) {
 			navBar.selectedItemId = firstItem()?.itemId ?: return
 		}
@@ -305,6 +313,7 @@ class MainNavigationDelegate(
 				},
 			)
 		}
+		(navBar as? FloatingBottomNavigationView)?.setComposeLabeled(value)
 		navRailHeader?.buttonExpand?.isVisible = value
 		if (!value) {
 			setNavbarIsExpanded(false)

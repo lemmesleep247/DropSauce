@@ -1,5 +1,7 @@
 package org.koitharu.kotatsu.main.ui.nav
 
+import android.content.res.ColorStateList
+import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
 import androidx.compose.animation.AnimatedVisibility
@@ -28,7 +30,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -48,6 +50,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 
 data class FloatingNavBarItem(
 	@IdRes val id: Int,
@@ -172,12 +175,13 @@ private fun FloatingNavItem(
 					}
 				},
 			) {
-				// Single painter per icon: state changes drive the AnimatedStateListDrawable's
-				// internal morph (avd_*_enter etc.) — that's the animation the old native
-				// BottomNavigationView played. Wrapping in Crossfade would defeat it.
-				Icon(
-					painter = rememberSelectorPainter(resId = item.icon, selected = selected),
-					contentDescription = null,
+				// Use a real ImageView so the AnimatedStateListDrawable's enter/leave morphs
+				// (avd_*_enter / avd_*_leave) actually tick. Painting an AVD onto Compose's
+				// canvas via a custom Painter doesn't reliably drive the platform animator —
+				// ImageView does, because it's the same path the native BottomNavigationView uses.
+				NavIcon(
+					resId = item.icon,
+					selected = selected,
 					tint = content,
 					modifier = Modifier.size(24.dp),
 				)
@@ -204,4 +208,53 @@ private fun FloatingNavItem(
 			}
 		}
 	}
+}
+
+private val SELECTOR_STATE_CHECKED = intArrayOf(android.R.attr.state_checked)
+private val SELECTOR_STATE_UNCHECKED = intArrayOf(-android.R.attr.state_checked)
+
+/**
+ * Renders a selector drawable (state-list with `<animated-selector>` transitions) inside
+ * Compose by hosting a real [ImageView]. We use ImageView rather than a custom [Painter]
+ * because `AnimatedVectorDrawable`'s animator pipeline doesn't reliably tick when painted
+ * onto Compose's generic canvas — wrapping in a View matches the path the platform
+ * `BottomNavigationView` uses, where these morphs are known to work.
+ *
+ * The [selected] flag drives the drawable state via [ImageView.setImageState], which is
+ * what triggers the `<transition>` AVD between the normal and checked items.
+ */
+@Composable
+private fun NavIcon(
+	@DrawableRes resId: Int,
+	selected: Boolean,
+	tint: Color,
+	modifier: Modifier = Modifier,
+) {
+	AndroidView(
+		modifier = modifier,
+		factory = { ctx ->
+			ImageView(ctx).apply {
+				scaleType = ImageView.ScaleType.FIT_CENTER
+				setImageResource(resId)
+				// Prime initial state without a transition. Setting state twice (empty,
+				// then the real state) suppresses the first-paint morph that would
+				// otherwise fire on inflate.
+				setImageState(IntArray(0), false)
+				jumpDrawablesToCurrentState()
+			}
+		},
+		update = { iv ->
+			if (iv.tag != resId) {
+				iv.setImageResource(resId)
+				iv.tag = resId
+			}
+			iv.imageTintList = ColorStateList.valueOf(tint.toArgb())
+			val targetState = if (selected) SELECTOR_STATE_CHECKED else SELECTOR_STATE_UNCHECKED
+			val current = iv.drawableState
+			val isAlreadyChecked = current.any { it == android.R.attr.state_checked }
+			if (isAlreadyChecked != selected) {
+				iv.setImageState(targetState, false)
+			}
+		},
+	)
 }

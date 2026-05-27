@@ -17,4 +17,9 @@
 		android:fromId="@id/normal"
 		android:toId="@id/checked" />
 
+	<transition
+		android:drawable="@drawable/avd_history_leave"
+		android:fromId="@id/checked"
+		android:toId="@id/normal" />
+
 </animated-selector>

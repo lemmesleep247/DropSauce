@@ -179,5 +179,7 @@
 	<style name="Theme.Kotatsu.AppWidgetContainer" parent="@style/Theme.MaterialComponents.Light">
 		<item name="android:colorBackground">@color/kotatsu_background</item>
 		<item name="android:panelColorBackground">@color/kotatsu_primaryContainer</item>
+		<item name="android:fontFamily">@font/gflex_body</item>
+		<item name="fontFamily">@font/gflex_body</item>
 	</style>
 </resources>

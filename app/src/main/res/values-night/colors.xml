@@ -24,4 +24,7 @@
 	<color name="background_sakura">#191C1D</color>
 	<color name="background_mamimi">#201A1A</color>
 	<color name="background_kanade">#222222</color>
+
+	<!-- Widget chart label — explicit so the bitmap renderer always gets the right color -->
+	<color name="widget_chart_label">#C4C6D0</color>
 </resources>

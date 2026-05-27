@@ -58,5 +58,6 @@
 		android:padding="10dp"
 		android:src="@drawable/ic_play"
 		android:contentDescription="@string/widget_continue_reading_open"
-		app:tint="@color/kotatsu_onPrimary" />
+		android:tint="@color/kotatsu_onPrimary"
+		tools:ignore="UseAppTint" />
 </LinearLayout>

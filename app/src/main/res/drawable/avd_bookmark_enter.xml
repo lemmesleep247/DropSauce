@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:aapt="http://schemas.android.com/aapt">
+	<aapt:attr name="android:drawable">
+		<vector
+			android:name="bookmark_enter"
+			android:width="24dp"
+			android:height="24dp"
+			android:viewportWidth="24"
+			android:viewportHeight="24">
+			<group
+				android:name="root"
+				android:pivotX="12"
+				android:pivotY="12">
+				<path
+					android:name="bookmark"
+					android:fillColor="#000000"
+					android:pathData="M17,3H7A2,2 0 0,0 5,5V21L12,18L19,21V5C19,3.89 18.1,3 17,3Z" />
+			</group>
+		</vector>
+	</aapt:attr>
+	<target android:name="root">
+		<aapt:attr name="android:animation">
+			<set>
+				<objectAnimator
+					android:duration="320"
+					android:interpolator="@android:anim/overshoot_interpolator"
+					android:propertyName="scaleX"
+					android:valueFrom="0.55"
+					android:valueTo="1.0"
+					android:valueType="floatType" />
+				<objectAnimator
+					android:duration="320"
+					android:interpolator="@android:anim/overshoot_interpolator"
+					android:propertyName="scaleY"
+					android:valueFrom="0.55"
+					android:valueTo="1.0"
+					android:valueType="floatType" />
+				<objectAnimator
+					android:duration="280"
+					android:interpolator="@android:interpolator/fast_out_slow_in"
+					android:propertyName="rotation"
+					android:valueFrom="-12"
+					android:valueTo="0"
+					android:valueType="floatType" />
+			</set>
+		</aapt:attr>
+	</target>
+</animated-vector>

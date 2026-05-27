@@ -11,6 +11,8 @@
 		<item name="android:colorBackground">@color/kotatsu_surfaceContainer</item>
 		<item name="android:panelColorBackground">@color/kotatsu_surfaceContainerHigh</item>
 		<item name="colorTertiary">@color/kotatsu_tertiary</item>
+		<item name="android:fontFamily">@font/gflex_body</item>
+		<item name="fontFamily">@font/gflex_body</item>
 	</style>
 
 </resources>

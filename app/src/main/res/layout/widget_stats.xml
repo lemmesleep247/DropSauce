@@ -24,7 +24,8 @@
 			android:layout_height="14dp"
 			android:src="@drawable/ic_timer"
 			android:contentDescription="@null"
-			app:tint="@color/kotatsu_primary" />
+			android:tint="@color/kotatsu_onSurface"
+			tools:ignore="UseAppTint" />
 
 		<TextView
 			android:layout_width="0dp"

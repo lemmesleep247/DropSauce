@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:aapt="http://schemas.android.com/aapt">
+	<aapt:attr name="android:drawable">
+		<vector
+			android:name="suggestion_leave"
+			android:width="24dp"
+			android:height="24dp"
+			android:viewportWidth="24"
+			android:viewportHeight="24">
+			<group
+				android:name="bulb"
+				android:pivotX="12"
+				android:pivotY="20">
+				<path
+					android:name="bulb_path"
+					android:fillColor="#000"
+					android:pathData="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-0.77 3-2.53 3-4.58a5 5 0 0 0-5-5z" />
+			</group>
+		</vector>
+	</aapt:attr>
+	<target android:name="bulb">
+		<aapt:attr name="android:animation">
+			<set>
+				<objectAnimator
+					android:duration="240"
+					android:interpolator="@android:interpolator/fast_out_slow_in"
+					android:propertyName="scaleX"
+					android:valueFrom="1.1"
+					android:valueTo="1.0"
+					android:valueType="floatType" />
+				<objectAnimator
+					android:duration="240"
+					android:interpolator="@android:interpolator/fast_out_slow_in"
+					android:propertyName="scaleY"
+					android:valueFrom="1.1"
+					android:valueTo="1.0"
+					android:valueType="floatType" />
+			</set>
+		</aapt:attr>
+	</target>
+</animated-vector>

@@ -23,7 +23,8 @@
 			android:layout_height="14dp"
 			android:src="@drawable/ic_history"
 			android:contentDescription="@null"
-			app:tint="@color/kotatsu_primary" />
+			android:tint="@color/kotatsu_onSurface"
+			tools:ignore="UseAppTint" />
 
 		<TextView
 			android:layout_width="0dp"
@@ -130,7 +131,8 @@
 					android:layout_height="15dp"
 					android:src="@drawable/ic_play"
 					android:contentDescription="@null"
-					app:tint="@color/kotatsu_onPrimary" />
+					android:tint="@color/kotatsu_onPrimary"
+					tools:ignore="UseAppTint" />
 
 				<TextView
 					android:layout_width="wrap_content"

@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import org.koitharu.kotatsu.R
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -33,10 +34,10 @@ object StatsChartRenderer {
 			color = ContextCompat.getColor(context, R.color.kotatsu_primary)
 		}
 		val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-			color = ContextCompat.getColor(context, R.color.kotatsu_onSurfaceVariant)
+			color = ContextCompat.getColor(context, R.color.widget_chart_label)
 			textSize = h * 0.18f
 			textAlign = Paint.Align.CENTER
-			typeface = Typeface.DEFAULT_BOLD
+			typeface = ResourcesCompat.getFont(context, R.font.gflex_body) ?: Typeface.DEFAULT
 		}
 		val labels = weekdayLabels(barCount)
 		val labelHeight = labelPaint.textSize + h * 0.04f

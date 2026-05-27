@@ -5,254 +5,590 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings as SystemSettings
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.preference.ListPreference
-import androidx.preference.MultiSelectListPreference
-import androidx.preference.Preference
-import androidx.preference.TwoStatePreference
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.AppShortcutManager
-import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.AppProtectionTimeout
+import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.prefs.ColorScheme
 import org.koitharu.kotatsu.core.prefs.ListMode
 import org.koitharu.kotatsu.core.prefs.ProgressIndicatorMode
 import org.koitharu.kotatsu.core.prefs.ScreenshotsPolicy
 import org.koitharu.kotatsu.core.prefs.SearchSuggestionType
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
 import org.koitharu.kotatsu.core.ui.util.ActivityRecreationHandle
 import org.koitharu.kotatsu.core.util.LocaleComparator
 import org.koitharu.kotatsu.core.util.ext.getLocalesConfig
-import org.koitharu.kotatsu.core.util.ext.postDelayed
-import org.koitharu.kotatsu.core.util.ext.setDefaultValueCompat
 import org.koitharu.kotatsu.core.util.ext.sortedWithSafe
 import org.koitharu.kotatsu.core.util.ext.toList
-import org.koitharu.kotatsu.parsers.util.mapToSet
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.parsers.util.toTitleCase
-import org.koitharu.kotatsu.settings.utils.ActivityListPreference
-import org.koitharu.kotatsu.settings.utils.MultiSummaryProvider
-import org.koitharu.kotatsu.settings.utils.PercentSummaryProvider
-import org.koitharu.kotatsu.settings.utils.SliderPreference
+import org.koitharu.kotatsu.settings.appearance.PreviewSettingsFragment
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.ColorSchemePickerRow
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.ListSettingsItem
+import org.koitharu.kotatsu.settings.compose.MultiSelectSettingsItem
+import org.koitharu.kotatsu.settings.compose.NavigationSettingsItem
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SliderSettingsItem
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
+import org.koitharu.kotatsu.settings.compose.rememberIntPref
+import org.koitharu.kotatsu.settings.compose.rememberStringPref
+import org.koitharu.kotatsu.settings.compose.rememberStringSetPref
+import org.koitharu.kotatsu.settings.nav.NavConfigFragment
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class AppearanceSettingsFragment :
-    BasePreferenceFragment(R.string.appearance),
-    SharedPreferences.OnSharedPreferenceChangeListener {
+class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearance) {
 
-  private var pendingProtectState: Boolean? = null
-  private var previousProtectState: Boolean = false
+	@Inject
+	lateinit var settings: AppSettings
 
-    @Inject
-    lateinit var activityRecreationHandle: ActivityRecreationHandle
+	@Inject
+	lateinit var activityRecreationHandle: ActivityRecreationHandle
 
-    @Inject
-    lateinit var appShortcutManager: AppShortcutManager
+	@Inject
+	lateinit var appShortcutManager: AppShortcutManager
 
-    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        addPreferencesFromResource(R.xml.pref_appearance)
-        findPreference<SliderPreference>(AppSettings.KEY_GRID_SIZE)?.summaryProvider = PercentSummaryProvider()
-        findPreference<ListPreference>(AppSettings.KEY_LIST_MODE)?.run {
-            entryValues = ListMode.entries.names()
-            setDefaultValueCompat(ListMode.GRID.name)
-        }
-        findPreference<ListPreference>(AppSettings.KEY_PROGRESS_INDICATORS)?.run {
-            entryValues = ProgressIndicatorMode.entries.names()
-            setDefaultValueCompat(ProgressIndicatorMode.PERCENT_READ.name)
-        }
-        findPreference<ActivityListPreference>(AppSettings.KEY_APP_LOCALE)?.run {
-            initLocalePicker(this)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                activityIntent = Intent(
-                    Settings.ACTION_APP_LOCALE_SETTINGS,
-                    Uri.fromParts("package", context.packageName, null),
-                )
-            }
-            summaryProvider = Preference.SummaryProvider<ActivityListPreference> {
-                val locale = AppCompatDelegate.getApplicationLocales().get(0)
-                locale?.getDisplayName(locale)?.toTitleCase(locale) ?: getString(R.string.follow_system)
-            }
-            setDefaultValueCompat("")
-        }
-        findPreference<MultiSelectListPreference>(AppSettings.KEY_MANGA_LIST_BADGES)?.run {
-            summaryProvider = MultiSummaryProvider(R.string.none)
-        }
-        findPreference<Preference>(AppSettings.KEY_SHORTCUTS)?.isVisible =
-            appShortcutManager.isDynamicShortcutsAvailable()
-        findPreference<TwoStatePreference>(AppSettings.KEY_PROTECT_APP)?.isChecked = settings.isAppProtectionEnabled
-        findPreference<ListPreference>(AppSettings.KEY_PROTECT_APP_TIMEOUT)?.run {
-            entryValues = AppProtectionTimeout.entries.names()
-            entries = AppProtectionTimeout.entries.map { context.getString(it.titleResId) }.toTypedArray()
-            setDefaultValueCompat(AppProtectionTimeout.INSTANT.name)
-        }
-        findPreference<ListPreference>(AppSettings.KEY_SCREENSHOTS_POLICY)?.run {
-            entryValues = ScreenshotsPolicy.entries.names()
-            setDefaultValueCompat(ScreenshotsPolicy.ALLOW.name)
-        }
-        findPreference<MultiSelectListPreference>(AppSettings.KEY_SEARCH_SUGGESTION_TYPES)?.let { pref ->
-            pref.entryValues = SearchSuggestionType.entries.names()
-            pref.entries = SearchSuggestionType.entries.map { pref.context.getString(it.titleResId) }.toTypedArray()
-            pref.summaryProvider = MultiSummaryProvider(R.string.none)
-            pref.values = settings.searchSuggestionTypes.mapToSet { it.name }
-        }
-        bindNavSummary()
-    }
+	private val authSupported = MutableStateFlow(false)
+	private var pendingProtectState: Boolean? = null
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        bindProtectionPrefs()
-        settings.subscribe(this)
-    }
+	// Mirror the legacy fragment behavior: theme / AMOLED toggles must trigger an activity
+	// recreation so the new color scheme takes effect immediately.
+	private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+		when (key) {
+			AppSettings.KEY_THEME -> {
+				AppCompatDelegate.setDefaultNightMode(settings.theme)
+			}
+			AppSettings.KEY_COLOR_THEME,
+			AppSettings.KEY_THEME_AMOLED -> {
+				Handler(Looper.getMainLooper()).postDelayed({
+					activityRecreationHandle.recreateAll()
+				}, 250)
+			}
+			AppSettings.KEY_APP_LOCALE -> {
+				AppCompatDelegate.setApplicationLocales(settings.appLocales)
+			}
+		}
+	}
 
-    override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
-        when (key) {
-            AppSettings.KEY_THEME -> {
-                AppCompatDelegate.setDefaultNightMode(settings.theme)
-            }
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			DropSauceTheme {
+				val authOk by authSupported.asStateFlow().collectAsState()
+				AppearanceScreen(
+					authSupported = authOk,
+					dynamicShortcutsAvailable = appShortcutManager.isDynamicShortcutsAvailable(),
+					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+					onOpenLocaleSettings = ::openSystemLocaleSettings,
+					onOpenDetailsAppearance = {
+						(activity as? SettingsActivity)?.openFragment(
+							PreviewSettingsFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+					onOpenNavConfig = {
+						(activity as? SettingsActivity)?.openFragment(
+							NavConfigFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+					onRequestProtectAuth = ::startProtectionAuthentication,
+				)
+			}
+		}
+	}
 
-            AppSettings.KEY_COLOR_THEME,
-            AppSettings.KEY_THEME_AMOLED,
-                -> {
-                postRestart()
-            }
-
-            AppSettings.KEY_APP_LOCALE -> {
-                AppCompatDelegate.setApplicationLocales(settings.appLocales)
-            }
-
-            AppSettings.KEY_NAV_MAIN -> {
-                bindNavSummary()
-            }
-
-            AppSettings.KEY_PROTECT_APP,
-            AppSettings.KEY_PROTECT_APP_TIMEOUT -> bindProtectionPrefs()
-        }
-    }
-
-    override fun onPreferenceTreeClick(preference: Preference): Boolean {
-        return when (preference.key) {
-            AppSettings.KEY_PROTECT_APP -> {
-                val pref = (preference as? TwoStatePreference ?: return false)
-                val requestedState = pref.isChecked
-                if (!isAuthenticationSupported()) {
-                    pref.isChecked = false
-                    settings.isAppProtectionEnabled = false
-                    bindProtectionPrefs()
-                    return true
-                }
-				previousProtectState = settings.isAppProtectionEnabled
-				pendingProtectState = requestedState
-				if (!startProtectionAuthentication()) {
-					pendingProtectState = null
-					pref.isChecked = previousProtectState
-					bindProtectionPrefs()
-				}
-                true
-            }
-
-            else -> super.onPreferenceTreeClick(preference)
-        }
-    }
-
-    private fun postRestart() {
-        viewLifecycleOwner.lifecycle.postDelayed(400) {
-            activityRecreationHandle.recreateAll()
-        }
-    }
-
-    private fun initLocalePicker(preference: ListPreference) {
-        val locales = preference.context.getLocalesConfig()
-            .toList()
-            .sortedWithSafe(LocaleComparator())
-        preference.entries = Array(locales.size + 1) { i ->
-            if (i == 0) {
-                getString(R.string.follow_system)
-            } else {
-                val lc = locales[i - 1]
-                lc.getDisplayName(lc).toTitleCase(lc)
-            }
-        }
-        preference.entryValues = Array(locales.size + 1) { i ->
-            if (i == 0) {
-                ""
-            } else {
-                locales[i - 1].toLanguageTag()
-            }
-        }
-    }
-
-    private fun bindNavSummary() {
-        val pref = findPreference<Preference>(AppSettings.KEY_NAV_MAIN) ?: return
-        pref.summary = settings.mainNavItems.joinToString {
-            getString(it.title)
-        }
-    }
-
-  private fun bindProtectionPrefs() {
-    val protectPref = findPreference<TwoStatePreference>(AppSettings.KEY_PROTECT_APP) ?: return
-    val timeoutPref = findPreference<ListPreference>(AppSettings.KEY_PROTECT_APP_TIMEOUT)
-    val secure = isAuthenticationSupported()
-    protectPref.isChecked = secure && settings.isAppProtectionEnabled
-    protectPref.isEnabled = secure
-    protectPref.summary = if (secure) {
-      getString(R.string.require_unlock_summary)
-    } else {
-      getString(R.string.require_unlock_unavailable)
-    }
-    timeoutPref?.isEnabled = secure && protectPref.isChecked
-  }
-
-  private fun applyPendingProtectState(accepted: Boolean) {
-    val newState = pendingProtectState ?: return
-    settings.isAppProtectionEnabled = if (accepted) newState else previousProtectState
-    findPreference<TwoStatePreference>(AppSettings.KEY_PROTECT_APP)?.isChecked = settings.isAppProtectionEnabled
-    pendingProtectState = null
-    bindProtectionPrefs()
-  }
-
-  private fun isAuthenticationSupported(): Boolean {
-    val manager = context?.let { BiometricManager.from(it) } ?: return false
-    return manager.canAuthenticate(BIOMETRIC_WEAK or DEVICE_CREDENTIAL) == BIOMETRIC_SUCCESS
-  }
-
-  private fun startProtectionAuthentication(): Boolean {
-    if (!isAuthenticationSupported() || !isAdded) {
-      return false
-    }
-    val executor = context?.let { ContextCompat.getMainExecutor(it) } ?: return false
-    val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
-      override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-        applyPendingProtectState(accepted = true)
-      }
-
-      override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-        applyPendingProtectState(accepted = false)
-      }
-    })
-    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-      .setTitle(getString(R.string.app_name))
-      .setSubtitle(getString(R.string.require_unlock))
-      .setAllowedAuthenticators(BIOMETRIC_WEAK or DEVICE_CREDENTIAL)
-      .setConfirmationRequired(false)
-      .build()
-    prompt.authenticate(promptInfo)
-    return true
-  }
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
+		authSupported.value = isAuthenticationSupported()
+		settings.subscribe(prefListener)
+	}
 
 	override fun onDestroyView() {
+		settings.unsubscribe(prefListener)
 		if (pendingProtectState != null) {
-			applyPendingProtectState(accepted = false)
+			pendingProtectState = null
 		}
-		settings.unsubscribe(this)
 		super.onDestroyView()
+	}
+
+
+	private fun openSystemLocaleSettings() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			val intent = Intent(
+				SystemSettings.ACTION_APP_LOCALE_SETTINGS,
+				Uri.fromParts("package", requireContext().packageName, null),
+			)
+			startActivity(intent)
+		}
+	}
+
+	private fun isAuthenticationSupported(): Boolean {
+		val manager = context?.let { BiometricManager.from(it) } ?: return false
+		return manager.canAuthenticate(BIOMETRIC_WEAK or DEVICE_CREDENTIAL) == BIOMETRIC_SUCCESS
+	}
+
+	private fun startProtectionAuthentication(requestedState: Boolean): Boolean {
+		if (!isAuthenticationSupported() || !isAdded) return false
+		val executor = context?.let { ContextCompat.getMainExecutor(it) } ?: return false
+		pendingProtectState = requestedState
+		val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+			override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+				val state = pendingProtectState ?: return
+				settings.isAppProtectionEnabled = state
+				pendingProtectState = null
+			}
+
+			override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+				// keep current state on failure — read-back triggers Compose re-render via
+				// the SharedPreferences listener.
+				pendingProtectState = null
+			}
+		})
+		val promptInfo = BiometricPrompt.PromptInfo.Builder()
+			.setTitle(getString(R.string.app_name))
+			.setSubtitle(getString(R.string.require_unlock))
+			.setAllowedAuthenticators(BIOMETRIC_WEAK or DEVICE_CREDENTIAL)
+			.setConfirmationRequired(false)
+			.build()
+		prompt.authenticate(promptInfo)
+		return true
+	}
+}
+
+@Composable
+private fun AppearanceScreen(
+	authSupported: Boolean,
+	dynamicShortcutsAvailable: Boolean,
+	onBack: () -> Unit,
+	onOpenLocaleSettings: () -> Unit,
+	onOpenDetailsAppearance: () -> Unit,
+	onOpenNavConfig: () -> Unit,
+	onRequestProtectAuth: (Boolean) -> Boolean,
+) {
+	val ctx = LocalContext.current
+
+	// Enum-backed array sources
+	val themeEntries = remember { ctx.resources.getStringArray(R.array.themes).toList() }
+	val themeValues = remember { ctx.resources.getStringArray(R.array.values_theme).toList() }
+	val colorSchemes = remember { ColorScheme.getAvailableList() }
+	val colorSchemeEntries = remember(colorSchemes) {
+		colorSchemes.map { ctx.getString(it.titleResId) }
+	}
+	val colorSchemeValues = remember(colorSchemes) { colorSchemes.map { it.name } }
+	val listModeEntries = remember { ctx.resources.getStringArray(R.array.list_modes).toList() }
+	val listModeValues = remember { ListMode.entries.names().toList() }
+	val progressEntries = remember { ctx.resources.getStringArray(R.array.progress_indicators).toList() }
+	val progressValues = remember { ProgressIndicatorMode.entries.names().toList() }
+	val badgeEntries = remember { ctx.resources.getStringArray(R.array.list_badges).toList() }
+	val badgeValues = remember { ctx.resources.getStringArray(R.array.values_list_badges).toList() }
+	val detailsTabEntries = remember { ctx.resources.getStringArray(R.array.details_tabs).toList() }
+	val detailsTabValues = remember { ctx.resources.getStringArray(R.array.details_tabs_values).toList() }
+	val searchSuggestionEntries = remember {
+		SearchSuggestionType.entries.map { ctx.getString(it.titleResId) }
+	}
+	val searchSuggestionValues = remember { SearchSuggestionType.entries.names().toList() }
+	val protectTimeoutEntries = remember {
+		AppProtectionTimeout.entries.map { ctx.getString(it.titleResId) }
+	}
+	val protectTimeoutValues = remember { AppProtectionTimeout.entries.names().toList() }
+	val screenshotsPolicyEntries = remember {
+		ctx.resources.getStringArray(R.array.screenshots_policy).toList()
+	}
+	val screenshotsPolicyValues = remember { ScreenshotsPolicy.entries.names().toList() }
+	val locales = remember {
+		ctx.getLocalesConfig().toList().sortedWithSafe(LocaleComparator())
+	}
+	val localeEntries = remember(locales) {
+		listOf(ctx.getString(R.string.follow_system)) + locales.map { it.getDisplayName(it).toTitleCase(it) }
+	}
+	val localeValues = remember(locales) {
+		listOf("") + locales.map { it.toLanguageTag() }
+	}
+
+	// Bound preferences
+	var colorScheme by rememberStringPref(AppSettings.KEY_COLOR_THEME, ColorScheme.default.name)
+	var theme by rememberStringPref(AppSettings.KEY_THEME, "-1")
+	var amoled by rememberBooleanPref(AppSettings.KEY_THEME_AMOLED, false)
+	var locale by rememberStringPref(AppSettings.KEY_APP_LOCALE, "")
+	var listMode by rememberStringPref(AppSettings.KEY_LIST_MODE, ListMode.GRID.name)
+	var gridSize by rememberIntPref(AppSettings.KEY_GRID_SIZE, 100)
+	var quickFilter by rememberBooleanPref(AppSettings.KEY_QUICK_FILTER, true)
+	var progressIndicators by rememberStringPref(
+		AppSettings.KEY_PROGRESS_INDICATORS,
+		ProgressIndicatorMode.PERCENT_READ.name,
+	)
+	var mangaListBadges by rememberStringSetPref(AppSettings.KEY_MANGA_LIST_BADGES, emptySet())
+
+	var descriptionCollapse by rememberBooleanPref(AppSettings.KEY_COLLAPSE_DESCRIPTION, true)
+	var pagesTab by rememberBooleanPref(AppSettings.KEY_PAGES_TAB, true)
+	var detailsTab by rememberStringPref(AppSettings.KEY_DETAILS_TAB, "-1")
+
+	var searchSuggestions by rememberStringSetPref(AppSettings.KEY_SEARCH_SUGGESTION_TYPES, emptySet())
+	var mainFab by rememberBooleanPref(AppSettings.KEY_MAIN_FAB, true)
+	var navLabels by rememberBooleanPref(AppSettings.KEY_NAV_LABELS, true)
+	var navPinned by rememberBooleanPref(AppSettings.KEY_NAV_PINNED, false)
+	var exitConfirm by rememberBooleanPref(AppSettings.KEY_EXIT_CONFIRM, false)
+	var dynamicShortcuts by rememberBooleanPref(AppSettings.KEY_SHORTCUTS, true)
+
+	var protectApp by rememberBooleanPref(AppSettings.KEY_PROTECT_APP, false)
+	var protectAppTimeout by rememberStringPref(
+		AppSettings.KEY_PROTECT_APP_TIMEOUT,
+		AppProtectionTimeout.INSTANT.name,
+	)
+	var screenshotsPolicy by rememberStringPref(
+		AppSettings.KEY_SCREENSHOTS_POLICY,
+		ScreenshotsPolicy.ALLOW.name,
+	)
+
+	val protectAppSummary = if (authSupported) {
+		stringResource(R.string.require_unlock_summary)
+	} else {
+		stringResource(R.string.require_unlock_unavailable)
+	}
+
+	SettingsScaffold(title = stringResource(R.string.appearance), onBack = onBack) {
+		// The color scheme picker is its own inline widget (horizontal cards), rendered
+		// directly here rather than via a SettingsGroup row.
+		item {
+			ColorSchemePickerRow(
+				title = stringResource(R.string.color_theme),
+				selectedValue = colorScheme,
+				onValueChange = { colorScheme = it },
+				shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+			)
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = "Theme") {
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.theme),
+						entries = themeEntries,
+						entryValues = themeValues,
+						selectedValue = theme,
+						onValueChange = {
+							theme = it
+							@Suppress("WrongConstant")
+							val mode = it.toIntOrNull() ?: AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+							AppCompatDelegate.setDefaultNightMode(mode)
+						},
+						icon = R.drawable.ic_appearance,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.black_dark_theme),
+						subtitle = stringResource(R.string.black_dark_theme_summary),
+						checked = amoled,
+						onCheckedChange = { amoled = it },
+						icon = R.drawable.ic_eye_off,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.language),
+						entries = localeEntries,
+						entryValues = localeValues,
+						selectedValue = locale,
+						onValueChange = { locale = it },
+						icon = R.drawable.ic_language,
+						
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.manga_list)) {
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.list_mode),
+						entries = listModeEntries,
+						entryValues = listModeValues,
+						selectedValue = listMode,
+						onValueChange = { listMode = it },
+						icon = R.drawable.ic_list,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SliderSettingsItem(
+						title = stringResource(R.string.grid_size),
+						value = gridSize,
+						valueFrom = 50,
+						valueTo = 150,
+						stepSize = 5,
+						unitSuffix = "%",
+						onValueChange = { gridSize = it },
+						icon = R.drawable.ic_grid,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.show_quick_filters),
+						subtitle = stringResource(R.string.show_quick_filters_summary),
+						checked = quickFilter,
+						onCheckedChange = { quickFilter = it },
+						icon = R.drawable.ic_filter_menu,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.show_reading_indicators),
+						entries = progressEntries,
+						entryValues = progressValues,
+						selectedValue = progressIndicators,
+						onValueChange = { progressIndicators = it },
+						icon = R.drawable.ic_read,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					MultiSelectSettingsItem(
+						title = stringResource(R.string.badges_in_lists),
+						entries = badgeEntries,
+						entryValues = badgeValues,
+						selectedValues = mangaListBadges,
+						onValuesChange = { mangaListBadges = it },
+						icon = R.drawable.ic_tag,
+						
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.details)) {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.collapse_long_description),
+						checked = descriptionCollapse,
+						onCheckedChange = { descriptionCollapse = it },
+						icon = R.drawable.ic_expand,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.show_pages_thumbs),
+						subtitle = stringResource(R.string.show_pages_thumbs_summary),
+						checked = pagesTab,
+						onCheckedChange = { pagesTab = it },
+						icon = R.drawable.ic_images,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.default_tab),
+						entries = detailsTabEntries,
+						entryValues = detailsTabValues,
+						selectedValue = detailsTab,
+						onValueChange = { detailsTab = it },
+						icon = R.drawable.ic_list_group,
+						
+						shape = pos.shape,
+						enabled = pagesTab,
+					)
+				}
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.details_appearance),
+						subtitle = stringResource(R.string.details_appearance_summary),
+						icon = R.drawable.ic_list_detailed,
+						
+						shape = pos.shape,
+						onClick = onOpenDetailsAppearance,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.main_screen)) {
+				item { pos ->
+					MultiSelectSettingsItem(
+						title = stringResource(R.string.search_suggestions),
+						entries = searchSuggestionEntries,
+						entryValues = searchSuggestionValues,
+						selectedValues = searchSuggestions,
+						onValuesChange = { searchSuggestions = it },
+						icon = R.drawable.ic_suggestion,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.main_screen_sections),
+						icon = R.drawable.ic_drawer_menu,
+						
+						shape = pos.shape,
+						onClick = onOpenNavConfig,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.main_screen_fab),
+						subtitle = stringResource(R.string.main_screen_fab_summary),
+						checked = mainFab,
+						onCheckedChange = { mainFab = it },
+						icon = R.drawable.ic_add,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.show_labels_in_navbar),
+						checked = navLabels,
+						onCheckedChange = { navLabels = it },
+						icon = R.drawable.ic_script,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.pin_navigation_ui),
+						subtitle = stringResource(R.string.pin_navigation_ui_summary),
+						checked = navPinned,
+						onCheckedChange = { navPinned = it },
+						icon = R.drawable.ic_pin,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.exit_confirmation),
+						subtitle = stringResource(R.string.exit_confirmation_summary),
+						checked = exitConfirm,
+						onCheckedChange = { exitConfirm = it },
+						icon = R.drawable.ic_alert_outline,
+						
+						shape = pos.shape,
+					)
+				}
+				if (dynamicShortcutsAvailable) {
+					item { pos ->
+						SwitchSettingsItem(
+							title = stringResource(R.string.history_shortcuts),
+							subtitle = stringResource(R.string.history_shortcuts_summary),
+							checked = dynamicShortcuts,
+							onCheckedChange = { dynamicShortcuts = it },
+							icon = R.drawable.ic_shortcut,
+							
+							shape = pos.shape,
+						)
+					}
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.privacy)) {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.require_unlock),
+						subtitle = protectAppSummary,
+						checked = protectApp && authSupported,
+						onCheckedChange = { requested ->
+							if (!authSupported) {
+								protectApp = false
+							} else {
+								// Route through biometric prompt — actual write happens in the
+								// fragment's callback.
+								onRequestProtectAuth(requested)
+							}
+						},
+						icon = R.drawable.ic_lock,
+						
+						shape = pos.shape,
+						enabled = authSupported,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.require_unlock_after),
+						entries = protectTimeoutEntries,
+						entryValues = protectTimeoutValues,
+						selectedValue = protectAppTimeout,
+						onValueChange = { protectAppTimeout = it },
+						icon = R.drawable.ic_timer,
+						
+						shape = pos.shape,
+						enabled = authSupported && protectApp,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.screenshots_policy),
+						entries = screenshotsPolicyEntries,
+						entryValues = screenshotsPolicyValues,
+						selectedValue = screenshotsPolicy,
+						onValueChange = { screenshotsPolicy = it },
+						icon = R.drawable.ic_eye,
+						
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
 	}
 }

@@ -1,16 +1,41 @@
 package org.koitharu.kotatsu.settings
 
-import android.content.Context
+import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings as SystemSettings
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import androidx.preference.ListPreference
-import androidx.preference.Preference
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
@@ -19,25 +44,30 @@ import org.koitharu.kotatsu.core.os.OpenDocumentTreeHelper
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.DownloadFormat
 import org.koitharu.kotatsu.core.prefs.TriStateOption
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
 import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
+import org.koitharu.kotatsu.core.util.ext.powerManager
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.resolveFile
-import org.koitharu.kotatsu.core.util.ext.setDefaultValueCompat
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
-import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.download.ui.worker.DownloadWorker
 import org.koitharu.kotatsu.local.data.LocalStorageManager
 import org.koitharu.kotatsu.parsers.util.names
-import org.koitharu.kotatsu.settings.utils.DozeHelper
+import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.InfoSettingsItem
+import org.koitharu.kotatsu.settings.compose.ListSettingsItem
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
+import org.koitharu.kotatsu.settings.compose.rememberStringPref
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class DownloadsSettingsFragment :
-	BasePreferenceFragment(R.string.downloads),
+	BaseComposeSettingsFragment(R.string.downloads),
 	SharedPreferences.OnSharedPreferenceChangeListener {
-
-	private val dozeHelper = DozeHelper(this)
 
 	@Inject
 	lateinit var storageManager: LocalStorageManager
@@ -45,29 +75,53 @@ class DownloadsSettingsFragment :
 	@Inject
 	lateinit var downloadsScheduler: DownloadWorker.Scheduler
 
+	@Inject
+	lateinit var settings: AppSettings
+
+	private val storageSummary = MutableStateFlow<String?>(null)
+	private val directoryCount = MutableStateFlow(0)
+	private val pagesDirSummary = MutableStateFlow<String?>(null)
+	private val dozeAvailable = MutableStateFlow(false)
+
 	private val pickFileTreeLauncher = OpenDocumentTreeHelper(this) {
 		if (it != null) onDirectoryPicked(it)
 	}
 
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-		addPreferencesFromResource(R.xml.pref_downloads)
-		findPreference<ListPreference>(AppSettings.KEY_DOWNLOADS_FORMAT)?.run {
-			entryValues = DownloadFormat.entries.names()
-			setDefaultValueCompat(DownloadFormat.AUTOMATIC.name)
+	private val startForDozeResult = registerForActivityResult(
+		ActivityResultContracts.StartActivityForResult(),
+	) {
+		dozeAvailable.value = isDozeIgnoreAvailable()
+	}
+
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			DropSauceTheme {
+				DownloadsScreen(
+					storageSummary = storageSummary.asStateFlow(),
+					directoryCount = directoryCount.asStateFlow(),
+					pagesDirSummary = pagesDirSummary.asStateFlow(),
+					dozeAvailable = dozeAvailable.asStateFlow(),
+					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+					onPickLocalManga = { router.openDirectoriesSettings() },
+					onPickLocalStorage = { router.showDirectorySelectDialog() },
+					onMeteredChanged = { updateDownloadsConstraints() },
+					onPickPagesDir = ::launchPagesDirPicker,
+					onIgnoreDoze = ::startIgnoreDoseActivity,
+				)
+			}
 		}
-		findPreference<ListPreference>(AppSettings.KEY_DOWNLOADS_METERED_NETWORK)?.run {
-			entryValues = TriStateOption.entries.names()
-			setDefaultValueCompat(TriStateOption.ASK.name)
-		}
-		dozeHelper.updatePreference()
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		findPreference<Preference>(AppSettings.KEY_LOCAL_STORAGE)?.bindStorageName()
-		findPreference<Preference>(AppSettings.KEY_LOCAL_MANGA_DIRS)?.bindDirectoriesCount()
-		findPreference<Preference>(AppSettings.KEY_PAGES_SAVE_DIR)?.bindPagesDirectory()
 		settings.subscribe(this)
+		refreshAsync()
+		dozeAvailable.value = isDozeIgnoreAvailable()
 	}
 
 	override fun onDestroyView() {
@@ -77,94 +131,47 @@ class DownloadsSettingsFragment :
 
 	override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
 		when (key) {
-			AppSettings.KEY_LOCAL_STORAGE -> {
-				findPreference<Preference>(key)?.bindStorageName()
-			}
-
-			AppSettings.KEY_LOCAL_MANGA_DIRS -> {
-				findPreference<Preference>(key)?.bindDirectoriesCount()
-			}
-
-			AppSettings.KEY_DOWNLOADS_METERED_NETWORK -> {
-				updateDownloadsConstraints()
-			}
-
-			AppSettings.KEY_PAGES_SAVE_DIR -> {
-				findPreference<Preference>(AppSettings.KEY_PAGES_SAVE_DIR)?.bindPagesDirectory()
-			}
+			AppSettings.KEY_LOCAL_STORAGE,
+			AppSettings.KEY_LOCAL_MANGA_DIRS,
+			AppSettings.KEY_PAGES_SAVE_DIR -> refreshAsync()
 		}
 	}
 
-	override fun onPreferenceTreeClick(preference: Preference): Boolean {
-		return when (preference.key) {
-			AppSettings.KEY_LOCAL_STORAGE -> {
-				router.showDirectorySelectDialog()
-				true
+	private fun refreshAsync() {
+		lifecycleScope.launch {
+			val storage = withContext(Dispatchers.IO) { storageManager.getDefaultWriteableDir() }
+			storageSummary.value = if (storage != null) {
+				storageManager.getDirectoryDisplayName(storage, isFullPath = true)
+			} else {
+				getString(R.string.not_available)
 			}
-
-			AppSettings.KEY_LOCAL_MANGA_DIRS -> {
-				router.openDirectoriesSettings()
-				true
-			}
-
-			AppSettings.KEY_IGNORE_DOZE -> {
-				dozeHelper.startIgnoreDoseActivity()
-			}
-
-			AppSettings.KEY_PAGES_SAVE_DIR -> {
-				if (!pickFileTreeLauncher.tryLaunch(settings.getPagesSaveDir(preference.context)?.uri)) {
-					Snackbar.make(
-						requireView(), R.string.operation_not_supported, Snackbar.LENGTH_SHORT,
-					).show()
-				}
-				true
-			}
-
-			else -> super.onPreferenceTreeClick(preference)
+			directoryCount.value = withContext(Dispatchers.IO) { storageManager.getReadableDirs().size }
+			val df = withContext(Dispatchers.IO) { settings.getPagesSaveDir(requireContext()) }
+			pagesDirSummary.value = df?.uri?.resolveFile(requireContext())?.path
+				?: df?.uri?.toString()
 		}
 	}
 
 	private fun onDirectoryPicked(uri: Uri) {
 		storageManager.takePermissions(uri)
-		val doc = DocumentFile.fromTreeUri(requireContext(), uri)?.takeIf {
-			it.canWrite()
-		}
+		val doc = DocumentFile.fromTreeUri(requireContext(), uri)?.takeIf { it.canWrite() }
 		settings.setPagesSaveDir(doc?.uri)
 	}
 
-	private fun Preference.bindStorageName() {
-		viewLifecycleScope.launch {
-			val storage = storageManager.getDefaultWriteableDir()
-			summary = if (storage != null) {
-				storageManager.getDirectoryDisplayName(storage, isFullPath = true)
-			} else {
-				getString(R.string.not_available)
-			}
-		}
-	}
-
-	private fun Preference.bindDirectoriesCount() {
-		viewLifecycleScope.launch {
-			val dirs = storageManager.getReadableDirs().size
-			summary = resources.getQuantityStringSafe(R.plurals.items, dirs, dirs)
-		}
-	}
-
-	private fun Preference.bindPagesDirectory() {
-		viewLifecycleScope.launch {
-			val df = withContext(Dispatchers.IO) {
-				settings.getPagesSaveDir(this@bindPagesDirectory.context)
-			}
-			summary = df?.getDisplayPath(this@bindPagesDirectory.context)
-				?: this@bindPagesDirectory.context.getString(androidx.preference.R.string.not_set)
+	private fun launchPagesDirPicker() {
+		val current = settings.getPagesSaveDir(requireContext())?.uri
+		if (!pickFileTreeLauncher.tryLaunch(current)) {
+			Snackbar.make(
+				requireView(),
+				R.string.operation_not_supported,
+				Snackbar.LENGTH_SHORT,
+			).show()
 		}
 	}
 
 	private fun updateDownloadsConstraints() {
-		val preference = findPreference<Preference>(AppSettings.KEY_DOWNLOADS_METERED_NETWORK)
-		viewLifecycleScope.launch {
+		lifecycleScope.launch {
 			try {
-				preference?.isEnabled = false
 				withContext(Dispatchers.Default) {
 					val option = when (settings.allowDownloadOnMeteredNetwork) {
 						TriStateOption.ENABLED -> true
@@ -175,14 +182,163 @@ class DownloadsSettingsFragment :
 				}
 			} catch (e: Exception) {
 				e.printStackTraceDebug()
-			} finally {
-				preference?.isEnabled = true
 			}
 		}
 	}
 
-	private fun DocumentFile.getDisplayPath(context: Context): String {
-		return uri.resolveFile(context)?.path ?: uri.toString()
+	private fun isDozeIgnoreAvailable(): Boolean {
+		val ctx = context ?: return false
+		val pm = ctx.powerManager ?: return false
+		return !pm.isIgnoringBatteryOptimizations(ctx.packageName)
 	}
 
+	@SuppressLint("BatteryLife")
+	private fun startIgnoreDoseActivity() {
+		val ctx = context ?: return
+		val pm = ctx.powerManager ?: return
+		if (pm.isIgnoringBatteryOptimizations(ctx.packageName)) return
+		try {
+			val intent = Intent(
+				SystemSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+				"package:${ctx.packageName}".toUri(),
+			)
+			startForDozeResult.launch(intent)
+		} catch (e: ActivityNotFoundException) {
+			Snackbar.make(
+				requireView(),
+				R.string.operation_not_supported,
+				Snackbar.LENGTH_SHORT,
+			).show()
+		}
+	}
+}
+
+@Composable
+private fun DownloadsScreen(
+	storageSummary: StateFlow<String?>,
+	directoryCount: StateFlow<Int>,
+	pagesDirSummary: StateFlow<String?>,
+	dozeAvailable: StateFlow<Boolean>,
+	onBack: () -> Unit,
+	onPickLocalManga: () -> Unit,
+	onPickLocalStorage: () -> Unit,
+	onMeteredChanged: () -> Unit,
+	onPickPagesDir: () -> Unit,
+	onIgnoreDoze: () -> Unit,
+) {
+	val ctx = LocalContext.current
+	val storage by storageSummary.collectAsState()
+	val dirCount by directoryCount.collectAsState()
+	val pagesDir by pagesDirSummary.collectAsState()
+	val showDoze by dozeAvailable.collectAsState()
+	val downloadFormats = remember {
+		ctx.resources.getStringArray(R.array.download_formats).toList()
+	}
+	val downloadFormatValues = remember { DownloadFormat.entries.names().toList() }
+	val meteredOptions = remember {
+		ctx.resources.getStringArray(R.array.metered_network_options).toList()
+	}
+	val meteredOptionValues = remember { TriStateOption.entries.names().toList() }
+
+	var downloadFormat by rememberStringPref(
+		AppSettings.KEY_DOWNLOADS_FORMAT,
+		DownloadFormat.AUTOMATIC.name,
+	)
+	var metered by rememberStringPref(
+		AppSettings.KEY_DOWNLOADS_METERED_NETWORK,
+		TriStateOption.ASK.name,
+	)
+	var pagesDirAsk by rememberBooleanPref(AppSettings.KEY_PAGES_SAVE_ASK, true)
+
+	LaunchedEffect(metered) { onMeteredChanged() }
+
+	SettingsScaffold(title = stringResource(R.string.downloads), onBack = onBack) {
+		item {
+			SettingsGroup(title = "General") {
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.local_manga_directories),
+						subtitle = ctx.resources.getQuantityStringSafe(R.plurals.items, dirCount, dirCount),
+						icon = R.drawable.ic_folder_file,
+						
+						shape = pos.shape,
+						onClick = onPickLocalManga,
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.manga_save_location),
+						subtitle = storage,
+						icon = R.drawable.ic_storage,
+						
+						shape = pos.shape,
+						onClick = onPickLocalStorage,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.preferred_download_format),
+						entries = downloadFormats,
+						entryValues = downloadFormatValues,
+						selectedValue = downloadFormat,
+						onValueChange = { downloadFormat = it },
+						icon = R.drawable.ic_file_zip,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.download_over_cellular),
+						entries = meteredOptions,
+						entryValues = meteredOptionValues,
+						selectedValue = metered,
+						onValueChange = { metered = it },
+						icon = R.drawable.ic_network_cellular,
+						
+						shape = pos.shape,
+					)
+				}
+				// (Removed download-slowdown info row per user request.)
+				if (showDoze) {
+					item { pos ->
+						ActionSettingsItem(
+							title = stringResource(R.string.disable_battery_optimization),
+							subtitle = stringResource(R.string.disable_battery_optimization_summary_downloads),
+							icon = R.drawable.ic_battery_outline,
+							
+							shape = pos.shape,
+							onClick = onIgnoreDoze,
+						)
+					}
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.pages_saving)) {
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.default_page_save_dir),
+						subtitle = pagesDir ?: stringResource(androidx.preference.R.string.not_set),
+						icon = R.drawable.ic_save,
+						
+						shape = pos.shape,
+						onClick = onPickPagesDir,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.ask_for_dest_dir_every_time),
+						checked = pagesDirAsk,
+						onCheckedChange = { pagesDirAsk = it },
+						icon = R.drawable.ic_alert_outline,
+						
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
+	}
 }

@@ -116,12 +116,7 @@ class SettingsActivity :
 		val hasFragment = supportFragmentManager.findFragmentById(R.id.container) != null
 		supportFragmentManager.commit {
 			setReorderingAllowed(true)
-			setCustomAnimations(
-				R.anim.m3_fade_through_enter,
-				R.anim.m3_fade_through_exit,
-				R.anim.m3_fade_through_pop_enter,
-				R.anim.m3_fade_through_pop_exit,
-			)
+			// Using the Fragment 1.7+ default predictive-back-compatible transition.
 			replace(R.id.container, fragmentClass, args)
 			setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
 			if (!isMasterDetails || (hasFragment && !isFromRoot)) {

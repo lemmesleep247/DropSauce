@@ -1,157 +1,285 @@
 package org.koitharu.kotatsu.settings
 
-import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import androidx.preference.Preference
+import android.view.ViewGroup
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
-import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerService
 import org.koitharu.kotatsu.scrobbling.common.ui.ScrobblerAuthHelper
-import org.koitharu.kotatsu.settings.utils.SplitSwitchPreference
+import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
+import org.koitharu.kotatsu.settings.compose.CategoryPalette
+import org.koitharu.kotatsu.settings.compose.ComposeOwnedScreen
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.NavigationSettingsItem
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
+import org.koitharu.kotatsu.settings.discord.DiscordSettingsFragment
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ServicesSettingsFragment : BasePreferenceFragment(R.string.services),
-	SharedPreferences.OnSharedPreferenceChangeListener {
+class ServicesSettingsFragment : BaseComposeSettingsFragment(R.string.services) {
+
+	@Inject
+	lateinit var settings: AppSettings
 
 	@Inject
 	lateinit var scrobblerAuthHelper: ScrobblerAuthHelper
 
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-		addPreferencesFromResource(R.xml.pref_services)
-		findPreference<SplitSwitchPreference>(AppSettings.KEY_STATS_ENABLED)?.let {
-			it.onContainerClickListener = Preference.OnPreferenceClickListener {
-				router.openStatistic()
-				true
+	private val scrobblerSummary = MutableStateFlow<Map<ScrobblerService, String?>>(emptyMap())
+
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			DropSauceTheme {
+				val summaries by scrobblerSummary.asStateFlow().collectAsState()
+				ServicesScreen(
+					scrobblerSummaries = summaries,
+					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+					onOpenSuggestions = {
+						(activity as? SettingsActivity)?.openFragment(
+							SuggestionsSettingsFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+					onOpenStatistics = router::openStatistic,
+					onScrobblerClick = ::handleScrobblerClick,
+					onOpenDiscord = {
+						(activity as? SettingsActivity)?.openFragment(
+							DiscordSettingsFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+				)
 			}
 		}
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		bindSuggestionsSummary()
-		bindStatsSummary()
-		settings.subscribe(this)
-	}
-
-	override fun onDestroyView() {
-		settings.unsubscribe(this)
-		super.onDestroyView()
 	}
 
 	override fun onResume() {
 		super.onResume()
-		bindScrobblerSummary(AppSettings.KEY_SHIKIMORI, ScrobblerService.SHIKIMORI)
-		bindScrobblerSummary(AppSettings.KEY_ANILIST, ScrobblerService.ANILIST)
-		bindScrobblerSummary(AppSettings.KEY_MAL, ScrobblerService.MAL)
-		bindScrobblerSummary(AppSettings.KEY_KITSU, ScrobblerService.KITSU)
+		refreshScrobblers()
 	}
 
-	override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
-		when (key) {
-			AppSettings.KEY_SUGGESTIONS -> bindSuggestionsSummary()
-			AppSettings.KEY_STATS_ENABLED -> bindStatsSummary()
-		}
+	private fun refreshScrobblers() {
+		ScrobblerService.values().forEach { svc -> refreshScrobblerSummary(svc) }
 	}
 
-
-	override fun onPreferenceTreeClick(preference: Preference): Boolean {
-		return when (preference.key) {
-			AppSettings.KEY_SHIKIMORI -> {
-				handleScrobblerClick(ScrobblerService.SHIKIMORI)
-				true
-			}
-
-			AppSettings.KEY_MAL -> {
-				handleScrobblerClick(ScrobblerService.MAL)
-				true
-			}
-
-			AppSettings.KEY_ANILIST -> {
-				handleScrobblerClick(ScrobblerService.ANILIST)
-				true
-			}
-
-			AppSettings.KEY_KITSU -> {
-				handleScrobblerClick(ScrobblerService.KITSU)
-				true
-			}
-
-			else -> super.onPreferenceTreeClick(preference)
-		}
-	}
-
-	private fun bindScrobblerSummary(
-		key: String,
-		scrobblerService: ScrobblerService
-	) {
-		val pref = findPreference<Preference>(key) ?: return
-		if (!scrobblerAuthHelper.isAuthorized(scrobblerService)) {
-			pref.setSummary(R.string.disabled)
+	private fun refreshScrobblerSummary(service: ScrobblerService) {
+		val current = scrobblerSummary.value.toMutableMap()
+		if (!scrobblerAuthHelper.isAuthorized(service)) {
+			current[service] = getString(R.string.disabled)
+			scrobblerSummary.value = current
 			return
 		}
-		val username = scrobblerAuthHelper.getCachedUser(scrobblerService)?.nickname
-		if (username != null) {
-			pref.summary = getString(R.string.logged_in_as, username)
-		} else {
-			pref.setSummary(R.string.loading_)
-			viewLifecycleScope.launch {
-				pref.summary = withContext(Dispatchers.Default) {
-					runCatching {
-						val user = scrobblerAuthHelper.getUser(scrobblerService)
-						getString(R.string.logged_in_as, user.nickname)
-					}.getOrElse {
-						it.printStackTraceDebug()
-						it.getDisplayMessage(resources)
-					}
+		val cached = scrobblerAuthHelper.getCachedUser(service)?.nickname
+		if (cached != null) {
+			current[service] = getString(R.string.logged_in_as, cached)
+			scrobblerSummary.value = current
+			return
+		}
+		current[service] = getString(R.string.loading_)
+		scrobblerSummary.value = current
+		lifecycleScope.launch {
+			val text = withContext(Dispatchers.Default) {
+				runCatching {
+					val user = scrobblerAuthHelper.getUser(service)
+					getString(R.string.logged_in_as, user.nickname)
+				}.getOrElse {
+					it.printStackTraceDebug()
+					it.getDisplayMessage(resources)
 				}
 			}
+			scrobblerSummary.value = scrobblerSummary.value + (service to text)
 		}
 	}
 
-	private fun handleScrobblerClick(scrobblerService: ScrobblerService) {
-		if (!scrobblerAuthHelper.isAuthorized(scrobblerService)) {
-			confirmScrobblerAuth(scrobblerService)
+	private fun handleScrobblerClick(service: ScrobblerService) {
+		if (!scrobblerAuthHelper.isAuthorized(service)) {
+			confirmScrobblerAuth(service)
 		} else {
-			router.openScrobblerSettings(scrobblerService)
+			router.openScrobblerSettings(service)
 		}
 	}
 
-	private fun bindSuggestionsSummary() {
-		findPreference<Preference>(AppSettings.KEY_SUGGESTIONS)?.setSummary(
-			if (settings.isSuggestionsEnabled) R.string.enabled else R.string.disabled,
-		)
-	}
-
-	private fun bindStatsSummary() {
-		findPreference<Preference>(AppSettings.KEY_STATS_ENABLED)?.setSummary(
-			if (settings.isStatsEnabled) R.string.enabled else R.string.disabled,
-		)
-	}
-
-	private fun confirmScrobblerAuth(scrobblerService: ScrobblerService) {
+	private fun confirmScrobblerAuth(service: ScrobblerService) {
 		buildAlertDialog(context ?: return, isCentered = true) {
-			setIcon(scrobblerService.iconResId)
-			setTitle(scrobblerService.titleResId)
-			setMessage(context.getString(R.string.scrobbler_auth_intro, context.getString(scrobblerService.titleResId)))
+			setIcon(service.iconResId)
+			setTitle(service.titleResId)
+			setMessage(context.getString(R.string.scrobbler_auth_intro, context.getString(service.titleResId)))
 			setPositiveButton(R.string.sign_in) { _, _ ->
-				scrobblerAuthHelper.startAuth(context, scrobblerService).onFailure {
-					Snackbar.make(listView, it.getDisplayMessage(resources), Snackbar.LENGTH_LONG).show()
+				scrobblerAuthHelper.startAuth(context, service).onFailure {
+					Snackbar.make(
+						requireView(),
+						it.getDisplayMessage(resources),
+						Snackbar.LENGTH_LONG,
+					).show()
 				}
 			}
 			setNegativeButton(android.R.string.cancel, null)
 		}.show()
+	}
+}
+
+@Composable
+private fun ServicesScreen(
+	scrobblerSummaries: Map<ScrobblerService, String?>,
+	onBack: () -> Unit,
+	onOpenSuggestions: () -> Unit,
+	onOpenStatistics: () -> Unit,
+	onScrobblerClick: (ScrobblerService) -> Unit,
+	onOpenDiscord: () -> Unit,
+) {
+	val colors = CategoryPalette.forKey("services")
+	var suggestionsEnabled by rememberBooleanPref(AppSettings.KEY_SUGGESTIONS, false)
+	var relatedManga by rememberBooleanPref(AppSettings.KEY_RELATED_MANGA, true)
+	var statsEnabled by rememberBooleanPref(AppSettings.KEY_STATS_ENABLED, true)
+	var readingTime by rememberBooleanPref(AppSettings.KEY_READING_TIME, true)
+
+	val enabledLabel = stringResource(R.string.enabled)
+	val disabledLabel = stringResource(R.string.disabled)
+
+	SettingsScaffold(title = stringResource(R.string.services), onBack = onBack) {
+		item {
+			SettingsGroup(title = "General") {
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.suggestions),
+						subtitle = if (suggestionsEnabled) enabledLabel else disabledLabel,
+						icon = R.drawable.ic_suggestion,
+						
+						shape = pos.shape,
+						onClick = onOpenSuggestions,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.related_manga),
+						subtitle = stringResource(R.string.related_manga_summary),
+						checked = relatedManga,
+						onCheckedChange = { relatedManga = it },
+						icon = R.drawable.ic_heart_outline,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.reading_stats),
+						subtitle = if (statsEnabled) enabledLabel else disabledLabel,
+						checked = statsEnabled,
+						onCheckedChange = { statsEnabled = it },
+						icon = R.drawable.ic_timelapse,
+						
+						shape = pos.shape,
+					)
+				}
+				if (statsEnabled) {
+					item { pos ->
+						NavigationSettingsItem(
+							title = stringResource(R.string.reading_stats),
+							icon = R.drawable.ic_timelapse,
+							
+							shape = pos.shape,
+							onClick = onOpenStatistics,
+						)
+					}
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.reading_time_estimation),
+						subtitle = stringResource(R.string.reading_time_estimation_summary),
+						checked = readingTime,
+						onCheckedChange = { readingTime = it },
+						icon = R.drawable.ic_timer,
+						
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.tracking)) {
+				val services = listOf(
+					ScrobblerService.ANILIST to R.drawable.ic_anilist,
+					ScrobblerService.KITSU to R.drawable.ic_kitsu,
+					ScrobblerService.MAL to R.drawable.ic_mal,
+					ScrobblerService.SHIKIMORI to R.drawable.ic_shikimori,
+				)
+				services.forEach { (svc, icon) ->
+					item { pos ->
+						ActionSettingsItem(
+							title = stringResource(svc.titleResId),
+							subtitle = scrobblerSummaries[svc],
+							icon = icon,
+							
+							shape = pos.shape,
+							onClick = { onScrobblerClick(svc) },
+						)
+					}
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = "External") {
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.discord_rpc),
+						subtitle = stringResource(R.string.discord_rpc_summary),
+						icon = R.drawable.ic_discord,
+						
+						shape = pos.shape,
+						onClick = onOpenDiscord,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
 	}
 }

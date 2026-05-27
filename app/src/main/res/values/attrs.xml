@@ -6,7 +6,6 @@
 	<attr name="sliderPreferenceStyle" />
 	<attr name="multiAutoCompleteTextViewPreferenceStyle" />
 	<attr name="autoCompleteTextViewPreferenceStyle" />
-	<attr name="themeChooserPreferenceStyle" />
 	<attr name="listItemTextViewStyle" />
 	<attr name="fastScrollerStyle" />
 	<attr name="tipViewStyle" />

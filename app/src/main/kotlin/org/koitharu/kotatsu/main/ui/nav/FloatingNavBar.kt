@@ -141,7 +141,6 @@ private fun FloatingNavItem(
 	)
 	val title = stringResource(item.titleRes)
 	val interactionSource = remember { MutableInteractionSource() }
-	val iconPainter = rememberSelectorPainter(resId = item.icon, selected = selected)
 
 	Box(
 		modifier = Modifier
@@ -173,8 +172,11 @@ private fun FloatingNavItem(
 					}
 				},
 			) {
+				// Single painter per icon: state changes drive the AnimatedStateListDrawable's
+				// internal morph (avd_*_enter etc.) — that's the animation the old native
+				// BottomNavigationView played. Wrapping in Crossfade would defeat it.
 				Icon(
-					painter = iconPainter,
+					painter = rememberSelectorPainter(resId = item.icon, selected = selected),
 					contentDescription = null,
 					tint = content,
 					modifier = Modifier.size(24.dp),

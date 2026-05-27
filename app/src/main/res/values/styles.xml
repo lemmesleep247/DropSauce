@@ -270,7 +270,7 @@
 	<style name="TextAppearance.Kotatsu.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
 		<item name="android:fontFamily">@font/gflex_bold</item>
 		<item name="fontFamily">@font/gflex_bold</item>
-		<item name="android:textFontWeight" tools:targetApi="p">700</item>
+		<item name="android:textFontWeight" tools:targetApi="p">800</item>
 		<item name="android:textSize">48sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">56sp</item>
 		<item name="lineHeight">56sp</item>
@@ -280,7 +280,7 @@
 	<style name="TextAppearance.Kotatsu.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
 		<item name="android:fontFamily">@font/gflex_bold</item>
 		<item name="fontFamily">@font/gflex_bold</item>
-		<item name="android:textFontWeight" tools:targetApi="p">700</item>
+		<item name="android:textFontWeight" tools:targetApi="p">800</item>
 		<item name="android:textSize">36sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">44sp</item>
 		<item name="lineHeight">44sp</item>
@@ -290,7 +290,7 @@
 	<style name="TextAppearance.Kotatsu.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
 		<item name="android:fontFamily">@font/gflex_body</item>
 		<item name="fontFamily">@font/gflex_body</item>
-		<item name="android:textFontWeight" tools:targetApi="p">400</item>
+		<item name="android:textFontWeight" tools:targetApi="p">500</item>
 		<item name="android:textSize">30sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">38sp</item>
 		<item name="lineHeight">38sp</item>
@@ -300,7 +300,7 @@
 	<style name="TextAppearance.Kotatsu.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
 		<item name="android:fontFamily">@font/gflex_heading</item>
 		<item name="fontFamily">@font/gflex_heading</item>
-		<item name="android:textFontWeight" tools:targetApi="p">600</item>
+		<item name="android:textFontWeight" tools:targetApi="p">700</item>
 		<item name="android:textSize">32sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">40sp</item>
 		<item name="lineHeight">40sp</item>
@@ -310,7 +310,7 @@
 	<style name="TextAppearance.Kotatsu.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
 		<item name="android:fontFamily">@font/gflex_heading</item>
 		<item name="fontFamily">@font/gflex_heading</item>
-		<item name="android:textFontWeight" tools:targetApi="p">600</item>
+		<item name="android:textFontWeight" tools:targetApi="p">700</item>
 		<item name="android:textSize">28sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">36sp</item>
 		<item name="lineHeight">36sp</item>
@@ -320,7 +320,7 @@
 	<style name="TextAppearance.Kotatsu.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
 		<item name="android:fontFamily">@font/gflex_heading</item>
 		<item name="fontFamily">@font/gflex_heading</item>
-		<item name="android:textFontWeight" tools:targetApi="p">600</item>
+		<item name="android:textFontWeight" tools:targetApi="p">700</item>
 		<item name="android:textSize">24sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">32sp</item>
 		<item name="lineHeight">32sp</item>
@@ -330,7 +330,7 @@
 	<style name="TextAppearance.Kotatsu.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
 		<item name="android:fontFamily">@font/gflex_body</item>
 		<item name="fontFamily">@font/gflex_body</item>
-		<item name="android:textFontWeight" tools:targetApi="p">400</item>
+		<item name="android:textFontWeight" tools:targetApi="p">500</item>
 		<item name="android:textSize">22sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">28sp</item>
 		<item name="lineHeight">28sp</item>
@@ -340,7 +340,7 @@
 	<style name="TextAppearance.Kotatsu.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
 		<item name="android:fontFamily">@font/gflex_medium</item>
 		<item name="fontFamily">@font/gflex_medium</item>
-		<item name="android:textFontWeight" tools:targetApi="p">500</item>
+		<item name="android:textFontWeight" tools:targetApi="p">600</item>
 		<item name="android:textSize">18sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">24sp</item>
 		<item name="lineHeight">24sp</item>
@@ -350,7 +350,7 @@
 	<style name="TextAppearance.Kotatsu.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
 		<item name="android:fontFamily">@font/gflex_medium</item>
 		<item name="fontFamily">@font/gflex_medium</item>
-		<item name="android:textFontWeight" tools:targetApi="p">500</item>
+		<item name="android:textFontWeight" tools:targetApi="p">600</item>
 		<item name="android:textSize">14sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">20sp</item>
 		<item name="lineHeight">20sp</item>
@@ -360,7 +360,7 @@
 	<style name="TextAppearance.Kotatsu.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
 		<item name="android:fontFamily">@font/gflex_body</item>
 		<item name="fontFamily">@font/gflex_body</item>
-		<item name="android:textFontWeight" tools:targetApi="p">400</item>
+		<item name="android:textFontWeight" tools:targetApi="p">500</item>
 		<item name="android:textSize">16sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">24sp</item>
 		<item name="lineHeight">24sp</item>
@@ -370,7 +370,7 @@
 	<style name="TextAppearance.Kotatsu.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
 		<item name="android:fontFamily">@font/gflex_body</item>
 		<item name="fontFamily">@font/gflex_body</item>
-		<item name="android:textFontWeight" tools:targetApi="p">400</item>
+		<item name="android:textFontWeight" tools:targetApi="p">500</item>
 		<item name="android:textSize">14sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">20sp</item>
 		<item name="lineHeight">20sp</item>
@@ -380,7 +380,7 @@
 	<style name="TextAppearance.Kotatsu.BodySmall" parent="TextAppearance.Material3.BodySmall">
 		<item name="android:fontFamily">@font/gflex_body</item>
 		<item name="fontFamily">@font/gflex_body</item>
-		<item name="android:textFontWeight" tools:targetApi="p">400</item>
+		<item name="android:textFontWeight" tools:targetApi="p">500</item>
 		<item name="android:textSize">12sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">16sp</item>
 		<item name="lineHeight">16sp</item>
@@ -390,7 +390,7 @@
 	<style name="TextAppearance.Kotatsu.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
 		<item name="android:fontFamily">@font/gflex_medium</item>
 		<item name="fontFamily">@font/gflex_medium</item>
-		<item name="android:textFontWeight" tools:targetApi="p">500</item>
+		<item name="android:textFontWeight" tools:targetApi="p">600</item>
 		<item name="android:textSize">16sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">20sp</item>
 		<item name="lineHeight">20sp</item>
@@ -400,7 +400,7 @@
 	<style name="TextAppearance.Kotatsu.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
 		<item name="android:fontFamily">@font/gflex_medium</item>
 		<item name="fontFamily">@font/gflex_medium</item>
-		<item name="android:textFontWeight" tools:targetApi="p">500</item>
+		<item name="android:textFontWeight" tools:targetApi="p">600</item>
 		<item name="android:textSize">14sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">16sp</item>
 		<item name="lineHeight">16sp</item>
@@ -410,7 +410,7 @@
 	<style name="TextAppearance.Kotatsu.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
 		<item name="android:fontFamily">@font/gflex_medium</item>
 		<item name="fontFamily">@font/gflex_medium</item>
-		<item name="android:textFontWeight" tools:targetApi="p">500</item>
+		<item name="android:textFontWeight" tools:targetApi="p">600</item>
 		<item name="android:textSize">11sp</item>
 		<item name="android:lineHeight" tools:targetApi="p">16sp</item>
 		<item name="lineHeight">16sp</item>
@@ -491,11 +491,6 @@
 
 	<style name="Preference.SwitchPreferenceCompat.M3" parent="Preference.SwitchPreferenceCompat.Material">
 		<item name="android:widgetLayout">@layout/preference_widget_material_switch</item>
-	</style>
-
-	<style name="Preference.ThemeChooser" parent="Preference.Material">
-		<item name="android:layout">@layout/preference_theme</item>
-		<item name="android:selectable">false</item>
 	</style>
 
 	<!-- Drawable -->

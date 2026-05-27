@@ -2,13 +2,24 @@ package org.koitharu.kotatsu.settings
 
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.Preference
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
@@ -17,16 +28,21 @@ import org.koitharu.kotatsu.backup.MihonBackupManager.Options
 import org.koitharu.kotatsu.backup.MihonBackupManager.RestoreReport
 import org.koitharu.kotatsu.backup.local.domain.BackupUtils
 import org.koitharu.kotatsu.backup.local.ui.backup.BackupService
+import org.koitharu.kotatsu.backup.local.ui.periodical.PeriodicalBackupSettingsFragment
 import org.koitharu.kotatsu.backup.local.ui.restore.RestoreDialogFragment
-import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.util.ext.checkNotificationPermission
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.NavigationSettingsItem
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class BackupSettingsFragment : BasePreferenceFragment(R.string.backup_restore) {
+class BackupSettingsFragment : BaseComposeSettingsFragment(R.string.backup_restore) {
 
 	@Inject
 	lateinit var backupManager: MihonBackupManager
@@ -55,29 +71,43 @@ class BackupSettingsFragment : BasePreferenceFragment(R.string.backup_restore) {
 		}
 	}
 
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-		addPreferencesFromResource(R.xml.pref_backup)
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			DropSauceTheme {
+				BackupScreen(
+					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+					onCreateBackup = {
+						createLocalBackupLauncher.launch(
+							BackupUtils.generateFileName(requireContext()),
+						)
+					},
+					onRestoreLocal = {
+						restoreLocalBackupLauncher.launch(
+							arrayOf(BackupUtils.MIME_TYPE, "application/*", "*/*"),
+						)
+					},
+					onOpenPeriodic = {
+						(activity as? SettingsActivity)?.openFragment(
+							PeriodicalBackupSettingsFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+					onRestoreFromTachiyomi = {
+						restoreMihonBackupLauncher.launch(arrayOf("application/*", "*/*"))
+					},
+				)
+			}
+		}
 	}
 
-	override fun onPreferenceTreeClick(preference: Preference): Boolean {
-		return when (preference.key) {
-			AppSettings.KEY_CREATE_BACKUP -> {
-				createLocalBackupLauncher.launch(BackupUtils.generateFileName(requireContext()))
-				true
-			}
-
-			AppSettings.KEY_RESTORE_LOCAL_BACKUP -> {
-				restoreLocalBackupLauncher.launch(arrayOf(BackupUtils.MIME_TYPE, "application/*", "*/*"))
-				true
-			}
-
-			AppSettings.KEY_RESTORE_BACKUP -> {
-				restoreMihonBackupLauncher.launch(arrayOf("application/*", "*/*"))
-				true
-			}
-
-			else -> super.onPreferenceTreeClick(preference)
-		}
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
 	}
 
 	private fun runMihonRestoreJob(uri: Uri, options: Options) {
@@ -104,7 +134,12 @@ class BackupSettingsFragment : BasePreferenceFragment(R.string.backup_restore) {
 		val lines = buildList {
 			add(getString(R.string.restore_report_restored_simple, report.restoredMangaCount))
 			if (report.missingSources.isNotEmpty()) {
-				add(getString(R.string.restore_report_missing_extensions_compact, report.missingSources.joinToString("\n")))
+				add(
+					getString(
+						R.string.restore_report_missing_extensions_compact,
+						report.missingSources.joinToString("\n"),
+					),
+				)
 			}
 		}
 		if (lines.size <= 1) return
@@ -150,5 +185,67 @@ class BackupSettingsFragment : BasePreferenceFragment(R.string.backup_restore) {
 	companion object {
 		private const val RESTORE_CHANNEL_ID = "backup_restore"
 		private const val RESTORE_NOTIFICATION_ID = 7002
+	}
+}
+
+@Composable
+private fun BackupScreen(
+	onBack: () -> Unit,
+	onCreateBackup: () -> Unit,
+	onRestoreLocal: () -> Unit,
+	onOpenPeriodic: () -> Unit,
+	onRestoreFromTachiyomi: () -> Unit,
+) {
+	SettingsScaffold(title = stringResource(R.string.backup_restore), onBack = onBack) {
+		item {
+			SettingsGroup(title = stringResource(R.string.backup_restore)) {
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.create_backup),
+						subtitle = stringResource(R.string.create_backup_summary),
+						icon = R.drawable.ic_save,
+						
+						shape = pos.shape,
+						onClick = onCreateBackup,
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.restore_backup),
+						subtitle = stringResource(R.string.restore_summary),
+						icon = R.drawable.ic_revert,
+						
+						shape = pos.shape,
+						onClick = onRestoreLocal,
+					)
+				}
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.periodic_backups),
+						subtitle = stringResource(R.string.periodic_backups_summary),
+						icon = R.drawable.ic_backup_restore,
+						
+						shape = pos.shape,
+						onClick = onOpenPeriodic,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.import_from_other_apps)) {
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.restore_from_tachiyomi),
+						subtitle = stringResource(R.string.restore_tachiyomi_summary),
+						icon = R.drawable.ic_revert,
+						
+						shape = pos.shape,
+						onClick = onRestoreFromTachiyomi,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
 	}
 }

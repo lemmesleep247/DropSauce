@@ -101,6 +101,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	}
 	private lateinit var navigationDelegate: MainNavigationDelegate
 	private lateinit var fadingAppbarMediator: FadingAppbarMediator
+	private var isSearchFullyShown = false
 
 	override val appBar: AppBarLayout
 		get() = viewBinding.appbar
@@ -128,14 +129,14 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			fragmentManager = supportFragmentManager,
 			settings = settings,
 		)
+		navigationDelegate.addOnFragmentChangedListener(this)
 		navigationDelegate.onExploreReselected = {
-			if (viewBinding.searchView.isShowing) {
+			if (isSearchFullyShown) {
 				viewBinding.searchView.hide()
-			} else {
+			} else if (!viewBinding.searchView.isShowing) {
 				viewBinding.searchView.show()
 			}
 		}
-		navigationDelegate.addOnFragmentChangedListener(this)
 		navigationDelegate.onCreate(this, savedInstanceState)
 		viewBinding.textViewTitle?.let { tv ->
 			navigationDelegate.observeTitle().observe(this) { tv.text = it }
@@ -174,6 +175,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 	override fun onRestoreInstanceState(savedInstanceState: Bundle) {
 		super.onRestoreInstanceState(savedInstanceState)
+		isSearchFullyShown = viewBinding.searchView.isShowing
 		adjustSearchUI(viewBinding.searchView.isShowing)
 		navigationDelegate.syncSelectedItem()
 	}
@@ -253,6 +255,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		if (isOpened != wasOpened) {
 			adjustSearchUI(isOpened)
 		}
+		isSearchFullyShown = (newState == SearchView.TransitionState.SHOWN)
 	}
 
 	override fun onRemoveQuery(query: String) {
@@ -323,8 +326,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 	private fun adjustAppbar(topFragment: Fragment) {
 		if (topFragment is FavouritesContainerFragment) {
+			viewBinding.appbar.fitsSystemWindows = true
 			fadingAppbarMediator.bind()
 		} else {
+			viewBinding.appbar.fitsSystemWindows = false
 			fadingAppbarMediator.unbind()
 		}
 	}

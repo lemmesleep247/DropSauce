@@ -3,12 +3,15 @@ package eu.kanade.tachiyomi.source.online
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.asObservableSuccess
+import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.network.newCachelessCallWithProgress
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.util.awaitSingle
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -101,12 +104,39 @@ abstract class HttpSource : CatalogueSource {
 
 	open fun pageListRequest(chapter: SChapter): Request = GET(baseUrl + chapter.url, headers)
 
-	open fun imageRequest(page: Page): Request = GET(page.imageUrl ?: getImageUrl(page), headers)
+	/**
+	 * Returns the request for getting the source image.
+	 * Requires [page.imageUrl] to be non-null (set via [getImageUrl] first).
+	 */
+	protected open fun imageRequest(page: Page): Request = GET(page.imageUrl!!, headers)
 
-	open fun getImageUrl(page: Page): String {
-		val imageUrl = page.imageUrl
-		if (imageUrl != null) return imageUrl
-		return client.newCall(tagRequest(imageUrlRequest(page))).execute().use(::imageUrlParse)
+	/**
+	 * Returns the response of the source image.
+	 * Typically does not need to be overridden.
+	 *
+	 * @since extensions-lib 1.5
+	 */
+	open suspend fun getImage(page: Page): Response {
+		return client.newCachelessCallWithProgress(imageRequest(page), page)
+			.awaitSuccess()
+	}
+
+	/**
+	 * Returns the absolute url of the source image.
+	 * Override this if the image URL must be resolved by a network request.
+	 *
+	 * @since extensions-lib 1.5
+	 */
+	@Suppress("DEPRECATION")
+	open suspend fun getImageUrl(page: Page): String {
+		return fetchImageUrl(page).awaitSingle()
+	}
+
+	@Deprecated("Use the non-RxJava API instead", replaceWith = ReplaceWith("getImageUrl"))
+	open fun fetchImageUrl(page: Page): Observable<String> {
+		return client.newCall(imageUrlRequest(page))
+			.asObservableSuccess()
+			.map { imageUrlParse(it) }
 	}
 
 	open fun imageUrlRequest(page: Page): Request = GET(baseUrl + page.url, headers)

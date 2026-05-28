@@ -106,6 +106,13 @@
     *** INSTANCE;
 }
 
+# xmlutil (nl.adaptivity.xmlutil) — used by extensions that parse XML manga sites
+-keep class nl.adaptivity.xmlutil.** { *; }
+-keep interface nl.adaptivity.xmlutil.** { *; }
+-keepclassmembers class nl.adaptivity.xmlutil.** { *; }
+-keep public enum nl.adaptivity.xmlutil.EventType { *; }
+-dontwarn nl.adaptivity.xmlutil.**
+
 # Dalvik ClassLoader (used by ChildFirstPathClassLoader)
 -keep class dalvik.system.** { *; }
 -dontwarn dalvik.system.**

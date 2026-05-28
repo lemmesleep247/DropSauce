@@ -194,8 +194,11 @@ dependencies {
 	implementation libs.rxjava
 	implementation libs.injekt.core
 	implementation libs.kotlinx.serialization.json
-	implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-okio:1.10.0"
-	implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.8.1"
+	implementation libs.kotlinx.serialization.json.okio
+	implementation libs.kotlinx.serialization.protobuf
+	// xmlutil — required by extensions that parse XML-based manga sites
+	implementation libs.xmlutil.core
+	implementation libs.xmlutil.serialization
 
 	implementation libs.adapterdelegates
 	implementation libs.adapterdelegates.viewbinding
@@ -232,7 +235,7 @@ dependencies {
 	androidTestImplementation libs.androidx.junit
 
 	androidTestImplementation libs.kotlinx.coroutines.test
-	androidTestImplementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.8.1"
+	androidTestImplementation libs.kotlinx.serialization.protobuf
 
 	androidTestImplementation libs.androidx.room.testing
 	androidTestImplementation libs.moshi.kotlin

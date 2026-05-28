@@ -322,8 +322,8 @@ class KotoInjektBridge @Inject constructor(
 				addSingletonFactory<XML> { xml }
 				// ProtoBuf serialization (used by extensions that use protobuf APIs)
 				addSingletonFactory<ProtoBuf> { ProtoBuf }
-				// JavaScript engine stub (extensions calling evaluate() get UnsupportedOperationException)
-				addSingletonFactory<JavaScriptEngine> { JavaScriptEngine(context) }
+				// JavaScript engine — delegates to WebViewExecutor for proxy-aware execution
+				addSingletonFactory<JavaScriptEngine> { JavaScriptEngine(context, webViewExecutor) }
 			}
 		})
 		initialized = true

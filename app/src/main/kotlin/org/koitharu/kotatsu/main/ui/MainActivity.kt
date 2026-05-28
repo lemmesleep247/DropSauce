@@ -121,8 +121,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		viewBinding.fab?.setOnClickListener(this)
 		viewBinding.navRail?.headerView?.findViewById<View>(R.id.railFab)?.setOnClickListener(this)
+		viewBinding.buttonIncognito.setOnClickListener {
+			val isEnabled = !viewModel.isIncognitoModeEnabled.value
+			viewModel.setIncognitoMode(isEnabled)
+		}
+		viewBinding.buttonSettings.setOnClickListener {
+			router.openSettings()
+		}
 		fadingAppbarMediator =
-			FadingAppbarMediator(viewBinding.appbar, viewBinding.layoutSearch ?: viewBinding.searchBar)
+			FadingAppbarMediator(viewBinding.appbar, viewBinding.layoutSearch)
 
 		navigationDelegate = MainNavigationDelegate(
 			navBar = checkNotNull(bottomNav ?: viewBinding.navRail),
@@ -205,7 +212,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
 		val searchBarDefaultMargin = resources.getDimensionPixelOffset(R.dimen.search_bar_margin_horizontal)
-		viewBinding.searchBar.updateLayoutParams<MarginLayoutParams> {
+		viewBinding.layoutSearch.updateLayoutParams<MarginLayoutParams> {
 			marginEnd = searchBarDefaultMargin + barsInsets.end(v)
 			marginStart = if (viewBinding.navRail != null) {
 				searchBarDefaultMargin
@@ -266,7 +273,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		super.onSupportActionModeStarted(mode)
 		adjustFabVisibility()
 		bottomNav?.hide()
-		(viewBinding.layoutSearch ?: viewBinding.searchBar).isInvisible = true
+		viewBinding.layoutSearch.isInvisible = true
 		updateContainerBottomMargin()
 	}
 
@@ -274,7 +281,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		super.onSupportActionModeFinished(mode)
 		adjustFabVisibility()
 		bottomNav?.show()
-		(viewBinding.layoutSearch ?: viewBinding.searchBar).isInvisible = false
+		viewBinding.layoutSearch.isInvisible = false
 		updateContainerBottomMargin()
 	}
 
@@ -296,6 +303,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		}
 		viewBinding.searchView.getEditText().imeOptions = options
 		invalidateOptionsMenu()
+		viewBinding.buttonIncognito.isChecked = isIncognito
 	}
 
 	private fun onLoadingStateChanged(isLoading: Boolean) {

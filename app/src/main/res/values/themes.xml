@@ -178,6 +178,10 @@
 	<!-- Changes only for night -->
 	<style name="ThemeOverlay.Kotatsu.Amoled" parent="" />
 
+	<style name="ThemeOverlay.Kotatsu.AppBarWithSearch" parent="ThemeOverlay.Material3Expressive.AppBarWithSearch">
+		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>
+	</style>
+
 	<!-- App Widgets -->
 
 	<style name="Theme.Kotatsu.AppWidgetContainer" parent="@style/Theme.MaterialComponents.Light">

@@ -73,8 +73,8 @@
 	<dimen name="fastscroll_scrollbar_padding_start">12dp</dimen>
 	<dimen name="fastscroll_scrollbar_padding_end">6dp</dimen>
 
-	<dimen name="search_bar_margin_horizontal">32dp</dimen>
-	<dimen name="search_bar_min_height">74dp</dimen>
+	<dimen name="search_bar_margin_horizontal">8dp</dimen>
+	<dimen name="search_bar_min_height">64dp</dimen>
 
 	<dimen name="m3_side_sheet_width">400dp</dimen>
 	<dimen name="m3_card_corner">12dp</dimen>

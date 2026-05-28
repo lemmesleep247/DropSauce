@@ -3,11 +3,16 @@ package org.koitharu.kotatsu.mihon.compat
 import android.app.Application
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import eu.kanade.tachiyomi.network.JavaScriptEngine
 import eu.kanade.tachiyomi.network.NetworkHelper
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialFormat
 import kotlinx.serialization.StringFormat
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
+import nl.adaptivity.xmlutil.XmlDeclMode
+import nl.adaptivity.xmlutil.core.XmlVersion
+import nl.adaptivity.xmlutil.serialization.XML
 import okhttp3.CookieJar
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -34,10 +39,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 class KotoNetworkHelper(
-	baseClient: OkHttpClient,
-	private val cookieJar: MutableCookieJar,
+	private val baseClient: OkHttpClient,
+	private val mutableCookieJar: MutableCookieJar,
 	private val webViewExecutor: WebViewExecutor? = null,
 ) : NetworkHelper() {
+
+	/** Expose the cookie jar so extensions can read/write session cookies. */
+	override val cookieJar: CookieJar get() = mutableCookieJar
+
+	/** A client without the Cloudflare interceptor, suitable for CDN/static requests. */
+	override val nonCloudflareClient: OkHttpClient get() = baseClient
 
 	override val client: OkHttpClient = OkHttpClient.Builder().apply {
 		connectTimeout(baseClient.connectTimeoutMillis.toLong(), java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -78,7 +89,7 @@ class KotoNetworkHelper(
 
 				CloudFlareHelper.PROTECTION_CAPTCHA -> {
 					val host = request.url.host.lowercase()
-					val clearance = cookieJar.loadForRequest(request.url)
+					val clearance = mutableCookieJar.loadForRequest(request.url)
 						.firstOrNull { it.name == "cf_clearance" }
 						?.value
 
@@ -186,7 +197,7 @@ class KotoNetworkHelper(
 
 	private fun enrichApiRequestHeadersIfNeeded(request: Request): Request {
 		if (!request.url.encodedPath.startsWith("/api/")) return request
-		val cookies = cookieJar.loadForRequest(request.url)
+		val cookies = mutableCookieJar.loadForRequest(request.url)
 		val hasCfClearance = cookies.any { it.name == "cf_clearance" }
 		if (!hasCfClearance) return request
 		val origin = "${request.url.scheme}://${request.url.host}"
@@ -288,6 +299,15 @@ class KotoInjektBridge @Inject constructor(
 			ignoreUnknownKeys = true
 			explicitNulls = false
 		}
+		val xml = XML {
+			defaultPolicy {
+				ignoreUnknownChildren()
+			}
+			autoPolymorphic = true
+			xmlDeclMode = XmlDeclMode.Charset
+			indent = 2
+			xmlVersion = XmlVersion.XML10
+		}
 		Injekt.importModule(object : InjektModule {
 			override fun InjektRegistrar.registerInjectables() {
 				addSingleton(application)
@@ -298,6 +318,12 @@ class KotoInjektBridge @Inject constructor(
 				addSingletonFactory<Json> { json }
 				addSingletonFactory<StringFormat> { json }
 				addSingletonFactory<SerialFormat> { json }
+				// XML serialization (used by extensions that parse XML manga sites)
+				addSingletonFactory<XML> { xml }
+				// ProtoBuf serialization (used by extensions that use protobuf APIs)
+				addSingletonFactory<ProtoBuf> { ProtoBuf }
+				// JavaScript engine stub (extensions calling evaluate() get UnsupportedOperationException)
+				addSingletonFactory<JavaScriptEngine> { JavaScriptEngine(context) }
 			}
 		})
 		initialized = true

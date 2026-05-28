@@ -2,6 +2,10 @@ package eu.kanade.tachiyomi.network
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.okio.decodeFromBufferedSource
+import kotlinx.serialization.serializer
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -119,3 +123,23 @@ fun OkHttpClient.newCachelessCallWithProgress(request: Request, listener: Progre
 }
 
 class HttpException(val code: Int) : IllegalStateException("HTTP error $code")
+
+/**
+ * Decode the [Response] body into the given type using kotlinx.serialization JSON + Okio.
+ *
+ * @since extensions-lib 1.5
+ */
+context(_: Json)
+inline fun <reified T> Response.parseAs(): T {
+    return decodeFromJsonResponse(serializer(), this)
+}
+
+context(json: Json)
+fun <T> decodeFromJsonResponse(
+    deserializer: DeserializationStrategy<T>,
+    response: Response,
+): T {
+    return response.body.source().use {
+        json.decodeFromBufferedSource(deserializer, it)
+    }
+}

@@ -194,6 +194,7 @@ dependencies {
 	implementation libs.rxjava
 	implementation libs.injekt.core
 	implementation libs.kotlinx.serialization.json
+	implementation "org.jetbrains.kotlinx:kotlinx-serialization-json-okio:1.10.0"
 	implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.8.1"
 
 	implementation libs.adapterdelegates

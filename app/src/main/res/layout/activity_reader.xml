@@ -127,11 +127,10 @@
 		android:outlineProvider="background"
 		android:padding="@dimen/screen_padding">
 
-		<com.google.android.material.progressindicator.CircularProgressIndicator
+		<com.google.android.material.loadingindicator.LoadingIndicator
 			android:id="@+id/progressBar"
 			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:indeterminate="true" />
+			android:layout_height="wrap_content" />
 
 		<TextView
 			android:id="@+id/textView_loading"

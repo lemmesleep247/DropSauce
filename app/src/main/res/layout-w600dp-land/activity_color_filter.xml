@@ -70,11 +70,10 @@
 				app:strokeWidth="1dp"
 				tools:src="@tools:sample/backgrounds/scenic" />
 
-			<com.google.android.material.progressindicator.CircularProgressIndicator
+			<com.google.android.material.loadingindicator.LoadingIndicator
 				android:id="@+id/progress_before"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:indeterminate="true"
 				app:layout_constraintBottom_toBottomOf="@id/imageView_before"
 				app:layout_constraintEnd_toEndOf="@id/imageView_before"
 				app:layout_constraintStart_toStartOf="@id/imageView_before"
@@ -107,11 +106,10 @@
 				app:strokeWidth="1dp"
 				tools:src="@tools:sample/backgrounds/scenic" />
 
-			<com.google.android.material.progressindicator.CircularProgressIndicator
+			<com.google.android.material.loadingindicator.LoadingIndicator
 				android:id="@+id/progress_after"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
-				android:indeterminate="true"
 				app:layout_constraintBottom_toBottomOf="@id/imageView_after"
 				app:layout_constraintEnd_toEndOf="@id/imageView_after"
 				app:layout_constraintStart_toStartOf="@id/imageView_after"

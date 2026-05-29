@@ -3,10 +3,10 @@ package org.koitharu.kotatsu.core.util.progress
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
-import com.google.android.material.progressindicator.BaseProgressIndicator
+import com.google.android.material.loadingindicator.LoadingIndicator
 
 class ImageRequestIndicatorListener(
-	private val indicators: Collection<BaseProgressIndicator<*>>,
+	private val indicators: Collection<LoadingIndicator>,
 ) : ImageRequest.Listener {
 
 	override fun onCancel(request: ImageRequest) = hide()

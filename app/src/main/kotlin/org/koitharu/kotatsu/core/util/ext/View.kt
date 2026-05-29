@@ -24,6 +24,7 @@ import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
+import com.google.android.material.loadingindicator.LoadingIndicator
 import com.google.android.material.progressindicator.BaseProgressIndicator
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.slider.Slider
@@ -161,6 +162,14 @@ fun TabLayout.setTabsEnabled(enabled: Boolean) {
 }
 
 fun BaseProgressIndicator<*>.showOrHide(value: Boolean) {
+	if (value) {
+		show()
+	} else {
+		hide()
+	}
+}
+
+fun LoadingIndicator.showOrHide(value: Boolean) {
 	if (value) {
 		show()
 	} else {

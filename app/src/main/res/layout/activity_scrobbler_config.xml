@@ -61,11 +61,10 @@
 		app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"
 		tools:listitem="@layout/item_scrobbling_manga" />
 
-	<com.google.android.material.progressindicator.CircularProgressIndicator
+	<com.google.android.material.loadingindicator.LoadingIndicator
 		android:id="@+id/progressBar"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:indeterminate="true"
 		android:visibility="gone"
 		app:layout_anchor="@id/recyclerView"
 		app:layout_anchorGravity="center"

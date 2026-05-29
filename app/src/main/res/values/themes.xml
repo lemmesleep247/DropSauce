@@ -96,8 +96,11 @@
 		<item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat.M3</item>
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+		<item name="actionBarPopupTheme">@style/ThemeOverlay.Kotatsu.ActionMode.Popup</item>
 		<item name="circularProgressIndicatorStyle">@style/Widget.Kotatsu.CircularProgressIndicator</item>
 		<item name="linearProgressIndicatorStyle">@style/Widget.Kotatsu.LinearProgressIndicator</item>
+		<item name="loadingIndicatorStyle">@style/Widget.Kotatsu.LoadingIndicator</item>
+		<item name="sliderStyle">@style/Widget.Material3Expressive.Slider.Xsmall</item>
 		<item name="bottomSheetDragHandleStyle">@style/Widget.Kotatsu.BottomSheet.DragHandle</item>
 		<item name="preferenceTheme">@style/PreferenceThemeOverlay.Kotatsu</item>
 		<!-- Fix crash in A15 -->
@@ -106,36 +109,11 @@
 		<item name="materialSearchViewStyle">@style/Widget.Material3Expressive.SearchView.AppBarWithSearch</item>
 		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>
 
-		<!-- Custom views -->
-		<item name="fastScrollerStyle">@style/Widget.Kotatsu.FastScroller</item>
-		<item name="listItemTextViewStyle">@style/Widget.Kotatsu.ListItemTextView</item>
-		<item name="dotIndicatorStyle">@style/Widget.Kotatsu.DotIndicator</item>
-		<item name="badgeViewStyle">@style/Widget.Kotatsu.BadgeView</item>
-		<item name="coverImageViewStyle">@style/Widget.Kotatsu.ImageView.Cover</item>
-	</style>
-
-	<!--== Default Theme ==-->
-	<style name="Theme.Kotatsu" parent="Base.Theme.Kotatsu" />
-
-	<!-- Base ThemeOverlay -->
-	<style name="ThemeOverlay.Kotatsu" parent="ThemeOverlay.Material3.Light">
-		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
-		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
-	</style>
-
-	<!-- Monet theme only supports S+ -->
-	<style name="ThemeOverlay.Kotatsu.Monet" parent="ThemeOverlay.Material3.DynamicColors.Light" />
-
-	<!-- Expressive Monet theme -->
-	<style name="ThemeOverlay.Kotatsu.Expressive" parent="ThemeOverlay.Material3Expressive.DynamicColors.DayNight">
+		<!-- Material 3 Expressive component styles (applied to every color scheme) -->
 		<item name="appBarLayoutStyle">@style/Widget.Material3Expressive.AppBarLayout</item>
 		<item name="collapsingToolbarLayoutStyle">@style/Widget.Material3Expressive.CollapsingToolbar</item>
 		<item name="collapsingToolbarLayoutMediumStyle">@style/Widget.Material3Expressive.CollapsingToolbar.Medium</item>
 		<item name="collapsingToolbarLayoutLargeStyle">@style/Widget.Material3Expressive.CollapsingToolbar.Large</item>
-
-		<item name="materialSearchBarStyle">@style/Widget.Kotatsu.SearchBar</item>
-		<item name="materialSearchViewStyle">@style/Widget.Material3Expressive.SearchView.AppBarWithSearch</item>
-		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>
 
 		<item name="floatingActionButtonStyle">@style/Widget.Material3Expressive.FloatingActionButton</item>
 		<item name="floatingActionButtonMediumStyle">@style/Widget.Material3Expressive.FloatingActionButton.Medium</item>
@@ -166,10 +144,32 @@
 		<item name="toolbarStyle">@style/Widget.Material3Expressive.Toolbar</item>
 		<item name="toolbarSurfaceStyle">@style/Widget.Material3Expressive.Toolbar.Surface</item>
 
-		<item name="linearProgressIndicatorStyle">@style/Widget.Material3Expressive.LinearProgressIndicator</item>
-		<item name="circularProgressIndicatorStyle">@style/Widget.Material3Expressive.CircularProgressIndicator</item>
+		<!-- Custom views -->
+		<item name="fastScrollerStyle">@style/Widget.Kotatsu.FastScroller</item>
+		<item name="listItemTextViewStyle">@style/Widget.Kotatsu.ListItemTextView</item>
+		<item name="dotIndicatorStyle">@style/Widget.Kotatsu.DotIndicator</item>
+		<item name="badgeViewStyle">@style/Widget.Kotatsu.BadgeView</item>
+		<item name="coverImageViewStyle">@style/Widget.Kotatsu.ImageView.Cover</item>
+	</style>
 
-		<item name="sliderStyle">@style/Widget.Material3Expressive.Slider.Xsmall</item>
+	<!--== Default Theme ==-->
+	<style name="Theme.Kotatsu" parent="Base.Theme.Kotatsu" />
+
+	<!-- Base ThemeOverlay -->
+	<style name="ThemeOverlay.Kotatsu" parent="ThemeOverlay.Material3.Light">
+		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
+		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+	</style>
+
+	<!-- Monet theme only supports S+ -->
+	<style name="ThemeOverlay.Kotatsu.Monet" parent="ThemeOverlay.Material3.DynamicColors.Light" />
+
+	<!-- Expressive Monet theme. The Material 3 Expressive component styles now live in
+	     Base.Theme.Kotatsu so every color scheme gets them; this overlay only adds dynamic colors. -->
+	<style name="ThemeOverlay.Kotatsu.Expressive" parent="ThemeOverlay.Material3Expressive.DynamicColors.DayNight">
+		<item name="materialSearchBarStyle">@style/Widget.Kotatsu.SearchBar</item>
+		<item name="materialSearchViewStyle">@style/Widget.Material3Expressive.SearchView.AppBarWithSearch</item>
+		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>
 
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>

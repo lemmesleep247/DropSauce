@@ -94,6 +94,12 @@
 		<item name="trackCornerRadius">@dimen/mtrl_progress_indicator_full_rounded_corner_radius</item>
 	</style>
 
+	<style name="Widget.Kotatsu.LinearProgressIndicator.Wavy" parent="Widget.Material3Expressive.LinearProgressIndicator.Wavy">
+		<item name="trackCornerRadius">@dimen/mtrl_progress_indicator_full_rounded_corner_radius</item>
+	</style>
+
+	<style name="Widget.Kotatsu.LoadingIndicator" parent="Widget.Material3.LoadingIndicator.Contained" />
+
 	<style name="Widget.Kotatsu.Chip" parent="Widget.Material3.Chip.Suggestion" />
 
 	<style name="Widget.Kotatsu.Chip.Filter" parent="Widget.Material3.Chip.Filter" />
@@ -255,6 +261,14 @@
 	<style name="ThemeOverlay.Kotatsu.ActionMode" parent="">
 		<item name="colorOnSurface">?colorPrimary</item>
 		<item name="colorControlNormal">?colorPrimary</item>
+	</style>
+
+	<!-- Popup theme for the contextual action mode (selection) overflow menu. Empty parent so it
+	     inherits the app's colors instead of the default ThemeOverlay.Material3.Light palette,
+	     matching the regular toolbar overflow menu. -->
+	<style name="ThemeOverlay.Kotatsu.ActionMode.Popup" parent="">
+		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
+		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
 	</style>
 
 	<!-- TextAppearance -->

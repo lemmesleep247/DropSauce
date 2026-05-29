@@ -45,7 +45,7 @@
 
 	</com.google.android.material.appbar.AppBarLayout>
 
-	<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+	<org.koitharu.kotatsu.core.ui.widgets.LoadingIndicatorSwipeRefreshLayout
 		android:id="@+id/swipeRefreshLayout"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
@@ -61,7 +61,7 @@
 			app:bubbleSize="normal"
 			app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
-	</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+	</org.koitharu.kotatsu.core.ui.widgets.LoadingIndicatorSwipeRefreshLayout>
 
 	<com.google.android.material.floatingactionbutton.FloatingActionButton
 		android:id="@+id/button_scroll_to_top"

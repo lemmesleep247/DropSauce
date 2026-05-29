@@ -157,17 +157,18 @@ abstract class BasePageHolder<B : ViewBinding>(
 		if (progress in 0..100) {
 			bindingInfo.progressBar.isIndeterminate = false
 			bindingInfo.progressBar.setProgressCompat(progress, true)
-			bindingInfo.textViewStatus.text = context.getString(R.string.percent_string_pattern, progress.toString())
 		} else {
 			bindingInfo.progressBar.isIndeterminate = true
-			bindingInfo.textViewStatus.setText(R.string.loading_)
 		}
 		when (state) {
 			is PageState.Converting -> {
 				bindingInfo.textViewStatus.setText(R.string.processing_)
+				bindingInfo.textViewStatus.isVisible = true
 			}
 
-			is PageState.Empty -> Unit
+			is PageState.Empty -> {
+				bindingInfo.textViewStatus.isVisible = false
+			}
 
 			is PageState.Error -> {
 				val e = state.error
@@ -182,10 +183,13 @@ abstract class BasePageHolder<B : ViewBinding>(
 
 			is PageState.Loaded -> {
 				bindingInfo.textViewStatus.setText(R.string.preparing_)
+				bindingInfo.textViewStatus.isVisible = true
 				ssiv.setImage(state.source)
 			}
 
 			is PageState.Loading -> {
+				bindingInfo.textViewStatus.isVisible = false
+				bindingInfo.progressBar.show()
 				if (state.preview != null && ssiv.getState() == null) {
 					ssiv.setImage(state.preview)
 				}

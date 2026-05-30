@@ -34,14 +34,16 @@
 
 				<ImageView
 					android:id="@+id/image_welcome_icon"
-					android:layout_width="@dimen/onboarding_icon_size"
-					android:layout_height="@dimen/onboarding_icon_size"
+					android:layout_width="96dp"
+					android:layout_height="96dp"
 					android:layout_gravity="center_horizontal"
-					android:layout_marginTop="@dimen/margin_small"
+					android:layout_marginTop="@dimen/margin_normal"
+					android:background="@drawable/bg_onboarding_icon"
 					android:contentDescription="@null"
+					android:padding="22dp"
 					android:scaleType="fitCenter"
 					android:src="@drawable/ic_welcome"
-					app:tint="?attr/colorPrimary" />
+					app:tint="?attr/colorOnPrimaryContainer" />
 
 				<TextView
 					android:id="@+id/text_welcome_title"
@@ -201,7 +203,7 @@
 
 								<com.google.android.material.button.MaterialButton
 									android:id="@+id/button_select_destination"
-									style="?materialButtonOutlinedStyle"
+									style="?materialButtonTonalStyle"
 									android:layout_width="match_parent"
 									android:layout_height="wrap_content"
 									android:layout_marginTop="@dimen/margin_normal"
@@ -214,7 +216,7 @@
 
 						<com.google.android.material.button.MaterialButton
 							android:id="@+id/button_permission_install"
-							style="?materialButtonOutlinedStyle"
+							style="?materialButtonTonalStyle"
 							android:layout_width="match_parent"
 							android:layout_height="wrap_content"
 							android:layout_marginHorizontal="@dimen/margin_normal"
@@ -224,7 +226,7 @@
 
 						<com.google.android.material.button.MaterialButton
 							android:id="@+id/button_permission_notifications"
-							style="?materialButtonOutlinedStyle"
+							style="?materialButtonTonalStyle"
 							android:layout_width="match_parent"
 							android:layout_height="wrap_content"
 							android:layout_marginHorizontal="@dimen/margin_normal"
@@ -234,7 +236,7 @@
 
 						<com.google.android.material.button.MaterialButton
 							android:id="@+id/button_permission_battery"
-							style="?materialButtonOutlinedStyle"
+							style="?materialButtonTonalStyle"
 							android:layout_width="match_parent"
 							android:layout_height="wrap_content"
 							android:layout_marginHorizontal="@dimen/margin_normal"
@@ -261,7 +263,7 @@
 
 						<com.google.android.material.button.MaterialButton
 							android:id="@+id/button_open_github"
-							style="?materialButtonOutlinedStyle"
+							style="?materialButtonTonalStyle"
 							android:layout_width="match_parent"
 							android:layout_height="wrap_content"
 							android:layout_marginHorizontal="@dimen/margin_normal"
@@ -271,7 +273,7 @@
 
 						<com.google.android.material.button.MaterialButton
 							android:id="@+id/button_open_discord"
-							style="?materialButtonOutlinedStyle"
+							style="?materialButtonTonalStyle"
 							android:layout_width="match_parent"
 							android:layout_height="wrap_content"
 							android:layout_marginHorizontal="@dimen/margin_normal"

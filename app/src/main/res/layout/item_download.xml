@@ -5,7 +5,10 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	style="?materialCardViewFilledStyle"
 	android:layout_width="match_parent"
-	android:layout_height="wrap_content">
+	android:layout_height="wrap_content"
+	app:cardBackgroundColor="?colorSurfaceContainerHigh"
+	app:cardCornerRadius="20dp"
+	app:cardElevation="0dp">
 
 	<androidx.constraintlayout.widget.ConstraintLayout
 		android:id="@+id/constraintLayout"
@@ -65,6 +68,7 @@
 
 		<com.google.android.material.progressindicator.LinearProgressIndicator
 			android:id="@+id/progressBar"
+			style="@style/Widget.Kotatsu.LinearProgressIndicator.Wavy"
 			android:layout_width="0dp"
 			android:layout_height="wrap_content"
 			android:layout_marginStart="12dp"
@@ -73,7 +77,7 @@
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toBottomOf="@id/barrier_top"
-			app:trackColor="?android:colorBackground"
+			app:trackColor="?colorSurfaceContainerLowest"
 			tools:progress="25" />
 
 		<org.koitharu.kotatsu.core.ui.widgets.NestedRecyclerView
@@ -145,20 +149,22 @@
 
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_pause"
-			style="?materialButtonOutlinedStyle"
+			style="?materialButtonTonalStyle"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@string/pause"
 			android:visibility="gone"
+			app:icon="@drawable/ic_action_pause"
 			tools:visibility="visible" />
 
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_resume"
-			style="?materialButtonOutlinedStyle"
+			style="?materialButtonTonalStyle"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@string/resume"
 			android:visibility="gone"
+			app:icon="@drawable/ic_play"
 			tools:visibility="visible" />
 
 		<com.google.android.material.button.MaterialButton

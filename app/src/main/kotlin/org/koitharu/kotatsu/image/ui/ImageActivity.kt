@@ -27,9 +27,11 @@ import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.image.CoilMemoryCacheKey
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
+import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
-import org.koitharu.kotatsu.core.ui.util.PopupMenuMediator
 import org.koitharu.kotatsu.core.util.ShareHelper
+import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.core.util.ext.consumeAll
 import org.koitharu.kotatsu.core.util.ext.end
 import org.koitharu.kotatsu.core.util.ext.enqueueWith
@@ -56,20 +58,23 @@ class ImageActivity : BaseActivity<ActivityImageBinding>(),
 
 	private var errorBinding: ItemErrorStateBinding? = null
 	private val viewModel: ImageViewModel by viewModels()
-	private lateinit var menuMediator: PopupMenuMediator
+	private lateinit var imageMenuProvider: ImageMenuProvider
+	private var manga: Manga? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityImageBinding.inflate(layoutInflater))
 		viewBinding.buttonBack.setOnClickListener(this)
-		viewBinding.buttonMenu.setOnClickListener(this)
+		viewBinding.buttonSave.setOnClickListener(this)
+		viewBinding.buttonEdit.setOnClickListener(this)
 
-		val menuProvider = ImageMenuProvider(
+		imageMenuProvider = ImageMenuProvider(
 			activity = this,
 			snackbarHost = viewBinding.root,
 			viewModel = viewModel,
 		)
-		menuMediator = PopupMenuMediator(menuProvider)
+		manga = intent.getParcelableExtraCompat<ParcelableManga>(AppRouter.KEY_MANGA)?.manga
+		viewBinding.buttonEdit.isVisible = manga != null
 		viewModel.isLoading.observe(this, ::onLoadingStateChanged)
 		viewModel.onError.observeEvent(this, SnackbarErrorObserver(viewBinding.root, null))
 		viewModel.onImageSaved.observeEvent(this, ::onImageSaved)
@@ -79,7 +84,8 @@ class ImageActivity : BaseActivity<ActivityImageBinding>(),
 	override fun onClick(v: View) {
 		when (v.id) {
 			R.id.button_back -> dispatchNavigateUp()
-			R.id.button_menu -> menuMediator.onLongClick(v)
+			R.id.button_save -> imageMenuProvider.requestSave()
+			R.id.button_edit -> manga?.let { router.openMangaOverrideConfig(it) }
 			else -> loadImage()
 		}
 	}
@@ -110,9 +116,10 @@ class ImageActivity : BaseActivity<ActivityImageBinding>(),
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
 		val baseMargin = v.resources.getDimensionPixelOffset(R.dimen.screen_padding)
-		viewBinding.buttonMenu.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+		viewBinding.layoutActions.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+			marginStart = barsInsets.start(v) + baseMargin
 			marginEnd = barsInsets.end(v) + baseMargin
-			topMargin = barsInsets.top + baseMargin
+			bottomMargin = barsInsets.bottom + baseMargin
 		}
 		viewBinding.buttonBack.updateLayoutParams<ViewGroup.MarginLayoutParams> {
 			marginStart = barsInsets.start(v) + baseMargin
@@ -141,19 +148,7 @@ class ImageActivity : BaseActivity<ActivityImageBinding>(),
 	}
 
 	private fun onLoadingStateChanged(isLoading: Boolean) {
-		val button = viewBinding.buttonMenu
-		button.isClickable = !isLoading
-		if (isLoading) {
-			button.setImageDrawable(
-				CircularProgressDrawable(this).also {
-					it.setStyle(CircularProgressDrawable.LARGE)
-					it.setColorSchemeColors(getThemeColor(appcompatR.attr.colorControlNormal))
-					it.start()
-				},
-			)
-		} else {
-			button.setImageResource(appcompatR.drawable.abc_ic_menu_overflow_material)
-		}
+		viewBinding.buttonSave.isEnabled = !isLoading
 	}
 
 	private class SsivTarget(

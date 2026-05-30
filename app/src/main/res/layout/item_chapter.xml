@@ -49,7 +49,8 @@
 		android:layout_height="wrap_content"
 		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
 		android:contentDescription="@string/bookmarks"
-		app:srcCompat="@drawable/ic_bookmark" />
+		app:srcCompat="@drawable/ic_bookmark"
+		app:tint="?colorPrimary" />
 
 	<ImageView
 		android:id="@+id/imageView_downloaded"
@@ -57,6 +58,7 @@
 		android:layout_height="wrap_content"
 		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
 		android:contentDescription="@string/downloaded"
-		app:srcCompat="@drawable/ic_storage" />
+		app:srcCompat="@drawable/ic_storage"
+		app:tint="?colorOnSurfaceVariant" />
 
 </LinearLayout>

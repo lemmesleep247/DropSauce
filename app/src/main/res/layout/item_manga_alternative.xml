@@ -5,7 +5,9 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	app:cardCornerRadius="16dp">
+	app:cardBackgroundColor="?colorSurfaceContainerHigh"
+	app:cardCornerRadius="20dp"
+	app:cardElevation="0dp">
 
 	<androidx.constraintlayout.widget.ConstraintLayout
 		android:layout_width="match_parent"
@@ -13,9 +15,14 @@
 
 		<org.koitharu.kotatsu.image.ui.CoverImageView
 			android:id="@+id/imageView_cover"
-			android:layout_width="98dp"
+			android:layout_width="86dp"
 			android:layout_height="0dp"
+			android:layout_marginStart="12dp"
+			android:layout_marginTop="12dp"
+			android:layout_marginBottom="12dp"
 			android:background="?colorSurfaceContainer"
+			android:scaleType="centerCrop"
+			app:layout_constraintBottom_toBottomOf="parent"
 			app:layout_constraintDimensionRatio="13:18"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toTopOf="parent"

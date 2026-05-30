@@ -39,7 +39,9 @@
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/card_order"
-                    style="?materialCardViewOutlinedStyle"
+                    style="?materialCardViewFilledStyle"
+                app:cardBackgroundColor="?colorSurfaceContainerHigh"
+                app:cardElevation="0dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="@dimen/margin_small"
@@ -82,7 +84,9 @@
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/card_locale"
-                    style="?materialCardViewOutlinedStyle"
+                    style="?materialCardViewFilledStyle"
+                app:cardBackgroundColor="?colorSurfaceContainerHigh"
+                app:cardElevation="0dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="@dimen/margin_small"
@@ -109,7 +113,9 @@
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/card_original_locale"
-                    style="?materialCardViewOutlinedStyle"
+                    style="?materialCardViewFilledStyle"
+                app:cardBackgroundColor="?colorSurfaceContainerHigh"
+                app:cardElevation="0dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="@dimen/margin_small"

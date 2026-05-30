@@ -10,7 +10,10 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.activityViewModels
+import android.view.animation.AccelerateDecelerateInterpolator
+import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.slider.Slider
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,6 +26,7 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior
 import org.koitharu.kotatsu.core.ui.sheet.BaseAdaptiveSheet
 import org.koitharu.kotatsu.core.util.ext.consume
 import org.koitharu.kotatsu.core.util.ext.findParentCallback
@@ -35,6 +39,7 @@ import org.koitharu.kotatsu.reader.domain.PageLoader
 import org.koitharu.kotatsu.reader.ui.ReaderViewModel
 import org.koitharu.kotatsu.reader.ui.ScreenOrientationHelper
 import javax.inject.Inject
+import com.google.android.material.R as materialR
 
 @AndroidEntryPoint
 class ReaderConfigSheet :
@@ -57,6 +62,11 @@ class ReaderConfigSheet :
 
     private lateinit var mode: ReaderMode
     private lateinit var imageServerDelegate: ImageServerDelegate
+
+    // The lock-rotation control is a checkable square button (not a CompoundButton).
+    private val lockRotationListener = MaterialButton.OnCheckedChangeListener { _, isChecked ->
+        orientationHelper.isLocked = isChecked
+    }
 
     @Inject
     lateinit var settings: AppSettings
@@ -104,12 +114,13 @@ class ReaderConfigSheet :
         binding.buttonBookmark.setOnClickListener(this)
         binding.switchDoubleReader.setOnCheckedChangeListener(this)
         binding.switchDoubleFoldable.setOnCheckedChangeListener(this)
+        binding.switchScreenLockRotation.addOnCheckedChangeListener(lockRotationListener)
         binding.sliderDoubleSensitivity.addOnChangeListener(this)
 
         viewModel.isBookmarkAdded.observe(viewLifecycleOwner) {
             binding.buttonBookmark.setText(if (it) R.string.bookmark_remove else R.string.bookmark_add)
-            binding.buttonBookmark.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                if (it) R.drawable.ic_bookmark_checked else R.drawable.ic_bookmark, 0, 0, 0,
+            binding.buttonBookmark.setIconResource(
+                if (it) R.drawable.ic_bookmark_checked else R.drawable.ic_bookmark,
             )
         }
 
@@ -120,6 +131,18 @@ class ReaderConfigSheet :
             }
             binding.buttonImageServer.isVisible = isAvailable
         }
+
+        // Open at full content height so nothing is hidden below the fold, and keep the sheet
+        // fitted to its contents so it grows from the top (the bottom button grid stays put).
+        binding.root.post { expandToContent() }
+    }
+
+    private fun expandToContent() {
+        val b = behavior ?: return
+        if (b is AdaptiveSheetBehavior.Bottom) {
+            b.isFitToContents = true
+        }
+        b.state = AdaptiveSheetBehavior.STATE_EXPANDED
     }
 
     override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -173,10 +196,6 @@ class ReaderConfigSheet :
 
     override fun onCheckedChanged(buttonView: CompoundButton, isChecked: Boolean) {
         when (buttonView.id) {
-            R.id.switch_screen_lock_rotation -> {
-                orientationHelper.isLocked = isChecked
-            }
-
             R.id.switch_double_reader -> {
                 settings.isReaderDoubleOnLandscape = isChecked
                 viewBinding?.adjustSensitivitySlider(withAnimation = true)
@@ -234,10 +253,10 @@ class ReaderConfigSheet :
     }
 
     private fun updateOrientationLockSwitch() {
-        val switch = viewBinding?.switchScreenLockRotation ?: return
-        switch.setOnCheckedChangeListener(null)
-        switch.isChecked = orientationHelper.isLocked
-        switch.setOnCheckedChangeListener(this)
+        val button = viewBinding?.switchScreenLockRotation ?: return
+        button.removeOnCheckedChangeListener(lockRotationListener)
+        button.isChecked = orientationHelper.isLocked
+        button.addOnCheckedChangeListener(lockRotationListener)
     }
 
     private fun bindImageServerTitle() {
@@ -256,7 +275,16 @@ class ReaderConfigSheet :
                 (isSubOptionsVisible != switchDoubleFoldable.isVisible)
             )
         if (needTransition) {
-            TransitionManager.beginDelayedTransition(layoutMain)
+            val transition = AutoTransition().apply {
+                duration = 250L
+                interpolator = AccelerateDecelerateInterpolator()
+            }
+            // Animate on the sheet container so its height re-fits smoothly (the bottom grid
+            // stays anchored while the section above grows/shrinks) instead of snapping.
+            val sceneRoot = dialog?.findViewById<ViewGroup>(materialR.id.coordinator)
+                ?: dialog?.findViewById<ViewGroup>(materialR.id.design_bottom_sheet)
+                ?: layoutMain
+            TransitionManager.beginDelayedTransition(sceneRoot, transition)
         }
         sliderDoubleSensitivity.isVisible = isSubOptionsVisible
         textDoubleSensitivity.isVisible = isSubOptionsVisible

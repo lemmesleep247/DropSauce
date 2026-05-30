@@ -154,9 +154,10 @@ class PagesFragment :
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val typeBask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeBask)
+		// Top inset is owned by the sheet's header bar; adding it here leaves a gap above the grid.
 		viewBinding?.recyclerView?.setPadding(
 			barsInsets.left,
-			barsInsets.top,
+			0,
 			barsInsets.right,
 			barsInsets.bottom,
 		)

@@ -139,6 +139,59 @@
 		<item name="android:paddingEnd">6dp</item>
 		<item name="android:elegantTextHeight">false</item>
 		<item name="shapeAppearance">?shapeAppearanceCornerMedium</item>
+		<!-- Accent-coloured selection instead of the default light/white fill -->
+		<item name="backgroundTint">@color/sel_toggle_button_bg</item>
+		<item name="android:textColor">@color/sel_toggle_button_fg</item>
+		<item name="iconTint">@color/sel_toggle_button_fg</item>
+	</style>
+
+	<!-- Reader read-mode segmented buttons: smaller label that wraps onto a second line
+	     (e.g. "Right-to-left") and keeps every segment the same height. -->
+	<style name="Widget.Kotatsu.ToggleButton.Vertical.ReaderMode">
+		<item name="android:maxLines">2</item>
+		<item name="android:minHeight">82dp</item>
+		<item name="android:paddingStart">2dp</item>
+		<item name="android:paddingEnd">2dp</item>
+		<item name="android:ellipsize">none</item>
+		<item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
+	</style>
+
+	<!-- Reader options sheet: round (pill) action buttons with the label beside the icon
+	     (Save page / Bookmark) -->
+	<style name="Widget.Kotatsu.ReaderOption.Round" parent="Widget.Material3.Button.TonalButton">
+		<item name="iconGravity">textStart</item>
+		<item name="iconSize">22dp</item>
+		<item name="iconPadding">8dp</item>
+		<item name="android:gravity">center</item>
+		<item name="android:textAlignment">center</item>
+		<item name="android:minHeight">60dp</item>
+		<item name="android:insetTop">0dp</item>
+		<item name="android:insetBottom">0dp</item>
+		<item name="android:paddingTop">8dp</item>
+		<item name="android:paddingBottom">8dp</item>
+		<item name="android:singleLine">true</item>
+		<item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
+		<item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Kotatsu.Circle</item>
+	</style>
+
+	<!-- Reader options sheet: square (rounded-corner) action buttons in a 2x2 grid -->
+	<style name="Widget.Kotatsu.ReaderOption.Square" parent="Widget.Material3.Button.TonalButton">
+		<item name="iconGravity">top</item>
+		<item name="iconSize">26dp</item>
+		<item name="iconPadding">4dp</item>
+		<item name="android:gravity">center</item>
+		<item name="android:textAlignment">center</item>
+		<item name="android:minHeight">88dp</item>
+		<item name="android:insetTop">0dp</item>
+		<item name="android:insetBottom">0dp</item>
+		<item name="android:paddingTop">14dp</item>
+		<item name="android:paddingBottom">14dp</item>
+		<item name="android:paddingStart">8dp</item>
+		<item name="android:paddingEnd">8dp</item>
+		<item name="android:singleLine">false</item>
+		<item name="android:maxLines">2</item>
+		<item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
+		<item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Kotatsu.ReaderSquare</item>
 	</style>
 
 	<style name="Widget.Kotatsu.Slider.Wide" parent="Widget.Material3Expressive.Slider.Xsmall">
@@ -476,6 +529,27 @@
 	<style name="ShapeAppearanceOverlay.Kotatsu.Circle" parent="">
 		<item name="cornerFamily">rounded</item>
 		<item name="cornerSize">50%</item>
+	</style>
+
+	<!-- Material 3 Expressive surfaces used by the Manga details screen -->
+	<style name="ShapeAppearanceOverlay.Kotatsu.Card.Expressive" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSize">24dp</item>
+	</style>
+
+	<style name="ShapeAppearanceOverlay.Kotatsu.Chapter.Grid" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSize">18dp</item>
+	</style>
+
+	<style name="ShapeAppearanceOverlay.Kotatsu.Page.Thumb" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSize">16dp</item>
+	</style>
+
+	<style name="ShapeAppearanceOverlay.Kotatsu.ReaderSquare" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSize">28dp</item>
 	</style>
 
 	<style name="ShapeAppearanceOverlay.Material3.Corner.None" parent="">

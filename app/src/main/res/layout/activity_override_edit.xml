@@ -10,7 +10,8 @@
 	<com.google.android.material.appbar.MaterialToolbar
 		android:id="@+id/toolbar"
 		android:layout_width="match_parent"
-		android:layout_height="?attr/actionBarSize">
+		android:layout_height="?attr/actionBarSize"
+		app:title="@string/edit">
 
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_done"
@@ -18,106 +19,117 @@
 			android:layout_height="wrap_content"
 			android:layout_gravity="end"
 			android:layout_marginHorizontal="@dimen/toolbar_button_margin"
-			android:text="@string/save" />
+			android:text="@string/save"
+			app:icon="@drawable/ic_check" />
 
 	</com.google.android.material.appbar.MaterialToolbar>
 
 	<ScrollView
 		android:id="@+id/scrollView"
 		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
+		android:layout_height="match_parent"
 		android:clipToPadding="false"
 		android:overScrollMode="ifContentScrolls">
 
-		<androidx.constraintlayout.widget.ConstraintLayout
+		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:orientation="vertical"
+			android:paddingHorizontal="@dimen/screen_padding"
+			android:paddingTop="@dimen/margin_normal"
 			android:paddingBottom="@dimen/screen_padding">
 
-			<org.koitharu.kotatsu.image.ui.CoverImageView
-				android:id="@+id/imageView_cover"
-				android:layout_width="0dp"
-				android:layout_height="0dp"
-				android:layout_marginStart="16dp"
-				android:layout_marginTop="16dp"
-				android:background="?colorSecondaryContainer"
-				android:clipToOutline="true"
-				android:foreground="?selectableItemBackground"
-				android:scaleType="centerCrop"
-				app:layout_constraintDimensionRatio="H,13:18"
-				app:layout_constraintEnd_toEndOf="parent"
-				app:layout_constraintHorizontal_bias="0"
-				app:layout_constraintStart_toStartOf="parent"
-				app:layout_constraintTop_toTopOf="parent"
-				app:layout_constraintWidth_percent="0.3"
-				app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover"
-				tools:background="@tools:sample/backgrounds/scenic[5]"
-				tools:ignore="ContentDescription,UnusedAttribute" />
+			<!-- Cover preview hero -->
+			<com.google.android.material.card.MaterialCardView
+				style="?materialCardViewFilledStyle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				app:cardBackgroundColor="?colorSurfaceContainerHigh"
+				app:cardElevation="0dp"
+				app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Card.Expressive">
+
+				<org.koitharu.kotatsu.image.ui.CoverImageView
+					android:id="@+id/imageView_cover"
+					android:layout_width="150dp"
+					android:layout_height="208dp"
+					android:layout_gravity="center_horizontal"
+					android:layout_marginVertical="@dimen/margin_normal"
+					android:background="?colorSecondaryContainer"
+					android:clipToOutline="true"
+					android:scaleType="centerCrop"
+					app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover"
+					tools:background="@tools:sample/backgrounds/scenic[5]"
+					tools:ignore="ContentDescription" />
+
+			</com.google.android.material.card.MaterialCardView>
 
 			<TextView
 				android:id="@+id/textView_cover_title"
-				android:layout_width="0dp"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginHorizontal="@dimen/screen_padding"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:layout_marginBottom="@dimen/margin_small"
 				android:paddingHorizontal="@dimen/margin_small"
 				android:text="@string/change_cover"
-				android:textAppearance="?textAppearanceTitleSmall"
-				app:layout_constraintEnd_toEndOf="parent"
-				app:layout_constraintStart_toEndOf="@id/imageView_cover"
-				app:layout_constraintTop_toTopOf="@id/imageView_cover" />
+				android:textAppearance="?textAppearanceTitleSmall" />
 
-			<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
-				android:id="@+id/button_pick_file"
-				android:layout_width="0dp"
+			<!-- Cover actions -->
+			<com.google.android.material.card.MaterialCardView
+				style="?materialCardViewFilledStyle"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginTop="4dp"
-				android:text="@string/pick_custom_file"
-				app:drawableStartCompat="@drawable/ic_folder_file"
-				app:layout_constraintEnd_toEndOf="@id/textView_cover_title"
-				app:layout_constraintStart_toStartOf="@id/textView_cover_title"
-				app:layout_constraintTop_toBottomOf="@id/textView_cover_title" />
+				app:cardBackgroundColor="?colorSurfaceContainerHigh"
+				app:cardElevation="0dp"
+				app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Card.Expressive">
 
-			<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
-				android:id="@+id/button_pick_page"
-				android:layout_width="0dp"
-				android:layout_height="wrap_content"
-				android:text="@string/pick_manga_page"
-				app:drawableStartCompat="@drawable/ic_grid"
-				app:layout_constraintEnd_toEndOf="@id/textView_cover_title"
-				app:layout_constraintStart_toStartOf="@id/textView_cover_title"
-				app:layout_constraintTop_toBottomOf="@id/button_pick_file" />
+				<LinearLayout
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:orientation="vertical"
+					android:paddingVertical="4dp">
 
-			<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
-				android:id="@+id/button_reset_cover"
-				android:layout_width="0dp"
-				android:layout_height="wrap_content"
-				android:text="@string/use_default_cover"
-				app:drawableStartCompat="@drawable/ic_revert"
-				app:layout_constraintEnd_toEndOf="@id/textView_cover_title"
-				app:layout_constraintStart_toStartOf="@id/textView_cover_title"
-				app:layout_constraintTop_toBottomOf="@id/button_pick_page" />
+					<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
+						android:id="@+id/button_pick_file"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:text="@string/pick_custom_file"
+						app:drawableStartCompat="@drawable/ic_folder_file" />
 
-			<androidx.constraintlayout.widget.Barrier
-				android:id="@+id/barrier_cover"
-				android:layout_width="wrap_content"
+					<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
+						android:id="@+id/button_pick_page"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:text="@string/pick_manga_page"
+						app:drawableStartCompat="@drawable/ic_grid" />
+
+					<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
+						android:id="@+id/button_reset_cover"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:text="@string/use_default_cover"
+						app:drawableStartCompat="@drawable/ic_revert" />
+
+				</LinearLayout>
+
+			</com.google.android.material.card.MaterialCardView>
+
+			<TextView
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				app:barrierDirection="bottom"
-				app:constraint_referenced_ids="imageView_cover,button_reset_cover" />
+				android:layout_marginTop="@dimen/margin_normal"
+				android:layout_marginBottom="@dimen/margin_small"
+				android:paddingHorizontal="@dimen/margin_small"
+				android:text="@string/name"
+				android:textAppearance="?textAppearanceTitleSmall" />
 
 			<com.google.android.material.textfield.TextInputLayout
 				android:id="@+id/layout_name"
 				style="?textInputOutlinedStyle"
-				android:layout_width="0dp"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginHorizontal="@dimen/screen_padding"
-				android:layout_marginTop="@dimen/margin_normal"
 				app:endIconContentDescription="@string/reset"
 				app:endIconDrawable="@drawable/ic_revert"
-				app:endIconMode="custom"
-				app:layout_constraintEnd_toEndOf="parent"
-				app:layout_constraintStart_toStartOf="parent"
-				app:layout_constraintTop_toBottomOf="@id/barrier_cover">
+				app:endIconMode="custom">
 
 				<com.google.android.material.textfield.TextInputEditText
 					android:id="@+id/edit_name"
@@ -131,33 +143,46 @@
 
 			</com.google.android.material.textfield.TextInputLayout>
 
-			<TextView
-				android:id="@+id/textView_tip"
+			<!-- Tip -->
+			<LinearLayout
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginHorizontal="@dimen/margin_normal"
 				android:layout_marginTop="@dimen/margin_normal"
-				android:text="@string/manga_override_hint"
-				android:textAppearance="?attr/textAppearanceBodySmall"
-				app:layout_constraintEnd_toEndOf="parent"
-				app:layout_constraintStart_toStartOf="parent"
-				app:layout_constraintTop_toBottomOf="@id/layout_name" />
+				android:background="@drawable/bg_settings_tip"
+				android:gravity="center_vertical"
+				android:orientation="horizontal"
+				android:padding="@dimen/margin_normal">
+
+				<ImageView
+					android:layout_width="22dp"
+					android:layout_height="22dp"
+					android:layout_marginEnd="@dimen/margin_normal"
+					android:contentDescription="@null"
+					android:src="@drawable/ic_info_outline"
+					app:tint="?colorOnSurfaceVariant" />
+
+				<TextView
+					android:id="@+id/textView_tip"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:text="@string/manga_override_hint"
+					android:textAppearance="?attr/textAppearanceBodySmall"
+					android:textColor="?colorOnSurfaceVariant" />
+
+			</LinearLayout>
 
 			<TextView
 				android:id="@+id/textView_error"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_marginHorizontal="@dimen/screen_padding"
-				android:layout_marginTop="@dimen/margin_small"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:paddingHorizontal="@dimen/margin_small"
 				android:textColor="?colorError"
 				android:visibility="gone"
-				app:layout_constraintEnd_toEndOf="parent"
-				app:layout_constraintStart_toStartOf="parent"
-				app:layout_constraintTop_toBottomOf="@id/textView_tip"
 				tools:text="@tools:sample/lorem[4]"
 				tools:visibility="visible" />
 
-		</androidx.constraintlayout.widget.ConstraintLayout>
+		</LinearLayout>
 
 	</ScrollView>
 

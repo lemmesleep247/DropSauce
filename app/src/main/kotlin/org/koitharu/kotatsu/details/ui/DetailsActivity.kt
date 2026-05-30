@@ -295,6 +295,7 @@ class DetailsActivity :
 					source = manga.source,
 					preview = CoilMemoryCacheKey.from(viewBinding.imageViewCover),
 					anchor = v,
+					manga = manga,
 				)
 			}
 			R.id.button_description_more -> {

@@ -198,12 +198,23 @@ class AppRouter private constructor(
         )
     }
 
-    fun openImage(url: String, source: MangaSource?, anchor: View? = null, preview: CoilMemoryCacheKey? = null) {
+    fun openImage(
+        url: String,
+        source: MangaSource?,
+        anchor: View? = null,
+        preview: CoilMemoryCacheKey? = null,
+        manga: Manga? = null,
+    ) {
         startActivity(
             Intent(contextOrNull(), ImageActivity::class.java)
                 .setData(url.toUri())
                 .putExtra(KEY_SOURCE, source?.name)
-                .putExtra(KEY_PREVIEW, preview),
+                .putExtra(KEY_PREVIEW, preview)
+                .apply {
+                    if (manga != null) {
+                        putExtra(KEY_MANGA, ParcelableManga(manga, withDescription = false))
+                    }
+                },
             anchor?.let { scaleUpActivityOptionsOf(it) },
         )
     }
@@ -322,12 +333,6 @@ class AppRouter private constructor(
 
     fun openSourceAuth(source: MangaSource) {
         startActivity(sourceAuthIntent(contextOrNull() ?: return, source))
-    }
-
-    fun openManageSources() {
-        startActivity(
-            manageSourcesIntent(contextOrNull() ?: return),
-        )
     }
 
     fun openStatistic() = startActivity(StatsActivity::class.java)
@@ -775,10 +780,6 @@ class AppRouter private constructor(
             Intent(context, SettingsActivity::class.java)
                 .setAction(ACTION_SOURCES)
 
-        fun manageSourcesIntent(context: Context) =
-            Intent(context, SettingsActivity::class.java)
-                .setAction(ACTION_MANAGE_SOURCES)
-
         fun downloadsSettingsIntent(context: Context) =
             Intent(context, SettingsActivity::class.java)
                 .setAction(ACTION_MANAGE_DOWNLOADS)
@@ -843,7 +844,6 @@ class AppRouter private constructor(
         const val KEY_SUCCESS_COOKIE_NAME = "success_cookie_name"
 
         const val ACTION_MANAGE_DOWNLOADS = "${BuildConfig.APPLICATION_ID}.action.MANAGE_DOWNLOADS"
-        const val ACTION_MANAGE_SOURCES = "${BuildConfig.APPLICATION_ID}.action.MANAGE_SOURCES_LIST"
         const val ACTION_MANGA_EXPLORE = "${BuildConfig.APPLICATION_ID}.action.EXPLORE_MANGA"
         const val ACTION_PROXY = "${BuildConfig.APPLICATION_ID}.action.MANAGE_PROXY"
         const val ACTION_READER = "${BuildConfig.APPLICATION_ID}.action.MANAGE_READER_SETTINGS"

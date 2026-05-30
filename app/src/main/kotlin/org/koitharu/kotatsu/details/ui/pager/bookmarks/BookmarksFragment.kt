@@ -118,9 +118,10 @@ class BookmarksFragment : BaseFragment<FragmentMangaBookmarksBinding>(),
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val barsInsets = insets.systemBarsInsets
+		// Top inset is owned by the sheet's header bar; adding it here leaves a gap above the grid.
 		viewBinding?.recyclerView?.setPadding(
 			barsInsets.left,
-			barsInsets.top,
+			0,
 			barsInsets.right,
 			barsInsets.bottom,
 		)

@@ -12,4 +12,4 @@
 	android:orientation="vertical"
 	android:scrollbars="vertical"
 	app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-	tools:listitem="@layout/item_source_config" />
+	tools:listitem="@layout/item_nav_config" />

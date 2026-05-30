@@ -40,7 +40,6 @@ import org.koitharu.kotatsu.settings.search.SettingsSearchFragment
 import org.koitharu.kotatsu.settings.search.SettingsSearchViewModel
 import org.koitharu.kotatsu.settings.sources.ExtensionsSettingsFragment
 import org.koitharu.kotatsu.settings.sources.SourceSettingsFragment
-import org.koitharu.kotatsu.settings.sources.manage.SourcesManageFragment
 import org.koitharu.kotatsu.settings.tracker.TrackerSettingsFragment
 
 @AndroidEntryPoint
@@ -171,7 +170,6 @@ class SettingsActivity :
 				MangaSource(intent.getStringExtra(AppRouter.KEY_SOURCE)),
 			)
 
-			AppRouter.ACTION_MANAGE_SOURCES -> SourcesManageFragment()
 			Intent.ACTION_VIEW -> {
 				when (intent.data?.host) {
 					HOST_ABOUT -> AboutSettingsFragment()

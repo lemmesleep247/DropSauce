@@ -4,9 +4,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Switch
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +52,7 @@ import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
 import org.koitharu.kotatsu.settings.compose.NavigationSettingsItem
 import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsItem
 import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
@@ -208,26 +215,25 @@ private fun ServicesScreen(
 					)
 				}
 				item { pos ->
-					SwitchSettingsItem(
+					// Combined row: tapping the row opens the statistics page, the trailing
+					// switch (split off by a divider) toggles collection on/off.
+					SettingsItem(
 						title = stringResource(R.string.reading_stats),
 						subtitle = if (statsEnabled) enabledLabel else disabledLabel,
-						checked = statsEnabled,
-						onCheckedChange = { statsEnabled = it },
 						icon = R.drawable.ic_timelapse,
-						
 						shape = pos.shape,
+						onClick = onOpenStatistics,
+						trailing = {
+							Row(verticalAlignment = Alignment.CenterVertically) {
+								VerticalDivider(modifier = Modifier.height(32.dp))
+								Spacer(Modifier.width(14.dp))
+								Switch(
+									checked = statsEnabled,
+									onCheckedChange = { statsEnabled = it },
+								)
+							}
+						},
 					)
-				}
-				if (statsEnabled) {
-					item { pos ->
-						NavigationSettingsItem(
-							title = stringResource(R.string.reading_stats),
-							icon = R.drawable.ic_timelapse,
-							
-							shape = pos.shape,
-							onClick = onOpenStatistics,
-						)
-					}
 				}
 				item { pos ->
 					SwitchSettingsItem(

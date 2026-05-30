@@ -42,15 +42,20 @@ class ImageMenuProvider(
 
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
 		R.id.action_save -> {
-			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-				permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-			} else {
-				saveImage()
-			}
+			requestSave()
 			true
 		}
 
 		else -> false
+	}
+
+	/** Trigger the save flow directly (e.g. from a button rather than a menu item). */
+	fun requestSave() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+			permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+		} else {
+			saveImage()
+		}
 	}
 
 	private fun saveImage() {

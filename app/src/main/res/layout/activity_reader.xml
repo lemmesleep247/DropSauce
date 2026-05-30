@@ -50,7 +50,7 @@
 		android:layout_height="wrap_content"
 		android:layout_gravity="bottom"
 		android:layout_margin="@dimen/screen_padding"
-		android:background="@drawable/bg_card"
+		android:background="@drawable/bg_reader_panel"
 		android:elevation="4dp"
 		android:visibility="gone"
 		app:layout_dodgeInsetEdges="bottom" />

@@ -1,11 +1,15 @@
 package org.koitharu.kotatsu.download.ui.list
 
 import android.view.View
+import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
 import androidx.work.WorkInfo
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import kotlinx.coroutines.CoroutineStart
@@ -33,6 +37,9 @@ fun downloadItemAD(
 
 	val percentPattern = context.resources.getString(R.string.percent_string_pattern)
 	var chaptersJob: Job? = null
+	// Tracks the last bound expanded state for THIS view holder so we only animate a real
+	// user toggle, not the initial bind or a recycle.
+	var lastExpanded: Boolean? = null
 
 	val clickListener = object : View.OnClickListener, View.OnLongClickListener {
 		override fun onClick(v: View) {
@@ -77,6 +84,10 @@ fun downloadItemAD(
 		(rv.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(targetPos, rv.height / 3)
 	}
 
+	onViewRecycled {
+		lastExpanded = null
+	}
+
 	bind { payloads ->
 		binding.textViewTitle.text = item.manga?.title ?: getString(R.string.unknown)
 		binding.imageViewCover.setImageAsync(item.manga?.coverUrl, item.manga)
@@ -96,6 +107,19 @@ fun downloadItemAD(
 		}
 		binding.buttonExpand.isChecked = item.isExpanded
 		binding.buttonExpand.setContentDescriptionAndTooltip(if (item.isExpanded) R.string.collapse else R.string.expand)
+		if (lastExpanded != null && lastExpanded != item.isExpanded) {
+			// Animate the chapter list growing/shrinking and the items below sliding.
+			(itemView.parent as? ViewGroup)?.let { parent ->
+				TransitionManager.beginDelayedTransition(
+					parent,
+					AutoTransition().apply {
+						duration = 250L
+						interpolator = AccelerateDecelerateInterpolator()
+					},
+				)
+			}
+		}
+		lastExpanded = item.isExpanded
 		binding.recyclerViewChapters.isVisible = item.isExpanded
 		when (item.workState) {
 			WorkInfo.State.ENQUEUED,

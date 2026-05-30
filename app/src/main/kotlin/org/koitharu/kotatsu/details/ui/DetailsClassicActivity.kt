@@ -314,6 +314,7 @@ class DetailsClassicActivity :
 					source = manga.source,
 					anchor = v,
 					preview = CoilMemoryCacheKey.from(viewBinding.imageViewCover),
+					manga = manga,
 				)
 			}
 

@@ -7,26 +7,19 @@ import androidx.core.view.MenuProvider
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 
+/**
+ * Main search-bar menu. The app-update indicator that used to live here was moved to the
+ * Settings icon (red dot) and an in-settings banner, so this menu is currently empty but is
+ * kept as the attachment point for any future main-screen actions.
+ */
 class MainMenuProvider(
-	private val router: AppRouter,
-	private val viewModel: MainViewModel,
+	@Suppress("unused") private val router: AppRouter,
+	@Suppress("unused") private val viewModel: MainViewModel,
 ) : MenuProvider {
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 		menuInflater.inflate(R.menu.opt_main, menu)
 	}
 
-	override fun onPrepareMenu(menu: Menu) {
-		val hasAppUpdate = viewModel.appUpdate.value != null
-		menu.findItem(R.id.action_app_update)?.isVisible = hasAppUpdate
-	}
-
-	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
-		R.id.action_app_update -> {
-			router.openAppUpdate()
-			true
-		}
-
-		else -> false
-	}
+	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = false
 }

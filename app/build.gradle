@@ -181,6 +181,7 @@ dependencies {
     implementation libs.androidx.compose.material3
     implementation libs.androidx.compose.material.icons.core
     implementation libs.androidx.compose.activity
+    implementation "androidx.graphics:graphics-shapes:1.0.1"
     debugImplementation libs.androidx.compose.ui.tooling
 
 	implementation libs.androidx.room.runtime

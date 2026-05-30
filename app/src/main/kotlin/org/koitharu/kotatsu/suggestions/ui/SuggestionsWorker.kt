@@ -247,8 +247,13 @@ class SuggestionsWorker @AssistedInject constructor(
 	}
 
 	private suspend fun getSources(): List<MangaSource> {
-		// Only extension sources are available
-		return sourcesRepository.getEnabledSources().shuffled()
+		// Only extension sources are available. Honour the "include disabled sources" setting.
+		val sources = if (appSettings.isSuggestionsIncludeDisabledSources) {
+			sourcesRepository.getAllSources()
+		} else {
+			sourcesRepository.getEnabledSources()
+		}
+		return sources.shuffled()
 	}
 
 	private suspend fun getList(

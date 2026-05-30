@@ -52,9 +52,8 @@ fun sourceCatalogItemExtensionAD(
 		binding.imageViewAdd.alpha = if (isInProgress) 0.45f else 1f
 		binding.progressIcon.isVisible = isInProgress
 		binding.imageViewSettings.isVisible = item.action != SourceCatalogItem.Extension.Action.INSTALL && item.sourceName != null
-		binding.viewAddDivider.isVisible = true
 		binding.root.updatePaddingRelative(end = compactEndPadding)
-		binding.imageViewAdd.setImageResource(item.action.iconRes)
+		binding.imageViewAdd.setIconResource(item.action.iconRes)
 		val actionDescription = if (isInProgress) {
 			context.getString(R.string.in_progress)
 		} else {

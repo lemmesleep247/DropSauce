@@ -540,4 +540,10 @@
 		<item name="drawableSize">@dimen/m3_chip_icon_size</item>
 	</style>
 
+	<!-- Applied to a MaterialToolbar to give its action icons a centered, bounded circular
+	     ripple instead of the default unbounded borderless one. -->
+	<style name="ThemeOverlay.Kotatsu.Toolbar.CenteredItems" parent="">
+		<item name="actionBarItemBackground">@drawable/bg_toolbar_icon_ripple</item>
+	</style>
+
 </resources>

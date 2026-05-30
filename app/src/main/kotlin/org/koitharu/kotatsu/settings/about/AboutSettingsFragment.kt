@@ -6,11 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StringRes
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,11 +20,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import org.koitharu.kotatsu.main.ui.nav.rememberAnyDrawablePainter
 import androidx.compose.runtime.Composable
@@ -34,6 +45,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.RoundedPolygon
+import androidx.graphics.shapes.star
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.google.android.material.snackbar.Snackbar
@@ -201,47 +215,161 @@ private fun AboutScreen(
 @Composable
 private fun AboutHero(appVersion: String) {
 	val cs = MaterialTheme.colorScheme
+	val decorColor = cs.onPrimaryContainer.copy(alpha = 0.16f)
+	val decorColorStrong = cs.onPrimaryContainer.copy(alpha = 0.22f)
 	Surface(
 		modifier = Modifier.fillMaxWidth(),
-		shape = RoundedCornerShape(24.dp),
+		shape = RoundedCornerShape(28.dp),
 		color = cs.primaryContainer,
 	) {
+		Box(modifier = Modifier.fillMaxWidth()) {
+			// Ghost-ish M3 Expressive shapes (4-sided cookie + pill) scattered behind the content,
+			// clipped by the Surface's rounded shape. The centered app icon sits around
+			// (width/2, ~90dp); shapes are kept to the edges/corners so they never touch it.
+			Canvas(modifier = Modifier.matchParentSize()) {
+				val unit = size.minDimension
+				// 4-sided cookie, top-right corner.
+				drawCookie(
+					centerX = size.width * 0.93f,
+					centerY = size.height * 0.12f,
+					radius = unit * 0.22f,
+					color = decorColorStrong,
+				)
+				// Pill, upright, left edge.
+				drawPill(
+					centerX = size.width * 0.05f,
+					centerY = size.height * 0.46f,
+					width = unit * 0.15f,
+					height = unit * 0.44f,
+					rotationDeg = -16f,
+					color = decorColor,
+				)
+				// Pill, diagonal, bottom-right.
+				drawPill(
+					centerX = size.width * 0.87f,
+					centerY = size.height * 0.84f,
+					width = unit * 0.42f,
+					height = unit * 0.15f,
+					rotationDeg = -27f,
+					color = decorColor,
+				)
+				// Small 4-sided cookie, bottom-left.
+				drawCookie(
+					centerX = size.width * 0.13f,
+					centerY = size.height * 0.86f,
+					radius = unit * 0.14f,
+					color = decorColorStrong,
+				)
+			}
 		Column(
 			modifier = Modifier
 				.fillMaxWidth()
-				.padding(vertical = 32.dp, horizontal = 24.dp),
+				.padding(top = 36.dp, bottom = 28.dp, start = 24.dp, end = 24.dp),
 			horizontalAlignment = Alignment.CenterHorizontally,
-			verticalArrangement = Arrangement.spacedBy(12.dp),
+			verticalArrangement = Arrangement.spacedBy(16.dp),
 		) {
+			// Logo: rounded-squircle tile on a soft tonal plate, so the adaptive icon reads
+			// as a proper app mark rather than a tiny circle.
 			Box(
 				modifier = Modifier
-					.size(96.dp)
-					.background(cs.onPrimaryContainer.copy(alpha = 0.12f), CircleShape),
+					.size(108.dp)
+					.clip(RoundedCornerShape(34.dp))
+					.background(cs.onPrimaryContainer.copy(alpha = 0.10f)),
 				contentAlignment = Alignment.Center,
 			) {
 				Image(
 					painter = rememberAnyDrawablePainter(org.koitharu.kotatsu.R.mipmap.ic_launcher),
 					contentDescription = null,
-					modifier = Modifier.size(72.dp),
+					modifier = Modifier
+						.size(88.dp)
+						.clip(RoundedCornerShape(26.dp)),
 				)
 			}
 			Text(
 				text = stringResource(R.string.app_name),
-				style = MaterialTheme.typography.headlineMedium,
+				style = MaterialTheme.typography.headlineLarge,
 				color = cs.onPrimaryContainer,
-				fontWeight = FontWeight.SemiBold,
+				fontWeight = FontWeight.Bold,
 			)
 			Surface(
 				shape = RoundedCornerShape(50),
-				color = cs.onPrimaryContainer.copy(alpha = 0.18f),
+				color = cs.onPrimaryContainer.copy(alpha = 0.16f),
 			) {
-				Text(
-					text = "v$appVersion",
-					style = MaterialTheme.typography.labelMedium,
-					color = cs.onPrimaryContainer,
-					modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-				)
+				Row(
+					modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
+					horizontalArrangement = Arrangement.spacedBy(6.dp),
+					verticalAlignment = Alignment.CenterVertically,
+				) {
+					Icon(
+						painter = painterResource(R.drawable.ic_info_outline),
+						contentDescription = null,
+						tint = cs.onPrimaryContainer,
+						modifier = Modifier.size(15.dp),
+					)
+					Text(
+						text = "v$appVersion",
+						style = MaterialTheme.typography.labelLarge,
+						color = cs.onPrimaryContainer,
+						fontWeight = FontWeight.Medium,
+					)
+				}
 			}
 		}
+		}
+	}
+}
+
+/**
+ * Draws a standard M3-Expressive 4-sided "cookie" shape (a `RoundedPolygon` star), built with
+ * androidx.graphics.shapes — the same primitive the Material 3 shape set uses.
+ */
+private fun DrawScope.drawCookie(
+	centerX: Float,
+	centerY: Float,
+	radius: Float,
+	color: Color,
+) {
+	val polygon = RoundedPolygon.star(
+		numVerticesPerRadius = 4,
+		radius = radius,
+		innerRadius = radius * 0.82f,
+		rounding = CornerRounding(radius * 0.5f),
+		innerRounding = CornerRounding(radius * 0.5f),
+		centerX = centerX,
+		centerY = centerY,
+	)
+	drawPath(polygon.toComposePath(), color)
+}
+
+/** Converts an androidx.graphics.shapes [RoundedPolygon] into a Compose [Path]. */
+private fun RoundedPolygon.toComposePath(): Path {
+	val path = Path()
+	val cubicList = cubics
+	if (cubicList.isEmpty()) return path
+	val first = cubicList.first()
+	path.moveTo(first.anchor0X, first.anchor0Y)
+	for (c in cubicList) {
+		path.cubicTo(c.control0X, c.control0Y, c.control1X, c.control1Y, c.anchor1X, c.anchor1Y)
+	}
+	path.close()
+	return path
+}
+
+/** Draws a single M3-Expressive "pill" (stadium) shape, optionally rotated. */
+private fun DrawScope.drawPill(
+	centerX: Float,
+	centerY: Float,
+	width: Float,
+	height: Float,
+	rotationDeg: Float,
+	color: Color,
+) {
+	rotate(degrees = rotationDeg, pivot = Offset(centerX, centerY)) {
+		drawRoundRect(
+			color = color,
+			topLeft = Offset(centerX - width / 2f, centerY - height / 2f),
+			size = Size(width, height),
+			cornerRadius = CornerRadius(height / 2f, height / 2f),
+		)
 	}
 }

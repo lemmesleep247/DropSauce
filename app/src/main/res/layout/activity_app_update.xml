@@ -7,18 +7,37 @@
 	android:layout_height="match_parent"
 	android:orientation="vertical">
 
+	<!-- M3 Expressive hero: app-update mark on a tonal tile + headline. -->
+	<com.google.android.material.card.MaterialCardView
+		android:layout_width="88dp"
+		android:layout_height="88dp"
+		android:layout_gravity="center_horizontal"
+		android:layout_marginTop="32dp"
+		app:cardBackgroundColor="?attr/colorSecondaryContainer"
+		app:cardCornerRadius="28dp"
+		app:cardElevation="0dp">
+
+		<ImageView
+			android:layout_width="42dp"
+			android:layout_height="42dp"
+			android:layout_gravity="center"
+			android:contentDescription="@string/app_update_available"
+			android:importantForAccessibility="no"
+			app:srcCompat="@drawable/ic_app_update"
+			app:tint="?attr/colorOnSecondaryContainer" />
+
+	</com.google.android.material.card.MaterialCardView>
+
 	<TextView
 		android:id="@+id/textView_title"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_marginHorizontal="@dimen/screen_padding"
-		android:layout_marginTop="24dp"
-		android:drawablePadding="@dimen/screen_padding"
+		android:layout_marginTop="16dp"
 		android:gravity="center_horizontal"
 		android:text="@string/app_update_available"
-		android:textAppearance="?textAppearanceHeadline5"
-		app:drawableTint="?colorPrimary"
-		app:drawableTopCompat="@drawable/ic_app_update" />
+		android:textAppearance="?attr/textAppearanceHeadlineSmall"
+		android:textColor="?attr/colorOnSurface" />
 
 	<com.google.android.material.progressindicator.LinearProgressIndicator
 		android:id="@+id/progressBar"
@@ -27,6 +46,7 @@
 		android:layout_marginHorizontal="@dimen/screen_padding"
 		android:layout_marginTop="@dimen/screen_padding"
 		android:max="100"
+		app:trackCornerRadius="4dp"
 		android:visibility="gone"
 		tools:visibility="visible" />
 
@@ -46,16 +66,27 @@
 		android:layout_width="match_parent"
 		android:layout_height="0dp"
 		android:layout_marginTop="@dimen/screen_padding"
-		android:layout_weight="1">
+		android:layout_weight="1"
+		android:clipToPadding="false">
 
-		<TextView
-			android:id="@+id/textView_content"
+		<com.google.android.material.card.MaterialCardView
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:paddingHorizontal="@dimen/screen_padding"
-			android:paddingBottom="@dimen/screen_padding"
-			android:textAppearance="?textAppearanceBodyMedium"
-			tools:text="@tools:sample/lorem/random" />
+			android:layout_marginHorizontal="@dimen/screen_padding"
+			android:layout_marginBottom="@dimen/screen_padding"
+			app:cardBackgroundColor="?attr/colorSurfaceContainer"
+			app:cardCornerRadius="24dp"
+			app:cardElevation="0dp">
+
+			<TextView
+				android:id="@+id/textView_content"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:padding="20dp"
+				android:textAppearance="?textAppearanceBodyMedium"
+				tools:text="@tools:sample/lorem/random" />
+
+		</com.google.android.material.card.MaterialCardView>
 
 	</ScrollView>
 
@@ -72,6 +103,7 @@
 
 			<com.google.android.material.button.MaterialButton
 				android:id="@+id/button_cancel"
+				style="?materialButtonOutlinedStyle"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_gravity="center_vertical|start"
@@ -79,11 +111,11 @@
 
 			<com.google.android.material.button.MaterialButton
 				android:id="@+id/button_update"
-				style="?materialButtonTonalStyle"
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:layout_gravity="center_vertical|end"
 				android:enabled="false"
+				app:icon="@drawable/ic_download"
 				android:text="@string/update" />
 
 		</FrameLayout>

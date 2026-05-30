@@ -189,7 +189,7 @@ private fun TrackerScreen(
 	var enabled by rememberBooleanPref(AppSettings.KEY_TRACKER_ENABLED, true)
 	var wifiOnly by rememberBooleanPref(AppSettings.KEY_TRACKER_WIFI_ONLY, false)
 	var frequency by rememberStringPref(AppSettings.KEY_TRACKER_FREQUENCY, "1")
-	var trackSources by rememberStringSetPref(AppSettings.KEY_TRACK_SOURCES, emptySet())
+	var trackSources by rememberStringSetPref(AppSettings.KEY_TRACK_SOURCES, setOf(AppSettings.TRACK_FAVOURITES))
 	var trackerNoNsfw by rememberBooleanPref(AppSettings.KEY_TRACKER_NO_NSFW, false)
 	var downloadStrategy by rememberStringPref(
 		AppSettings.KEY_TRACKER_DOWNLOAD,

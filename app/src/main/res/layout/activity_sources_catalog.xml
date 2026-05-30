@@ -11,7 +11,11 @@
 		android:id="@+id/appbar"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
+		android:background="?attr/colorSurface"
+		android:elevation="0dp"
 		android:fitsSystemWindows="false"
+		android:stateListAnimator="@null"
+		app:elevation="0dp"
 		app:liftOnScroll="false"
 		app:liftOnScrollColor="@null">
 
@@ -19,6 +23,8 @@
 			android:id="@id/toolbar"
 			android:layout_width="match_parent"
 			android:layout_height="?attr/actionBarSize"
+			android:background="@null"
+			android:theme="@style/ThemeOverlay.Kotatsu.Toolbar.CenteredItems"
 			app:layout_scrollFlags="scroll|enterAlways|snap" />
 
 		<HorizontalScrollView

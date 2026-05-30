@@ -4,49 +4,80 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.result.ActivityResultCallback
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
-import androidx.preference.Preference
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.StateFlow
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.OpenDocumentTreeHelper
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
-import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
+import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.InfoSettingsItem
+import org.koitharu.kotatsu.settings.compose.ListSettingsItem
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SliderSettingsItem
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
+import org.koitharu.kotatsu.settings.compose.rememberIntPref
+import org.koitharu.kotatsu.settings.compose.rememberStringPref
 import java.util.Date
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PeriodicalBackupSettingsFragment :
-	BasePreferenceFragment(R.string.periodic_backups),
+	BaseComposeSettingsFragment(R.string.periodic_backups),
 	ActivityResultCallback<Uri?> {
 
 	private val viewModel by viewModels<PeriodicalBackupSettingsViewModel>()
 
+	@Inject
+	lateinit var settings: AppSettings
+
 	private val outputSelectCall = OpenDocumentTreeHelper(this, this)
 
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-		addPreferencesFromResource(R.xml.pref_backup_periodic)
-	}
-
-	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-		super.onViewCreated(view, savedInstanceState)
-		viewModel.lastBackupDate.observe(viewLifecycleOwner, ::bindLastBackupInfo)
-		viewModel.backupsDirectory.observe(viewLifecycleOwner, ::bindOutputSummary)
-	}
-
-	override fun onPreferenceTreeClick(preference: Preference): Boolean {
-		return when (preference.key) {
-			AppSettings.KEY_BACKUP_PERIODICAL_OUTPUT -> {
-				if (!outputSelectCall.tryLaunch(null)) {
-					Snackbar.make(listView, R.string.operation_not_supported, Snackbar.LENGTH_SHORT).show()
-				}
-				true
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			DropSauceTheme {
+				PeriodicalBackupScreen(
+					backupsDirectory = viewModel.backupsDirectory,
+					lastBackupDate = viewModel.lastBackupDate,
+					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+					onPickDirectory = ::pickDirectory,
+				)
 			}
+		}
+	}
 
-			else -> super.onPreferenceTreeClick(preference)
+	private fun pickDirectory() {
+		if (!outputSelectCall.tryLaunch(null)) {
+			Snackbar.make(requireView(), R.string.operation_not_supported, Snackbar.LENGTH_SHORT).show()
 		}
 	}
 
@@ -58,29 +89,111 @@ class PeriodicalBackupSettingsFragment :
 			viewModel.updateSummaryData()
 		}
 	}
+}
 
-	private fun bindOutputSummary(path: String?) {
-		val preference = findPreference<Preference>(AppSettings.KEY_BACKUP_PERIODICAL_OUTPUT) ?: return
-		preference.summary = when (path) {
-			null -> getString(R.string.invalid_value_message)
-			"" -> null
-			else -> path
-		}
-		preference.icon = if (path == null) {
-			getWarningIcon()
-		} else {
-			null
-		}
+@Composable
+private fun PeriodicalBackupScreen(
+	backupsDirectory: StateFlow<String?>,
+	lastBackupDate: StateFlow<Date?>,
+	onBack: () -> Unit,
+	onPickDirectory: () -> Unit,
+) {
+	val ctx = LocalContext.current
+	val directory by backupsDirectory.collectAsState()
+	val lastBackup by lastBackupDate.collectAsState()
+
+	val frequencyEntries = remember { ctx.resources.getStringArray(R.array.backup_frequency).toList() }
+	val frequencyValues = remember { ctx.resources.getStringArray(R.array.backup_frequency_values).toList() }
+
+	var enabled by rememberBooleanPref(AppSettings.KEY_BACKUP_PERIODICAL_ENABLED, false)
+	var frequency by rememberStringPref(AppSettings.KEY_BACKUP_PERIODICAL_FREQ, "3")
+	var trim by rememberBooleanPref(AppSettings.KEY_BACKUP_PERIODICAL_TRIM, true)
+	var maxCount by rememberIntPref(AppSettings.KEY_BACKUP_PERIODICAL_COUNT, 10)
+
+	val dirIsWarning = directory == null
+	val dirSubtitle = when (directory) {
+		null -> stringResource(R.string.invalid_value_message)
+		"" -> null
+		else -> directory
 	}
 
-	private fun bindLastBackupInfo(lastBackupDate: Date?) {
-		val preference = findPreference<Preference>(AppSettings.KEY_BACKUP_PERIODICAL_LAST) ?: return
-		preference.summary = lastBackupDate?.let {
-			preference.context.getString(
-				R.string.last_successful_backup,
-				DateUtils.getRelativeTimeSpanString(it.time),
-			)
+	SettingsScaffold(title = stringResource(R.string.periodic_backups), onBack = onBack) {
+		item {
+			SettingsGroup {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.periodic_backups_enable),
+						checked = enabled,
+						onCheckedChange = { enabled = it },
+						icon = R.drawable.ic_backup_restore,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.backups_output_directory),
+						subtitle = dirSubtitle,
+						icon = if (dirIsWarning) R.drawable.ic_alert_outline else R.drawable.ic_folder_file,
+						shape = pos.shape,
+						enabled = enabled,
+						onClick = onPickDirectory,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.backup_frequency),
+						entries = frequencyEntries,
+						entryValues = frequencyValues,
+						selectedValue = frequency,
+						onValueChange = { frequency = it },
+						icon = R.drawable.ic_timelapse,
+						shape = pos.shape,
+						enabled = enabled,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.delete_old_backups),
+						subtitle = stringResource(R.string.delete_old_backups_summary),
+						checked = trim,
+						onCheckedChange = { trim = it },
+						icon = R.drawable.ic_delete,
+						shape = pos.shape,
+						enabled = enabled,
+					)
+				}
+				item { pos ->
+					SliderSettingsItem(
+						title = stringResource(R.string.max_backups_count),
+						value = maxCount.coerceIn(1, 32),
+						valueFrom = 1,
+						valueTo = 32,
+						stepSize = 1,
+						onValueChange = { maxCount = it },
+						icon = R.drawable.ic_storage,
+						shape = pos.shape,
+						enabled = enabled && trim,
+					)
+				}
+			}
 		}
-		preference.isVisible = lastBackupDate != null
+		if (lastBackup != null) {
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+			item {
+				SettingsGroup {
+					item { pos ->
+						InfoSettingsItem(
+							title = stringResource(
+								R.string.last_successful_backup,
+								DateUtils.getRelativeTimeSpanString(lastBackup!!.time),
+							),
+							icon = R.drawable.ic_history,
+							shape = pos.shape,
+						)
+					}
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
 	}
 }

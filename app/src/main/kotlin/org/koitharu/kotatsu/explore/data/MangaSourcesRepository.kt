@@ -33,6 +33,12 @@ class MangaSourcesRepository @Inject constructor(
 		return buildSortedSourceInfoList(getMihonSources()).map { it.mangaSource }
 	}
 
+	/** All installed sources including those disabled via per-extension language toggles
+	 *  (still respects the NSFW filter). Used by suggestions when "include disabled sources" is on. */
+	fun getAllSources(): List<MangaSource> {
+		return buildSortedSourceInfoList(getAllMihonSources()).map { it.mangaSource }
+	}
+
 	fun getPinnedSources(): Set<MangaSource> {
 		val sourcesByKey = getMihonSources().associateBy(::sourceKeyOf)
 		return getPinnedSourceKeys()

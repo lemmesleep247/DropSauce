@@ -1,8 +1,11 @@
 package org.koitharu.kotatsu.settings.reader
 
 import android.content.DialogInterface
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -10,7 +13,6 @@ import android.view.View
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.core.graphics.ColorUtils
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.text.bold
 import androidx.core.text.buildSpannedString
 import androidx.core.view.WindowInsetsCompat
@@ -20,14 +22,13 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.util.ext.consumeAllSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.findKeyByValue
-import org.koitharu.kotatsu.core.util.ext.getThemeDrawable
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
 import org.koitharu.kotatsu.databinding.ActivityReaderTapActionsBinding
 import org.koitharu.kotatsu.reader.domain.TapGridArea
 import org.koitharu.kotatsu.reader.ui.tapgrid.TapAction
+import com.google.android.material.color.MaterialColors
 import java.util.EnumMap
-import androidx.appcompat.R as appcompatR
 
 @AndroidEntryPoint
 class ReaderTapGridConfigActivity : BaseActivity<ActivityReaderTapActionsBinding>(), View.OnClickListener,
@@ -116,7 +117,7 @@ class ReaderTapGridConfigActivity : BaseActivity<ActivityReaderTapActionsBinding
 					appendLine(actions?.longTapAction.getText())
 				}
 			}
-			view.background = createBackground(actions?.tapAction)
+			view.background = createBackground(area, actions?.tapAction)
 		}
 	}
 
@@ -156,12 +157,34 @@ class ReaderTapGridConfigActivity : BaseActivity<ActivityReaderTapActionsBinding
 			}.show()
 	}
 
-	private fun createBackground(action: TapAction?): Drawable? {
-		val ripple = getThemeDrawable(appcompatR.attr.selectableItemBackground)
-		return if (action == null) {
-			ripple
-		} else {
-			LayerDrawable(arrayOf(ripple, ColorUtils.setAlphaComponent(action.color, 40).toDrawable()))
+	private fun createBackground(area: TapGridArea, action: TapAction?): Drawable {
+		val r = 24f * resources.displayMetrics.density
+		// Only the four corner cells are rounded, and only on their OUTER corner, so the whole
+		// grid reads as a single rounded rectangle while the inner cells stay square.
+		// cornerRadii order: top-left, top-right, bottom-right, bottom-left (x,y each).
+		val radii = when (area) {
+			TapGridArea.TOP_LEFT -> floatArrayOf(r, r, 0f, 0f, 0f, 0f, 0f, 0f)
+			TapGridArea.TOP_RIGHT -> floatArrayOf(0f, 0f, r, r, 0f, 0f, 0f, 0f)
+			TapGridArea.BOTTOM_RIGHT -> floatArrayOf(0f, 0f, 0f, 0f, r, r, 0f, 0f)
+			TapGridArea.BOTTOM_LEFT -> floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, r, r)
+			else -> floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 		}
+		val fillColor = if (action == null) {
+			MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHighest, Color.TRANSPARENT)
+		} else {
+			ColorUtils.setAlphaComponent(action.color, 70)
+		}
+		val base = GradientDrawable().apply {
+			shape = GradientDrawable.RECTANGLE
+			cornerRadii = radii
+			setColor(fillColor)
+		}
+		val mask = GradientDrawable().apply {
+			shape = GradientDrawable.RECTANGLE
+			cornerRadii = radii.clone()
+			setColor(Color.WHITE)
+		}
+		val rippleColor = MaterialColors.getColor(this, android.R.attr.colorControlHighlight, Color.TRANSPARENT)
+		return RippleDrawable(ColorStateList.valueOf(rippleColor), base, mask)
 	}
 }

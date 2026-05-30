@@ -3,13 +3,8 @@
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto">
 
-	<item
-		android:id="@+id/action_app_update"
-		android:icon="@drawable/ic_app_update"
-		android:orderInCategory="1"
-		android:title="@string/app_update_available"
-		android:titleCondensed="@string/update"
-		android:visible="false"
-		app:showAsAction="ifRoom" />
+	<!-- The app-update indicator was moved off the main search bar to the Settings icon
+	     (red dot) + an in-settings banner. See MainActivity.appUpdate observer and
+	     RootSettingsFragment's update banner. -->
 
 </menu>

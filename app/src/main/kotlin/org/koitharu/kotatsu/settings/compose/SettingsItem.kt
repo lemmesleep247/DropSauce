@@ -1,6 +1,8 @@
 package org.koitharu.kotatsu.settings.compose
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -17,16 +19,27 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import org.koitharu.kotatsu.main.ui.nav.rememberAnyDrawablePainter
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 /**
  * Generic row in a [SettingsGroup]. Lays out a circular tinted icon, a 1- or 2-line text
@@ -48,10 +61,42 @@ fun SettingsItem(
 	onClick: (() -> Unit)? = null,
 	trailing: @Composable (() -> Unit)? = null,
 ) {
+	// One-shot search highlight: scroll this row comfortably into view and flash its background
+	// once when it is the navigation target (matched by title).
+	val pendingHighlight by SettingsSearchHighlight.pendingTitle.collectAsState()
+	val isHighlightTarget = pendingHighlight != null && pendingHighlight == title
+	val scrollToHighlight = LocalSettingsHighlightScroll.current
+	val rowWindowY = remember { mutableFloatStateOf(Float.NaN) }
+	val highlight = remember { Animatable(0f) }
+	LaunchedEffect(isHighlightTarget) {
+		if (isHighlightTarget) {
+			// Wait until this row has a real laid-out position, then scroll to it.
+			val y = snapshotFlow { rowWindowY.floatValue }.first { !it.isNaN() }
+			scrollToHighlight(y)
+			highlight.snapTo(1f)
+			delay(320)
+			highlight.animateTo(0f, animationSpec = tween(durationMillis = 1100))
+			SettingsSearchHighlight.consume(title)
+		}
+	}
+	val containerColor = lerp(
+		MaterialTheme.colorScheme.surfaceContainer,
+		MaterialTheme.colorScheme.primaryContainer,
+		highlight.value,
+	)
+	// Pin the content color: an interpolated `color` makes contentColorFor() return Unspecified,
+	// which would render text as plain black (broken in dark mode). Keep text legible on both
+	// the resting surfaceContainer and the brief primaryContainer flash.
+	val contentColor = lerp(
+		MaterialTheme.colorScheme.onSurface,
+		MaterialTheme.colorScheme.onPrimaryContainer,
+		highlight.value,
+	)
 	Surface(
-		modifier = modifier,
+		modifier = modifier.onGloballyPositioned { rowWindowY.floatValue = it.positionInWindow().y },
 		shape = shape,
-		color = MaterialTheme.colorScheme.surfaceContainer,
+		color = containerColor,
+		contentColor = contentColor,
 	) {
 		Row(
 			modifier = Modifier

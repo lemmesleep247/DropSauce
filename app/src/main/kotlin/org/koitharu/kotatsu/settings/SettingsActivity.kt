@@ -192,6 +192,8 @@ class SettingsActivity :
 			putString(ARG_PREF_KEY, item.key)
 		}
 		openFragment(item.fragmentClass, args, true)
+		// Ask the target Compose screen to flash the matching row once (matched by title).
+		org.koitharu.kotatsu.settings.compose.SettingsSearchHighlight.request(item.title.toString())
 	}
 
 	private fun observeFoldHinge() {

@@ -1,21 +1,42 @@
 package org.koitharu.kotatsu.settings.sources
 
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
+import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
+import android.view.ViewGroup
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
+import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
-import androidx.preference.EditTextPreferenceDialogFragmentCompat
+import androidx.preference.ListPreference
+import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
-import androidx.preference.PreferenceCategory
+import androidx.preference.PreferenceGroup
+import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
-import androidx.preference.SwitchPreferenceCompat
+import androidx.preference.TwoStatePreference
 import dagger.hilt.android.AndroidEntryPoint
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -26,246 +47,437 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.parser.EmptyMangaRepository
 import org.koitharu.kotatsu.core.prefs.SourceSettings
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.withArgs
 import org.koitharu.kotatsu.extensions.runtime.getExternalExtensionLanguageDisplayName
 import org.koitharu.kotatsu.mihon.MihonMangaRepository
 import org.koitharu.kotatsu.parsers.model.MangaSource
-import java.io.File
+import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.EditTextSettingsItem
+import org.koitharu.kotatsu.settings.compose.InfoSettingsItem
+import org.koitharu.kotatsu.settings.compose.ListSettingsItem
+import org.koitharu.kotatsu.settings.compose.MultiSelectSettingsItem
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 
 @AndroidEntryPoint
-class SourceSettingsFragment : BasePreferenceFragment(0) {
+class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 
 	private val viewModel: SourceSettingsViewModel by viewModels()
 
+	private var mihonPm: PreferenceManager? = null
+	private var mihonScreen: PreferenceScreen? = null
+
 	override fun onResume() {
 		super.onResume()
-		context?.let { ctx ->
-			setTitle(viewModel.source.getTitle(ctx))
-		}
+		val ctx = context ?: return
+		(activity as? org.koitharu.kotatsu.settings.SettingsActivity)
+			?.setSectionTitle(viewModel.source.getTitle(ctx))
 	}
 
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 		val repo = viewModel.repository
-		if (repo is MihonMangaRepository) {
-			preferenceManager.sharedPreferencesName = "source_${repo.mihonSource.id}"
-		} else {
-			preferenceManager.sharedPreferencesName = viewModel.source.name.replace(File.separatorChar, '$')
-		}
-		addPreferencesFromResource(R.xml.pref_source)
-		addPreferencesFromRepository(viewModel.repository)
-		val isValidSource = viewModel.repository !is EmptyMangaRepository
+		val isValidSource = repo !is EmptyMangaRepository
+		val prefsName = SourceSettings.getStorageName(viewModel.source.name)
+		val sourcePrefs = requireContext().getSharedPreferences(prefsName, android.content.Context.MODE_PRIVATE)
+		val mihonSections = buildMihonSections(prefsName)
+		val openBrowserUrl = ((repo as? MihonMangaRepository)?.mihonSource as? HttpSource)
+			?.baseUrl?.takeIf { it.isNotBlank() }
+		val uninstallPkg = (repo as? MihonMangaRepository)?.source?.pkgName
+		val languageToggles = buildLanguageToggles()
 
-		findPreference<Preference>(SourceSettings.KEY_SLOWDOWN)?.isVisible = isValidSource
+		setContent {
+			DropSauceTheme {
+				SourceSettingsScreen(
+					sourcePrefs = sourcePrefs,
+					isValidSource = isValidSource,
+					mihonSections = mihonSections,
+					languageToggles = languageToggles,
+					openBrowserUrl = openBrowserUrl,
+					uninstallPkg = uninstallPkg,
+					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+					onOpenBrowser = { url -> openBrowser(url) },
+					onUninstall = { pkg -> uninstallExtension(pkg) },
+				)
+			}
+		}
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		tryAddMihonPreferences()
-		viewModel.onError.observeEvent(
-			viewLifecycleOwner,
-			SnackbarErrorObserver(
-				listView,
-				this,
-				exceptionResolver,
-				null,
-			),
-		)
-		viewModel.onActionDone.observeEvent(viewLifecycleOwner, ReversibleActionObserver(listView))
+		viewModel.onError.observeEvent(viewLifecycleOwner, SnackbarErrorObserver(view, this))
+		viewModel.onActionDone.observeEvent(viewLifecycleOwner, ReversibleActionObserver(view))
 	}
 
-	override fun onDisplayPreferenceDialog(preference: Preference) {
-		if (preference.key == SourceSettings.KEY_DOMAIN) {
-			if (parentFragmentManager.findFragmentByTag(DomainDialogFragment.DIALOG_FRAGMENT_TAG) != null) {
-				return
-			}
-			val f = DomainDialogFragment.newInstance(preference.key)
-			@Suppress("DEPRECATION")
-			f.setTargetFragment(this, 0)
-			f.show(parentFragmentManager, DomainDialogFragment.DIALOG_FRAGMENT_TAG)
-			return
-		}
-		super.onDisplayPreferenceDialog(preference)
+	override fun onDestroyView() {
+		mihonScreen = null
+		mihonPm = null
+		super.onDestroyView()
 	}
 
-	class DomainDialogFragment : EditTextPreferenceDialogFragmentCompat() {
-
-		override fun onPrepareDialogBuilder(builder: AlertDialog.Builder) {
-			super.onPrepareDialogBuilder(builder)
-			builder.setNeutralButton(R.string.reset) { _, _ ->
-				resetValue()
-			}
+	@SuppressLint("RestrictedApi")
+	private fun buildMihonSections(prefsName: String): List<PreferenceSection> {
+		val repo = viewModel.repository as? MihonMangaRepository ?: return emptyList()
+		val mihonSource = repo.mihonSource as? ConfigurableSource ?: return emptyList()
+		val ctx = requireContext()
+		val pm = PreferenceManager(ctx).apply { sharedPreferencesName = prefsName }
+		val screen = pm.createPreferenceScreen(ctx)
+		try {
+			mihonSource.setupPreferenceScreen(screen)
+		} catch (e: Throwable) {
+			Log.e("SourceSettingsFragment", "Failed to setup Mihon preferences", e)
 		}
-
-		private fun resetValue() {
-			val editTextPreference = preference as EditTextPreference
-			if (editTextPreference.callChangeListener("")) {
-				editTextPreference.text = ""
-			}
-		}
-
-		companion object {
-
-			const val DIALOG_FRAGMENT_TAG: String = "androidx.preference.PreferenceFragment.DIALOG"
-
-			fun newInstance(key: String) = DomainDialogFragment().withArgs(1) {
-				putString(ARG_KEY, key)
-			}
-		}
+		mihonPm = pm
+		mihonScreen = screen
+		return buildSections(screen)
 	}
 
-	/**
-	 * If the source is a Mihon extension implementing ConfigurableSource,
-	 * inject its preferences into the current preference screen.
-	 * Also adds language enable/disable toggles for multi-language extensions.
-	 */
-	private fun tryAddMihonPreferences() {
-		val repo = viewModel.repository as? MihonMangaRepository ?: return
-		val screen = preferenceScreen ?: return
-		screen.removePreferenceRecursively(KEY_MIHON_LANGUAGE_TOGGLES)
-		screen.removePreferenceRecursively(KEY_MIHON_OPEN_BROWSER)
-		screen.removePreferenceRecursively(KEY_MIHON_UNINSTALL_EXTENSION)
-		val mihonSource = repo.mihonSource as? ConfigurableSource
-		if (mihonSource != null) {
-			try {
-				mihonSource.setupPreferenceScreen(screen)
-			} catch (e: Throwable) {
-				android.util.Log.e("SourceSettingsFragment", "Failed to setup Mihon preferences", e)
-			}
-		}
-		addMihonLanguageToggles(repo, screen)
-		moveMihonLanguageTogglesToBottom(screen)
-		addMihonOpenBrowserPreference(screen, repo)
-		addMihonUninstallPreference(screen, repo.source.pkgName)
-	}
-
-	private fun addMihonOpenBrowserPreference(screen: PreferenceScreen, repo: MihonMangaRepository) {
-		val baseUrl = (repo.mihonSource as? HttpSource)?.baseUrl?.takeIf { it.isNotBlank() } ?: return
-		val openBrowserPref = Preference(requireContext()).apply {
-			key = KEY_MIHON_OPEN_BROWSER
-			title = getString(R.string.open_in_browser)
-			icon = ContextCompat.getDrawable(context, R.drawable.ic_open_external)
-			summary = baseUrl
-			isIconSpaceReserved = true
-			onPreferenceClickListener = Preference.OnPreferenceClickListener {
-				router.openBrowser(
-					url = baseUrl,
-					source = repo.source,
-					title = repo.source.displayName,
-				)
-				true
-			}
-		}
-		val maxOrder = (0 until screen.preferenceCount)
-			.map { screen.getPreference(it) }
-			.maxOfOrNull { it.order } ?: 0
-		openBrowserPref.order = maxOrder + 1
-		screen.addPreference(openBrowserPref)
-	}
-
-	private fun addMihonLanguageToggles(repo: MihonMangaRepository, screen: PreferenceScreen) {
+	private fun buildLanguageToggles(): LanguageToggles? {
+		val repo = viewModel.repository as? MihonMangaRepository ?: return null
 		val pkgName = repo.source.pkgName
 		val siblings = viewModel.getSiblingMihonSources().sortedBy { it.language }
-		if (siblings.size <= 1) return
+		if (siblings.size <= 1) return null
 		val langs = siblings.map { it.language }
-
-		val category = PreferenceCategory(requireContext()).apply {
-			key = KEY_MIHON_LANGUAGE_TOGGLES
-			title = getString(R.string.languages)
-			isIconSpaceReserved = false
-		}
-		screen.addPreference(category)
-
-		val allLanguagesToggle = SwitchPreferenceCompat(requireContext()).apply {
-			key = "lang_toggle_all_${pkgName}"
-			title = getString(R.string.all_languages)
-			isPersistent = false
-			isChecked = viewModel.areAllMihonSourceLangsEnabled(pkgName, langs)
-			isIconSpaceReserved = false
-			order = -1
-			onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-				val enabled = newValue as Boolean
-				viewModel.setMihonSourceLangsEnabled(pkgName, langs, enabled)
-				for (i in 0 until category.preferenceCount) {
-					val pref = category.getPreference(i) as? SwitchPreferenceCompat ?: continue
-					if (pref.key != key) {
-						pref.isChecked = enabled
-					}
-				}
-				true
-			}
-		}
-		category.addPreference(allLanguagesToggle)
-
-		for ((index, source) in siblings.withIndex()) {
-			val lang = source.language
-			val langDisplayName = getExternalExtensionLanguageDisplayName(lang)
-			SwitchPreferenceCompat(requireContext()).apply {
-				key = "lang_toggle_${pkgName}_$lang"
-				title = langDisplayName
-				isPersistent = false
-				isChecked = viewModel.isMihonSourceLangEnabled(pkgName, lang)
-				isIconSpaceReserved = false
-				order = index
-				onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, newValue ->
-					viewModel.setMihonSourceLangEnabled(pkgName, lang, newValue as Boolean)
-					allLanguagesToggle.isChecked = viewModel.areAllMihonSourceLangsEnabled(pkgName, langs)
-					true
-				}
-			}.also { category.addPreference(it) }
-		}
+		return LanguageToggles(
+			pkgName = pkgName,
+			languages = langs.map { lang ->
+				LanguageEntry(lang, getExternalExtensionLanguageDisplayName(lang))
+			},
+			isLangEnabled = { lang -> viewModel.isMihonSourceLangEnabled(pkgName, lang) },
+			setLangEnabled = { lang, enabled -> viewModel.setMihonSourceLangEnabled(pkgName, lang, enabled) },
+			areAllEnabled = { viewModel.areAllMihonSourceLangsEnabled(pkgName, langs) },
+			setAllEnabled = { enabled -> viewModel.setMihonSourceLangsEnabled(pkgName, langs, enabled) },
+		)
 	}
 
-	private fun moveMihonLanguageTogglesToBottom(screen: PreferenceScreen) {
-		val category = screen.findPreference<PreferenceCategory>(KEY_MIHON_LANGUAGE_TOGGLES) ?: return
-		val maxOrder = (0 until screen.preferenceCount)
-			.map { screen.getPreference(it) }
-			.filterNot { it.key == KEY_MIHON_LANGUAGE_TOGGLES }
-			.maxOfOrNull { it.order } ?: 0
-		category.order = maxOrder + 1
-		screen.removePreference(category)
-		screen.addPreference(category)
+	private fun openBrowser(url: String) {
+		val repo = viewModel.repository as? MihonMangaRepository ?: return
+		router.openBrowser(url = url, source = repo.source, title = repo.source.displayName)
 	}
 
-	private fun addMihonUninstallPreference(screen: PreferenceScreen, packageName: String) {
-		val errorColor = ContextCompat.getColor(requireContext(), android.R.color.holo_red_light)
-		val uninstallPref = Preference(requireContext()).apply {
-			key = KEY_MIHON_UNINSTALL_EXTENSION
-			title = SpannableString(getString(R.string.uninstall)).apply {
-				setSpan(ForegroundColorSpan(errorColor), 0, length, 0)
-			}
-			icon = ContextCompat.getDrawable(context, R.drawable.ic_delete)
-			summary = packageName
-			isIconSpaceReserved = true
-			onPreferenceClickListener = Preference.OnPreferenceClickListener {
-				val uri = Uri.fromParts("package", packageName, null)
-				val action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-					Intent.ACTION_DELETE
-				} else {
-					@Suppress("DEPRECATION")
-					Intent.ACTION_UNINSTALL_PACKAGE
-				}
-				startActivity(Intent(action, uri))
-				true
+	private fun uninstallExtension(packageName: String) {
+		val uri = Uri.fromParts("package", packageName, null)
+		val action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			Intent.ACTION_DELETE
+		} else {
+			@Suppress("DEPRECATION")
+			Intent.ACTION_UNINSTALL_PACKAGE
+		}
+		startActivity(Intent(action, uri))
+	}
+
+	/** Splits a populated [PreferenceScreen] into sections: each PreferenceCategory becomes its
+	 *  own titled section; consecutive top-level leaf preferences are grouped together. */
+	private fun buildSections(screen: PreferenceScreen): List<PreferenceSection> {
+		val sections = mutableListOf<PreferenceSection>()
+		val pending = mutableListOf<Preference>()
+		fun flush() {
+			if (pending.isNotEmpty()) {
+				sections += PreferenceSection(null, pending.toList())
+				pending.clear()
 			}
 		}
-		val maxOrder = (0 until screen.preferenceCount)
-			.map { screen.getPreference(it) }
-			.maxOfOrNull { it.order } ?: 0
-		uninstallPref.order = maxOrder + 1
-		screen.addPreference(uninstallPref)
+		for (i in 0 until screen.preferenceCount) {
+			val pref = screen.getPreference(i)
+			if (!pref.isVisible) continue
+			if (pref is PreferenceGroup) {
+				flush()
+				val children = (0 until pref.preferenceCount)
+					.map { pref.getPreference(it) }
+					.filter { it.isVisible }
+				if (children.isNotEmpty()) {
+					sections += PreferenceSection(pref.title?.toString(), children)
+				}
+			} else {
+				pending += pref
+			}
+		}
+		flush()
+		return sections
 	}
 
 	companion object {
-
-		private const val KEY_MIHON_LANGUAGE_TOGGLES = "mihon_language_toggles"
-		private const val KEY_MIHON_OPEN_BROWSER = "mihon_open_browser"
-		private const val KEY_MIHON_UNINSTALL_EXTENSION = "mihon_uninstall_extension"
-
 		fun newInstance(source: MangaSource) = SourceSettingsFragment().withArgs(1) {
 			putString(AppRouter.KEY_SOURCE, source.name)
+		}
+	}
+}
+
+private data class PreferenceSection(val title: String?, val preferences: List<Preference>)
+
+private class LanguageEntry(val lang: String, val displayName: String)
+
+private class LanguageToggles(
+	val pkgName: String,
+	val languages: List<LanguageEntry>,
+	val isLangEnabled: (String) -> Boolean,
+	val setLangEnabled: (String, Boolean) -> Unit,
+	val areAllEnabled: () -> Boolean,
+	val setAllEnabled: (Boolean) -> Unit,
+)
+
+@Composable
+private fun SourceSettingsScreen(
+	sourcePrefs: SharedPreferences,
+	isValidSource: Boolean,
+	mihonSections: List<PreferenceSection>,
+	languageToggles: LanguageToggles?,
+	openBrowserUrl: String?,
+	uninstallPkg: String?,
+	onBack: () -> Unit,
+	onOpenBrowser: (String) -> Unit,
+	onUninstall: (String) -> Unit,
+) {
+	// Recomposition trigger for bridged preferences (they read live values from sourcePrefs).
+	var rev by remember { mutableIntStateOf(0) }
+	DisposableEffect(sourcePrefs) {
+		val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> rev++ }
+		sourcePrefs.registerOnSharedPreferenceChangeListener(listener)
+		onDispose { sourcePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+	}
+
+	SettingsScaffold(title = "", onBack = onBack) {
+		if (!isValidSource) {
+			item {
+				SettingsGroup {
+					item { pos ->
+						InfoSettingsItem(
+							title = stringResource(R.string.unsupported_source),
+							icon = R.drawable.ic_alert_outline,
+							shape = pos.shape,
+						)
+					}
+				}
+			}
+		}
+		if (isValidSource) {
+			item {
+				SettingsGroup {
+					item { pos ->
+						var slowdown by rememberSourceBoolean(sourcePrefs, SourceSettings.KEY_SLOWDOWN, false)
+						SwitchSettingsItem(
+							title = stringResource(R.string.download_slowdown),
+							subtitle = stringResource(R.string.download_slowdown_summary),
+							checked = slowdown,
+							onCheckedChange = { slowdown = it },
+							icon = R.drawable.ic_timelapse,
+							shape = pos.shape,
+						)
+					}
+				}
+			}
+		}
+
+		// Dynamic extension-provided preferences.
+		mihonSections.forEach { section ->
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+			item {
+				SettingsGroup(title = section.title) {
+					section.preferences.forEach { pref ->
+						item { pos ->
+							MihonPreferenceRow(pref = pref, shape = pos.shape, rev = rev)
+						}
+					}
+				}
+			}
+		}
+
+		if (languageToggles != null) {
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+			item {
+				LanguageTogglesGroup(languageToggles)
+			}
+		}
+
+		if (openBrowserUrl != null || uninstallPkg != null) {
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+			item {
+				SettingsGroup {
+					if (openBrowserUrl != null) {
+						item { pos ->
+							ActionSettingsItem(
+								title = stringResource(R.string.open_in_browser),
+								subtitle = openBrowserUrl,
+								icon = R.drawable.ic_open_external,
+								shape = pos.shape,
+								onClick = { onOpenBrowser(openBrowserUrl) },
+							)
+						}
+					}
+					if (uninstallPkg != null) {
+						item { pos ->
+							ActionSettingsItem(
+								title = stringResource(R.string.uninstall),
+								subtitle = uninstallPkg,
+								icon = R.drawable.ic_delete,
+								shape = pos.shape,
+								onClick = { onUninstall(uninstallPkg) },
+							)
+						}
+					}
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
+	}
+}
+
+@Composable
+private fun MihonPreferenceRow(
+	pref: Preference,
+	shape: androidx.compose.ui.graphics.Shape,
+	@Suppress("UNUSED_PARAMETER") rev: Int, // change forces recomposition to re-read live pref values
+) {
+	val title = pref.title?.toString().orEmpty()
+	when (pref) {
+		is TwoStatePreference -> {
+			var checked by remember(rev) { mutableStateOf(pref.isChecked) }
+			SwitchSettingsItem(
+				title = title,
+				subtitle = pref.summary?.toString(),
+				checked = checked,
+				onCheckedChange = { newVal ->
+					if (pref.callChangeListener(newVal)) {
+						pref.isChecked = newVal
+						checked = newVal
+					}
+				},
+				shape = shape,
+				enabled = pref.isEnabled,
+			)
+		}
+
+		is ListPreference -> {
+			val entries = pref.entries?.map { it.toString() } ?: emptyList()
+			val values = pref.entryValues?.map { it.toString() } ?: emptyList()
+			ListSettingsItem(
+				title = title,
+				entries = entries,
+				entryValues = values,
+				selectedValue = pref.value,
+				onValueChange = { newVal -> if (pref.callChangeListener(newVal)) pref.value = newVal },
+				shape = shape,
+				enabled = pref.isEnabled,
+			)
+		}
+
+		is MultiSelectListPreference -> {
+			val entries = pref.entries?.map { it.toString() } ?: emptyList()
+			val values = pref.entryValues?.map { it.toString() } ?: emptyList()
+			MultiSelectSettingsItem(
+				title = title,
+				entries = entries,
+				entryValues = values,
+				selectedValues = pref.values,
+				onValuesChange = { newVals -> if (pref.callChangeListener(newVals)) pref.values = newVals },
+				shape = shape,
+				enabled = pref.isEnabled,
+			)
+		}
+
+		is EditTextPreference -> {
+			EditTextSettingsItem(
+				title = title,
+				value = pref.text.orEmpty(),
+				onValueChange = { newVal -> if (pref.callChangeListener(newVal)) pref.text = newVal },
+				shape = shape,
+				enabled = pref.isEnabled,
+			)
+		}
+
+		else -> {
+			ActionSettingsItem(
+				title = title,
+				subtitle = pref.summary?.toString(),
+				shape = shape,
+				enabled = pref.isEnabled,
+				// Use public API instead of the restricted Preference.performClick(): fire the
+				// click listener, then fall back to the preference's intent if it didn't handle it.
+				onClick = {
+					val handled = pref.onPreferenceClickListener?.onPreferenceClick(pref) == true
+					if (!handled) {
+						pref.intent?.let { intent -> runCatching { pref.context.startActivity(intent) } }
+					}
+				},
+			)
+		}
+	}
+}
+
+@Composable
+private fun LanguageTogglesGroup(toggles: LanguageToggles) {
+	// Single hoisted source of truth so toggling "All languages" updates every per-language
+	// switch immediately (previously each row kept its own state and only synced on re-entry).
+	val states = remember(toggles) {
+		mutableStateMapOf<String, Boolean>().apply {
+			toggles.languages.forEach { put(it.lang, toggles.isLangEnabled(it.lang)) }
+		}
+	}
+	val allEnabled = toggles.languages.isNotEmpty() && toggles.languages.all { states[it.lang] == true }
+	SettingsGroup(title = stringResource(R.string.languages)) {
+		item { pos ->
+			SwitchSettingsItem(
+				title = stringResource(R.string.all_languages),
+				checked = allEnabled,
+				onCheckedChange = { enabled ->
+					toggles.setAllEnabled(enabled)
+					toggles.languages.forEach { states[it.lang] = enabled }
+				},
+				shape = pos.shape,
+			)
+		}
+		toggles.languages.forEach { entry ->
+			item { pos ->
+				SwitchSettingsItem(
+					title = entry.displayName,
+					checked = states[entry.lang] == true,
+					onCheckedChange = { value ->
+						toggles.setLangEnabled(entry.lang, value)
+						states[entry.lang] = value
+					},
+					shape = pos.shape,
+				)
+			}
+		}
+	}
+}
+
+@Composable
+private fun rememberSourceBoolean(
+	prefs: SharedPreferences,
+	key: String,
+	default: Boolean,
+): androidx.compose.runtime.MutableState<Boolean> {
+	val state = remember(prefs, key) { mutableStateOf(prefs.getBoolean(key, default)) }
+	DisposableEffect(prefs, key) {
+		val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, changedKey ->
+			if (changedKey == key) state.value = sp.getBoolean(key, default)
+		}
+		prefs.registerOnSharedPreferenceChangeListener(listener)
+		onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+	}
+	return remember(state, prefs) {
+		object : androidx.compose.runtime.MutableState<Boolean> {
+			override var value: Boolean
+				get() = state.value
+				set(newValue) {
+					if (state.value != newValue) {
+						state.value = newValue
+						prefs.edit().putBoolean(key, newValue).apply()
+					}
+				}
+
+			override fun component1() = value
+			override fun component2(): (Boolean) -> Unit = { value = it }
 		}
 	}
 }

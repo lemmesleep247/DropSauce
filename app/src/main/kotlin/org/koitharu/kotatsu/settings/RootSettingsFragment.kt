@@ -7,22 +7,42 @@ import android.view.View
 import android.view.ViewGroup
 import org.koitharu.kotatsu.settings.compose.ComposeOwnedScreen
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.github.AppUpdateRepository
+import org.koitharu.kotatsu.core.nav.router
+import org.koitharu.kotatsu.settings.search.SettingsSearchMenuProvider
+import org.koitharu.kotatsu.settings.search.SettingsSearchViewModel
 import org.koitharu.kotatsu.settings.about.AboutSettingsFragment
 import org.koitharu.kotatsu.settings.compose.CategoryPalette
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
@@ -31,6 +51,7 @@ import org.koitharu.kotatsu.settings.compose.SettingsItem
 import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import org.koitharu.kotatsu.settings.sources.ExtensionsSettingsFragment
 import org.koitharu.kotatsu.settings.tracker.TrackerSettingsFragment
+import javax.inject.Inject
 
 /**
  * Redesigned settings landing screen — Compose-based, modeled after PixelPlayer's settings.
@@ -43,6 +64,11 @@ import org.koitharu.kotatsu.settings.tracker.TrackerSettingsFragment
 @AndroidEntryPoint
 class RootSettingsFragment : BaseComposeSettingsFragment(R.string.settings) {
 
+	@Inject
+	lateinit var appUpdateRepository: AppUpdateRepository
+
+	private val searchViewModel: SettingsSearchViewModel by activityViewModels()
+
 	override fun onCreateView(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
@@ -51,9 +77,12 @@ class RootSettingsFragment : BaseComposeSettingsFragment(R.string.settings) {
 		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 		setContent {
 			DropSauceTheme {
+				val update by appUpdateRepository.observeAvailableUpdate().collectAsState()
 				RootSettingsContent(
 					appVersion = BuildConfig.VERSION_NAME,
+					updateAvailable = update != null,
 					onSectionClick = { section -> openSection(section) },
+					onUpdateClick = { router.openAppUpdate() },
 					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 				)
 			}
@@ -62,6 +91,12 @@ class RootSettingsFragment : BaseComposeSettingsFragment(R.string.settings) {
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
+		// The search icon lives on the activity toolbar and is only present while the
+		// root settings screen is shown (tied to this fragment's view lifecycle).
+		requireActivity().addMenuProvider(
+			SettingsSearchMenuProvider(searchViewModel),
+			viewLifecycleOwner,
+		)
 	}
 
 	private fun openSection(section: SettingsSection) {
@@ -133,7 +168,9 @@ private enum class SettingsSection(
 @Composable
 private fun RootSettingsContent(
 	appVersion: String,
+	updateAvailable: Boolean,
 	onSectionClick: (SettingsSection) -> Unit,
+	onUpdateClick: () -> Unit,
 	onBack: () -> Unit,
 ) {
 	val ctx = LocalContext.current
@@ -141,6 +178,12 @@ private fun RootSettingsContent(
 		title = stringResource(R.string.settings),
 		onBack = onBack,
 	) {
+		if (updateAvailable) {
+			item {
+				UpdateBanner(onClick = onUpdateClick)
+			}
+			item { Spacer(Modifier.height(12.dp).fillMaxWidth()) }
+		}
 		item {
 			SettingsGroup {
 				// SettingsGroup's DSL block is NOT @Composable — @Composable calls
@@ -166,5 +209,55 @@ private fun RootSettingsContent(
 			}
 		}
 		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
+	}
+}
+
+/**
+ * Non-removable banner shown at the top of Settings whenever an app update is available.
+ * Tapping it opens the update page. There is intentionally no dismiss affordance.
+ */
+@Composable
+private fun UpdateBanner(onClick: () -> Unit) {
+	val cs = MaterialTheme.colorScheme
+	Surface(
+		modifier = Modifier.fillMaxWidth(),
+		shape = RoundedCornerShape(24.dp),
+		color = cs.primaryContainer,
+		onClick = onClick,
+	) {
+		Row(
+			modifier = Modifier
+				.fillMaxWidth()
+				.padding(horizontal = 16.dp, vertical = 16.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Icon(
+				painter = painterResource(R.drawable.ic_app_update),
+				contentDescription = null,
+				tint = cs.onPrimaryContainer,
+				modifier = Modifier.size(28.dp),
+			)
+			Spacer(Modifier.width(16.dp))
+			Column(modifier = Modifier.weight(1f)) {
+				Text(
+					text = stringResource(R.string.app_update_available),
+					style = MaterialTheme.typography.titleMedium,
+					fontWeight = FontWeight.SemiBold,
+					color = cs.onPrimaryContainer,
+				)
+				Text(
+					text = stringResource(R.string.update),
+					style = MaterialTheme.typography.bodySmall,
+					color = cs.onPrimaryContainer.copy(alpha = 0.8f),
+				)
+			}
+			Spacer(Modifier.width(8.dp))
+			Icon(
+				painter = painterResource(R.drawable.ic_arrow_forward),
+				contentDescription = null,
+				tint = cs.onPrimaryContainer,
+				modifier = Modifier.size(22.dp),
+			)
+		}
 	}
 }

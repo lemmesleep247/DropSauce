@@ -27,6 +27,9 @@
 	<dimen name="selection_stroke_width">2dp</dimen>
 	<dimen name="list_selector_corner">12dp</dimen>
 	<dimen name="toolbar_button_margin">10dp</dimen>
+	<dimen name="top_bar_navigation_button_size">40dp</dimen>
+	<dimen name="top_bar_navigation_button_margin_start">16dp</dimen>
+	<dimen name="top_bar_title_inset_with_navigation">72dp</dimen>
 	<dimen name="widget_cover_height">116dp</dimen>
 	<dimen name="widget_cover_width">84dp</dimen>
 	<dimen name="scrobbling_list_spacing">12dp</dimen>

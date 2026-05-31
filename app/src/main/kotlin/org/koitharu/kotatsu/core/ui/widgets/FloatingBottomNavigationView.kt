@@ -1,31 +1,30 @@
 package org.koitharu.kotatsu.core.ui.widgets
 
 import android.content.Context
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.IdRes
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.main.ui.nav.FloatingNavBar
+import org.koitharu.kotatsu.main.ui.nav.FloatingNavBarColors
 import org.koitharu.kotatsu.main.ui.nav.FloatingNavBarItem
-import org.koitharu.kotatsu.main.ui.nav.composeColorSchemeFromTheme
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
+import com.google.android.material.R as materialR
 
 /**
  * A SlidingBottomNavigationView whose visible face is rendered with Jetpack Compose as a
@@ -43,10 +42,13 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 	private val composeItemsState = MutableStateFlow<List<FloatingNavBarItem>>(emptyList())
 	private val selectedIdState = MutableStateFlow(0)
 	private val labeledState = MutableStateFlow(true)
-	private val amoledState = MutableStateFlow(false)
+	private val navColorsState = MutableStateFlow(readLegacyNavColors())
 	private val sourceItems = mutableListOf<NavItem>()
 	private val hiddenIds = mutableSetOf<Int>()
 	private val badgeCounts = mutableMapOf<Int, Int>()
+	private val legacyBackground: Drawable = ColorDrawable(context.getThemeColor(materialR.attr.colorSurfaceContainer))
+	private val legacyElevation = elevation
+	private var useLegacyNavigation = false
 
 	private val composeView: ComposeView = ComposeView(context).apply {
 		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -57,7 +59,7 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 				val items by composeItemsState.collectAsState()
 				val selectedId by selectedIdState.collectAsState()
 				val labeled by labeledState.collectAsState()
-				val amoled by amoledState.collectAsState()
+				val navColors by navColorsState.collectAsState()
 				Box(
 					modifier = Modifier
 						.fillMaxWidth()
@@ -68,7 +70,7 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 						items = items,
 						selectedId = selectedId,
 						showLabels = labeled,
-						amoled = amoled,
+						colors = navColors,
 						onItemSelected = { id -> this@FloatingBottomNavigationView.selectedItemId = id },
 						onItemReselected = { id ->
 							val menuItem = menu.findItem(id) ?: return@FloatingNavBar
@@ -133,8 +135,10 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 		labeledState.value = value
 	}
 
-	fun setComposeAmoled(value: Boolean) {
-		amoledState.value = value
+	fun setUseLegacyNavigation(value: Boolean) {
+		if (useLegacyNavigation == value) return
+		useLegacyNavigation = value
+		updateNavigationMode()
 	}
 
 	fun setComposeBadge(@IdRes itemId: Int, count: Int) {
@@ -169,9 +173,42 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 		for (i in 0 until childCount) {
 			val child = getChildAt(i)
 			if (child !== composeView) {
-				child.visibility = View.GONE
+				child.visibility = if (useLegacyNavigation) View.VISIBLE else View.GONE
 			}
 		}
+	}
+
+	private fun updateNavigationMode() {
+		navColorsState.value = readLegacyNavColors()
+		composeView.visibility = if (useLegacyNavigation) View.GONE else View.VISIBLE
+		for (i in 0 until childCount) {
+			val child = getChildAt(i)
+			if (child !== composeView) {
+				child.visibility = if (useLegacyNavigation) View.VISIBLE else View.GONE
+			}
+		}
+		background = if (useLegacyNavigation) legacyBackground else null
+		elevation = if (useLegacyNavigation) legacyElevation else 0f
+	}
+
+	private fun readLegacyNavColors(): FloatingNavBarColors {
+		val selectedState = intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked)
+		val unselectedState = intArrayOf(android.R.attr.state_enabled, -android.R.attr.state_checked)
+		val fallbackContainer = context.getThemeColor(materialR.attr.colorSurfaceContainer)
+		val fallbackSelected = context.getThemeColor(materialR.attr.colorSecondaryContainer)
+		val fallbackSelectedContent = context.getThemeColor(androidx.appcompat.R.attr.colorPrimary)
+		val fallbackUnselectedContent = context.getThemeColor(materialR.attr.colorOnSurfaceVariant)
+		return FloatingNavBarColors(
+			container = backgroundTintList?.defaultColor ?: fallbackContainer,
+			selectedContainer = itemActiveIndicatorColor?.getColorForState(selectedState, fallbackSelected)
+				?: fallbackSelected,
+			selectedContent = itemIconTintList?.getColorForState(selectedState, fallbackSelectedContent)
+				?: itemTextColor?.getColorForState(selectedState, fallbackSelectedContent)
+				?: fallbackSelectedContent,
+			unselectedContent = itemIconTintList?.getColorForState(unselectedState, fallbackUnselectedContent)
+				?: itemTextColor?.getColorForState(unselectedState, fallbackUnselectedContent)
+				?: fallbackUnselectedContent,
+		)
 	}
 
 	companion object {

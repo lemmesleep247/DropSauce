@@ -121,7 +121,7 @@ class MainNavigationDelegate(
 		(navBar as? FloatingBottomNavigationView)?.let { floating ->
 			floating.setComposeItems(settings.mainNavItems)
 			floating.setComposeLabeled(settings.isNavLabelsVisible)
-			floating.setComposeAmoled(settings.isAmoledTheme)
+			floating.setUseLegacyNavigation(settings.isLegacyNavigationBar)
 		}
 		observeSettings(lifecycleOwner)
 		val fragment = primaryFragment
@@ -287,11 +287,17 @@ class MainNavigationDelegate(
 	}
 
 	private fun observeSettings(lifecycleOwner: LifecycleOwner) {
-		settings.observe(AppSettings.KEY_TRACKER_ENABLED, AppSettings.KEY_SUGGESTIONS, AppSettings.KEY_NAV_LABELS)
+		settings.observe(
+			AppSettings.KEY_TRACKER_ENABLED,
+			AppSettings.KEY_SUGGESTIONS,
+			AppSettings.KEY_NAV_LABELS,
+			AppSettings.KEY_NAV_LEGACY,
+		)
 			.onEach {
 				setItemVisibility(R.id.nav_suggestions, settings.isSuggestionsEnabled)
 				setItemVisibility(R.id.nav_feed, settings.isTrackerEnabled)
 				setNavbarIsLabeled(settings.isNavLabelsVisible)
+				(navBar as? FloatingBottomNavigationView)?.setUseLegacyNavigation(settings.isLegacyNavigationBar)
 			}.launchIn(lifecycleOwner.lifecycleScope)
 	}
 

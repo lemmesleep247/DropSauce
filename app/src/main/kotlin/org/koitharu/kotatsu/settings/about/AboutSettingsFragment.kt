@@ -336,30 +336,51 @@ private fun AboutHero(appVersion: String) {
 				color = cs.onPrimaryContainer,
 				fontWeight = FontWeight.Bold,
 			)
-			Surface(
-				shape = RoundedCornerShape(50),
-				color = cs.onPrimaryContainer.copy(alpha = 0.16f),
+			Row(
+				horizontalArrangement = Arrangement.spacedBy(8.dp),
+				verticalAlignment = Alignment.CenterVertically,
 			) {
-				Row(
-					modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
-					horizontalArrangement = Arrangement.spacedBy(6.dp),
-					verticalAlignment = Alignment.CenterVertically,
-				) {
-					Icon(
-						painter = painterResource(R.drawable.ic_info_outline),
-						contentDescription = null,
-						tint = cs.onPrimaryContainer,
-						modifier = Modifier.size(15.dp),
-					)
-					Text(
-						text = "v$appVersion",
-						style = MaterialTheme.typography.labelLarge,
-						color = cs.onPrimaryContainer,
-						fontWeight = FontWeight.Medium,
-					)
-				}
+				AboutMetaPill(
+					icon = R.drawable.ic_info_outline,
+					text = "v$appVersion",
+				)
+				AboutMetaPill(
+					icon = R.drawable.ic_github,
+					text = "HuzaifaKhalid1311",
+				)
 			}
 		}
+		}
+	}
+}
+
+@Composable
+private fun AboutMetaPill(
+	@androidx.annotation.DrawableRes icon: Int,
+	text: String,
+) {
+	val cs = MaterialTheme.colorScheme
+	Surface(
+		shape = RoundedCornerShape(50),
+		color = cs.onPrimaryContainer.copy(alpha = 0.16f),
+	) {
+		Row(
+			modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Icon(
+				painter = painterResource(icon),
+				contentDescription = null,
+				tint = cs.onPrimaryContainer,
+				modifier = Modifier.size(15.dp),
+			)
+			Text(
+				text = text,
+				style = MaterialTheme.typography.labelLarge,
+				color = cs.onPrimaryContainer,
+				fontWeight = FontWeight.Medium,
+			)
 		}
 	}
 }

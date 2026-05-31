@@ -30,6 +30,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.ui.util.ActionModeDelegate
+import org.koitharu.kotatsu.core.ui.util.applyTonalNavigationButtonStyle
 import org.koitharu.kotatsu.core.util.ext.isWebViewUnavailable
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.main.ui.protect.ScreenshotPolicyHelper
@@ -95,7 +96,10 @@ abstract class BaseActivity<B : ViewBinding> :
 		super.setContentView(binding.root)
 		ViewCompat.setOnApplyWindowInsetsListener(binding.root, this)
 		val toolbar = (binding.root.findViewById<View>(R.id.toolbar) as? Toolbar)
-		toolbar?.let(this::setSupportActionBar)
+		toolbar?.let {
+			setSupportActionBar(it)
+			it.applyTonalNavigationButtonStyle()
+		}
 	}
 
 	protected fun setDisplayHomeAsUp(isEnabled: Boolean, showUpAsClose: Boolean) {
@@ -105,6 +109,12 @@ abstract class BaseActivity<B : ViewBinding> :
 				setHomeAsUpIndicator(appcompatR.drawable.abc_ic_clear_material)
 			}
 		}
+		(findViewById<View>(R.id.toolbar) as? Toolbar)?.applyTonalNavigationButtonStyle()
+	}
+
+	override fun onPostResume() {
+		super.onPostResume()
+		(findViewById<View>(R.id.toolbar) as? Toolbar)?.applyTonalNavigationButtonStyle()
 	}
 
 	override fun onSupportNavigateUp(): Boolean {

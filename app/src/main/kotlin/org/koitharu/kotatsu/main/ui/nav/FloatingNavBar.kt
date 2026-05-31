@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.main.ui.nav
 
 import android.content.res.ColorStateList
+import android.graphics.PorterDuff
 import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
@@ -13,11 +14,9 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -51,12 +50,20 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import org.koitharu.kotatsu.R
 
 data class FloatingNavBarItem(
 	@IdRes val id: Int,
 	val titleRes: Int,
 	@DrawableRes val icon: Int,
 	val badgeCount: Int = 0,
+)
+
+data class FloatingNavBarColors(
+	val container: Int,
+	val selectedContainer: Int,
+	val selectedContent: Int,
+	val unselectedContent: Int,
 )
 
 // Material 3 "expressive" default spatial spring — snappier than the standard Compose default,
@@ -79,17 +86,14 @@ fun FloatingNavBar(
 	items: List<FloatingNavBarItem>,
 	selectedId: Int,
 	showLabels: Boolean,
-	amoled: Boolean,
+	colors: FloatingNavBarColors,
 	onItemSelected: (Int) -> Unit,
 	onItemReselected: (Int) -> Unit,
 	modifier: Modifier = Modifier,
 ) {
 	if (items.isEmpty()) return
 	val cs = MaterialTheme.colorScheme
-	val useAmoledBlack = amoled && isSystemInDarkTheme()
-	val barColor = if (useAmoledBlack) Color.Black else cs.surfaceContainer
-	val borderColor = if (useAmoledBlack) cs.outline.copy(alpha = 0.55f)
-	else cs.outlineVariant.copy(alpha = 0.35f)
+	val barColor = Color(colors.container)
 
 	Surface(
 		modifier = modifier
@@ -98,7 +102,6 @@ fun FloatingNavBar(
 		shape = RoundedCornerShape(50),
 		color = barColor,
 		contentColor = cs.onSurface,
-		border = BorderStroke(1.dp, borderColor),
 	) {
 		Row(
 			modifier = Modifier
@@ -114,6 +117,7 @@ fun FloatingNavBar(
 					item = item,
 					selected = item.id == selectedId,
 					showLabel = showLabels,
+					colors = colors,
 					onClick = {
 						if (item.id == selectedId) onItemReselected(item.id)
 						else onItemSelected(item.id)
@@ -129,16 +133,24 @@ private fun FloatingNavItem(
 	item: FloatingNavBarItem,
 	selected: Boolean,
 	showLabel: Boolean,
+	colors: FloatingNavBarColors,
 	onClick: () -> Unit,
 ) {
-	val cs = MaterialTheme.colorScheme
 	val container by animateColorAsState(
-		targetValue = if (selected) cs.primaryContainer else Color.Transparent,
+		targetValue = if (selected) {
+			Color(colors.selectedContainer)
+		} else {
+			Color.Transparent
+		},
 		animationSpec = FloatSpec_Color,
 		label = "navItemContainer",
 	)
 	val content by animateColorAsState(
-		targetValue = if (selected) cs.primary else cs.onSurfaceVariant,
+		targetValue = if (selected) {
+			Color(colors.selectedContent)
+		} else {
+			Color(colors.unselectedContent)
+		},
 		animationSpec = FloatSpec_Color,
 		label = "navItemContent",
 	)
@@ -244,17 +256,26 @@ private fun NavIcon(
 			}
 		},
 		update = { iv ->
-			if (iv.tag != resId) {
-				iv.setImageResource(resId)
-				iv.tag = resId
+			val targetResId = when {
+				resId == R.drawable.ic_explore_selector && selected -> R.drawable.ic_explore_checked
+				resId == R.drawable.ic_explore_selector -> R.drawable.ic_explore_normal
+				else -> resId
 			}
-			iv.imageTintList = ColorStateList.valueOf(tint.toArgb())
+			if (iv.tag != targetResId) {
+				iv.setImageResource(targetResId)
+				iv.tag = targetResId
+				iv.isSelected = !selected
+			}
 			val targetState = if (selected) SELECTOR_STATE_CHECKED else SELECTOR_STATE_UNCHECKED
-			val current = iv.drawableState
-			val isAlreadyChecked = current.any { it == android.R.attr.state_checked }
-			if (isAlreadyChecked != selected) {
+			if (iv.isSelected != selected) {
+				iv.isSelected = selected
+				iv.isActivated = selected
 				iv.setImageState(targetState, false)
 			}
+			val tintColor = tint.toArgb()
+			iv.imageTintList = ColorStateList.valueOf(tintColor)
+			iv.drawable?.mutate()?.setTint(tintColor)
+			iv.setColorFilter(tintColor, PorterDuff.Mode.SRC_IN)
 		},
 	)
 }

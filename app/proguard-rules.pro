@@ -67,6 +67,13 @@
 -keep interface rx.** { *; }
 -dontwarn rx.**
 
+# QuickJS (used by Mihon's JavaScriptEngine and directly by some extensions)
+-keep class app.cash.quickjs.** { *; }
+-keepclassmembers class app.cash.quickjs.** {
+    public <init>(...);
+    public protected *;
+}
+
 # OkHttp and Okio (used by extensions)
 -keep class okhttp3.** { *; }
 -keep interface okhttp3.** { *; }

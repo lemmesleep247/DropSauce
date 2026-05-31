@@ -194,6 +194,7 @@ dependencies {
 	implementation libs.okhttp.dnsoverhttps
 	implementation libs.okio
 	implementation libs.rxjava
+	implementation libs.quickJs
 	implementation libs.injekt.core
 	implementation libs.kotlinx.serialization.json
 	implementation libs.kotlinx.serialization.json.okio

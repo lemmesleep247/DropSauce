@@ -151,7 +151,7 @@ abstract class HttpSource : CatalogueSource {
 			.map { imageUrlParse(it) }
 	}
 
-	open fun imageUrlRequest(page: Page): Request = GET(baseUrl + page.url, headers)
+	open fun imageUrlRequest(page: Page): Request = GET(page.url, headers)
 
 	private fun tagRequest(request: Request): Request {
 		if (request.tag(org.koitharu.kotatsu.parsers.model.MangaSource::class.java) != null) {

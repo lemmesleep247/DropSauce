@@ -37,6 +37,15 @@
 		<item>Google</item>
 		<item>CloudFlare</item>
 		<item>AdGuard</item>
+		<item>Quad9</item>
+		<item>AliDNS</item>
+		<item>DNSPod</item>
+		<item>360</item>
+		<item>Quad101</item>
+		<item>Mullvad</item>
+		<item>Control D</item>
+		<item>Njalla</item>
+		<item>Shecan</item>
 		<item>0ms</item>
 	</string-array>
 	<string-array name="image_proxies" translatable="false">

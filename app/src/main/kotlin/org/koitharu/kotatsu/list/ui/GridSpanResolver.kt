@@ -35,7 +35,12 @@ class GridSpanResolver(
 		}
 		val rv = v as? RecyclerView ?: return
 		val width = abs(right - left)
-		if (width == 0) {
+		// Ignore implausibly small widths. While the RecyclerView lives inside a ViewPager2
+		// (e.g. the favourites pager) it can momentarily be laid out at a tiny transient width
+		// during page settling/rotation. Trusting such a value would lower the span count to the
+		// minimum and blow every cover up to full size. A real full-width grid is always at least
+		// one cell wide, so anything narrower than that is a transient we must skip.
+		if (width < cellWidth) {
 			return
 		}
 		resolveGridSpanCount(width)
@@ -46,7 +51,7 @@ class GridSpanResolver(
 		cellWidth = (gridWidth * scaleFactor) + spacing
 		val lm = rv.layoutManager as? GridLayoutManager ?: return
 		val innerWidth = lm.width - lm.paddingEnd - lm.paddingStart
-		if (innerWidth > 0) {
+		if (innerWidth >= cellWidth) {
 			resolveGridSpanCount(innerWidth)
 			lm.spanCount = spanCount
 		}

@@ -55,7 +55,18 @@ private class SyncCookieJar(
 		secondary.saveFromResponse(url, cookies)
 	}
 
-	override fun loadForRequest(url: HttpUrl): List<Cookie> = primary.loadForRequest(url)
+	override fun loadForRequest(url: HttpUrl): List<Cookie> {
+		val primaryCookies = primary.loadForRequest(url)
+		val secondaryCookies = secondary.loadForRequest(url)
+		if (secondaryCookies.isEmpty()) return primaryCookies
+		// Merge both stores so that WebView-set cookies (e.g. cf_clearance acquired during
+		// a Cloudflare challenge) are visible to OkHttp requests even if they were never
+		// written to MutableCookieJar. Primary wins for same-named cookies.
+		val merged = LinkedHashMap<String, Cookie>()
+		secondaryCookies.forEach { merged[it.name] = it }
+		primaryCookies.forEach { merged[it.name] = it }
+		return merged.values.toList()
+	}
 }
 
 class KotoNetworkHelper(

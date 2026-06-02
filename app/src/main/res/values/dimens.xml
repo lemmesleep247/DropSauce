@@ -98,7 +98,13 @@
 	<dimen name="read_button_min_width">92dp</dimen>
 	<dimen name="menu_popup_corner_radius">20dp</dimen>
 	<dimen name="menu_popup_content_padding">0dp</dimen>
-	<dimen name="menu_popup_content_padding_left">4dp</dimen>
-	<dimen name="menu_popup_content_padding_vertical">14dp</dimen>
-	<dimen name="menu_icon_text_spacing_extra">12dp</dimen>
+	<dimen name="menu_popup_content_padding_left">0dp</dimen>
+	<dimen name="menu_popup_content_padding_vertical">0dp</dimen>
+	<dimen name="menu_popup_min_width">160dp</dimen>
+	<dimen name="menu_popup_item_min_height">40dp</dimen>
+	<dimen name="menu_popup_icon_size">32dp</dimen>
+	<dimen name="menu_popup_item_padding_horizontal">12dp</dimen>
+	<dimen name="menu_popup_selector_inset_horizontal">4dp</dimen>
+	<dimen name="menu_popup_selector_inset_vertical">4dp</dimen>
+	<dimen name="menu_icon_text_spacing_extra">10dp</dimen>
 </resources>

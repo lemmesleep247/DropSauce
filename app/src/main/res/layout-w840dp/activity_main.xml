@@ -85,7 +85,7 @@
                     android:clipToPadding="false">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/button_overflow"
+                        android:id="@+id/button_settings"
                         style="?materialIconButtonStyle"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
@@ -94,12 +94,24 @@
                         android:insetBottom="0dp"
                         android:insetLeft="0dp"
                         android:insetRight="0dp"
-                        app:icon="@drawable/ic_more_vert"
+                        app:icon="@drawable/ic_settings_filled"
                         app:iconSize="24dp"
                         app:iconPadding="0dp"
                         app:iconGravity="textStart"
                         app:iconTint="?attr/colorOnSurfaceVariant"
-                        android:contentDescription="@string/more" />
+                        android:contentDescription="@string/settings" />
+
+                    <View
+                        android:id="@+id/badge_settings_update"
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginEnd="11dp"
+                        android:background="@drawable/bg_update_dot"
+                        android:backgroundTint="?attr/colorError"
+                        android:visibility="gone"
+                        android:contentDescription="@string/app_update_available" />
 
                 </FrameLayout>
 
@@ -121,7 +133,7 @@
                     android:clipToPadding="false">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/button_settings"
+                        android:id="@+id/button_overflow"
                         style="?materialIconButtonStyle"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
@@ -130,24 +142,12 @@
                         android:insetBottom="0dp"
                         android:insetLeft="0dp"
                         android:insetRight="0dp"
-                        app:icon="@drawable/ic_settings"
+                        app:icon="@drawable/ic_more_vert"
                         app:iconSize="24dp"
                         app:iconPadding="0dp"
                         app:iconGravity="textStart"
                         app:iconTint="?attr/colorOnSurfaceVariant"
-                        android:contentDescription="@string/settings" />
-
-                    <View
-                        android:id="@+id/badge_settings_update"
-                        android:layout_width="9dp"
-                        android:layout_height="9dp"
-                        android:layout_gravity="top|end"
-                        android:layout_marginTop="12dp"
-                        android:layout_marginEnd="11dp"
-                        android:background="@drawable/bg_update_dot"
-                        android:backgroundTint="?attr/colorError"
-                        android:visibility="gone"
-                        android:contentDescription="@string/app_update_available" />
+                        android:contentDescription="@string/more" />
 
                 </FrameLayout>
 

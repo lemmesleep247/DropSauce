@@ -1,7 +1,6 @@
 package org.koitharu.kotatsu.core.ui.list
 
 import android.os.Bundle
-import android.graphics.drawable.InsetDrawable
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -18,8 +17,8 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryOwner
 import kotlinx.coroutines.Dispatchers
-import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.list.decor.AbstractSelectionItemDecoration
+import org.koitharu.kotatsu.core.util.ext.adjustPopupMenuIcons
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.core.util.ext.toLongArray
 import org.koitharu.kotatsu.core.util.ext.toSet
@@ -105,7 +104,7 @@ class ListSelectionController(
 		enableMenuIcons(menu.menu)
 		callback.onCreateActionMode(this, menu.menuInflater, menu.menu)
 		callback.onPrepareActionMode(this, null, menu.menu)
-		adjustMenuIconSpacing(menu.menu, view.resources.getDimensionPixelSize(R.dimen.menu_icon_text_spacing_extra))
+		menu.menu.adjustPopupMenuIcons(view.resources)
 		menu.setForceShowIcon(true)
 		if (menu.menu.hasVisibleItems()) {
 			menu.setOnMenuItemClickListener { menuItem ->
@@ -119,18 +118,6 @@ class ListSelectionController(
 		} else {
 			focusedItemId = null
 			return false
-		}
-	}
-
-	private fun adjustMenuIconSpacing(menu: Menu, endInset: Int) {
-		for (index in 0 until menu.size()) {
-			val item = menu.getItem(index)
-			item.icon?.let { icon ->
-				if (icon !is InsetDrawable) {
-					item.icon = InsetDrawable(icon.mutate(), 0, 0, endInset, 0)
-				}
-			}
-			item.subMenu?.let { adjustMenuIconSpacing(it, endInset) }
 		}
 	}
 

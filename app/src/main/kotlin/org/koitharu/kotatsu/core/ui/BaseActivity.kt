@@ -3,7 +3,6 @@ package org.koitharu.kotatsu.core.ui
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.drawable.InsetDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -31,6 +30,7 @@ import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.ui.util.ActionModeDelegate
 import org.koitharu.kotatsu.core.ui.util.applyTonalNavigationButtonStyle
+import org.koitharu.kotatsu.core.util.ext.adjustPopupMenuIcons
 import org.koitharu.kotatsu.core.util.ext.isWebViewUnavailable
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.main.ui.protect.ScreenshotPolicyHelper
@@ -144,21 +144,8 @@ abstract class BaseActivity<B : ViewBinding> :
 
 	override fun onPreparePanel(featureId: Int, view: View?, menu: Menu): Boolean {
 		menu.setOptionalIconsVisibleCompat(true)
-		adjustMenuIconSpacing(menu)
+		menu.adjustPopupMenuIcons(resources) { it.requiresActionButtonCompat() }
 		return super.onPreparePanel(featureId, view, menu)
-	}
-
-	private fun adjustMenuIconSpacing(menu: Menu) {
-		val endInset = resources.getDimensionPixelSize(R.dimen.menu_icon_text_spacing_extra)
-		for (index in 0 until menu.size()) {
-			val item = menu.getItem(index)
-			item.icon?.let { icon ->
-				if (icon !is InsetDrawable && !item.requiresActionButtonCompat()) {
-					item.icon = InsetDrawable(icon.mutate(), 0, 0, endInset, 0)
-				}
-			}
-			item.subMenu?.let(::adjustMenuIconSpacing)
-		}
 	}
 
 	private fun MenuItem.requiresActionButtonCompat(): Boolean {

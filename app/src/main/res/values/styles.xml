@@ -47,15 +47,33 @@
 	<style name="Widget.Kotatsu.PopupMenu" parent="Widget.Material3.PopupMenu">
 		<item name="android:popupBackground">@drawable/m3_menu_background</item>
 		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
+		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
+		<item name="android:textAppearanceLargePopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="android:textAppearanceSmallPopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="textAppearanceLargePopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="textAppearanceSmallPopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="android:listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
+		<item name="listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
 	</style>
 
 	<style name="Widget.Kotatsu.PopupMenu.Overflow" parent="Widget.Material3.PopupMenu.Overflow">
 		<item name="android:popupBackground">@drawable/m3_menu_background</item>
 		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
+		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
+		<item name="android:textAppearanceLargePopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="android:textAppearanceSmallPopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="textAppearanceLargePopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="textAppearanceSmallPopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
+		<item name="android:listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
+		<item name="listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
 	</style>
 
 	<style name="Widget.Kotatsu.PopupMenu.ListView" parent="Widget.AppCompat.ListView.DropDown">
-		<item name="android:listSelector">@drawable/m3_popup_menu_row_selector</item>
+		<item name="android:listSelector">@drawable/popup_menu_no_selector</item>
+		<item name="android:cacheColorHint">@android:color/transparent</item>
+		<item name="android:drawSelectorOnTop">false</item>
 		<item name="android:divider">@null</item>
 		<item name="android:dividerHeight">0dp</item>
 		<item name="android:paddingStart">0dp</item>
@@ -63,6 +81,15 @@
 		<item name="android:paddingTop">0dp</item>
 		<item name="android:paddingBottom">0dp</item>
 		<item name="android:clipToPadding">true</item>
+		<item name="android:listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
+		<item name="listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
+	</style>
+
+	<style name="Widget.Kotatsu.PopupMenu.ListPopupWindow" parent="Widget.Material3.PopupMenu.ListPopupWindow">
+		<item name="android:popupBackground">@drawable/m3_menu_background</item>
+		<item name="android:listSelector">@drawable/popup_menu_no_selector</item>
+		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
 	</style>
 
 	<style name="Animation.Kotatsu.BottomSheetDialog" parent="Animation.AppCompat.Dialog">
@@ -317,6 +344,10 @@
 		<item name="colorControlHighlight">@color/selector_overlay</item>
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
+		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
 	</style>
 
 	<style name="ThemeOverlay.Kotatsu.ActionMode" parent="">
@@ -330,6 +361,10 @@
 	<style name="ThemeOverlay.Kotatsu.ActionMode.Popup" parent="">
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
+		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
 	</style>
 
 	<!-- TextAppearance -->
@@ -494,6 +529,12 @@
 
 	<style name="TextAppearance.Widget.Menu" parent="TextAppearance.AppCompat.Menu">
 		<item name="android:textColor">?attr/colorOnBackground</item>
+	</style>
+
+	<style name="TextAppearance.Widget.Menu.Popup" parent="TextAppearance.Widget.Menu">
+		<item name="android:textSize">13sp</item>
+		<item name="android:lineHeight" tools:ignore="NewApi">16sp</item>
+		<item name="lineHeight">16sp</item>
 	</style>
 
 	<style name="TextAppearance.Kotatsu.Preference.Secondary" parent="TextAppearance.Material3.BodySmall" />

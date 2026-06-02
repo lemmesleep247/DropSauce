@@ -13,6 +13,7 @@ import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.core.view.MenuProvider
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
@@ -125,6 +126,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		// Place the search icon inline, right before the hint, and centre the whole group.
 		viewBinding.searchBar.textView.apply {
 			gravity = android.view.Gravity.CENTER
+			includeFontPadding = false
 			setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0)
 			compoundDrawablePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
 		}
@@ -244,7 +246,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		val providers = overflowMenuProviders
 			.filter { it.isActive }
 			.map { it.provider }
-		val popup = PopupMenu(anchor.context, anchor)
+		val popup = PopupMenu(anchor.context, anchor, GravityCompat.END)
 		val menu = popup.menu
 		providers.forEach { it.onCreateMenu(menu, popup.menuInflater) }
 		providers.forEach { it.onPrepareMenu(menu) }

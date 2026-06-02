@@ -322,5 +322,24 @@ class MihonMangaRepository(
 		return mihonFilters
 	}
 
-	override suspend fun getRelatedMangaImpl(seed: Manga): List<Manga> = emptyList()
+	override suspend fun getRelatedMangaImpl(seed: Manga): List<Manga> = withContext(Dispatchers.IO) {
+		val httpSource = mihonSource as? HttpSource
+		// Search the same source using the manga's first tag as a query so the
+		// results are genre-adjacent. Fall back to popular if there are no tags.
+		val query = seed.tags.firstOrNull()?.title.orEmpty()
+		val page = if (query.isNotEmpty()) {
+			mihonSource.getSearchManga(1, query, FilterList())
+		} else {
+			mihonSource.getPopularManga(1)
+		}
+		page.mangas
+			.filter { it.url != seed.url }
+			.take(10)
+			.map { sManga ->
+				sManga.toManga(
+					source = source,
+					publicUrl = httpSource?.getMangaUrl(sManga).orEmpty(),
+				)
+			}
+	}
 }

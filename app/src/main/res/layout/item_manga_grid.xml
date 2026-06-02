@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- App-wide manga card (Material 3 Expressive). The cover lives in a rounded card; the title can
-     either be overlaid on a bottom scrim inside the cover (textView_title_overlay) or placed below
-     the cover (textView_title), toggled per the "title over cover" setting. The root width and the
-     overlay title appearance are applied by ItemSizeResolver. -->
+<!-- App-wide manga card (Material 3 Expressive). The cover rounds itself (no MaterialCardView
+     wrapper, so Coil's CoverSizeResolver measures it reliably). The title is either overlaid on a
+     dark-accent scrim inside the cover (textView_title_overlay) or shown below it (textView_title),
+     toggled by the "title over cover" setting. Root width + the overlay title appearance are set by
+     ItemSizeResolver; the scrim drawable + the overlay title's end margin are set in the adapter. -->
 <LinearLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -10,35 +11,33 @@
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
 	android:layout_margin="2dp"
+	android:background="@drawable/custom_selectable_item_background"
 	android:clipChildren="false"
 	android:orientation="vertical"
 	tools:layout_width="140dp">
 
-	<com.google.android.material.card.MaterialCardView
+	<FrameLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:duplicateParentState="true"
-		android:foreground="?attr/selectableItemBackground"
-		app:cardBackgroundColor="?attr/colorSurfaceContainer"
-		app:cardCornerRadius="16dp"
-		app:cardElevation="0dp">
+		android:foreground="?attr/selectableItemBackground">
 
 		<org.koitharu.kotatsu.image.ui.CoverImageView
 			android:id="@+id/imageView_cover"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:background="?attr/colorSurfaceContainer"
-			android:scaleType="centerCrop"
 			app:allowRgb565="true"
+			app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Large"
 			tools:ignore="ContentDescription"
 			tools:src="@tools:sample/backgrounds/scenic[5]" />
 
 		<View
 			android:id="@+id/view_scrim"
 			android:layout_width="match_parent"
-			android:layout_height="104dp"
+			android:layout_height="72dp"
 			android:layout_gravity="bottom"
-			tools:background="#99000000" />
+			tools:background="#CC000000" />
 
 		<org.koitharu.kotatsu.core.ui.widgets.IconsView
 			android:id="@+id/iconsView"
@@ -69,8 +68,8 @@
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:layout_gravity="bottom|start"
-			android:layout_marginStart="10dp"
-			android:layout_marginEnd="44dp"
+			android:layout_marginStart="12dp"
+			android:layout_marginEnd="12dp"
 			android:layout_marginBottom="8dp"
 			android:elegantTextHeight="false"
 			android:ellipsize="end"
@@ -85,7 +84,7 @@
 			android:layout_gravity="bottom|end"
 			android:layout_margin="@dimen/card_indicator_offset" />
 
-	</com.google.android.material.card.MaterialCardView>
+	</FrameLayout>
 
 	<TextView
 		android:id="@+id/textView_title"

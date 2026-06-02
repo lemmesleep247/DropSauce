@@ -160,7 +160,10 @@ class CoverImageView @JvmOverloads constructor(
 		if (trimImage) {
 			transformations(listOf(TrimTransformation()))
 		}
-		if (hasAspectRatio) {
+		// Fall back to the view-measured size only when no explicit size was requested. An explicit
+		// exactImageSize is stable and avoids loading low-res covers when the view is measured at a
+		// transient size (e.g. grids inside a ViewPager2 during settling/rotation).
+		if (exactImageSize == null && hasAspectRatio) {
 			size(CoverSizeResolver(this@CoverImageView))
 		}
 	}

@@ -94,6 +94,7 @@ class SourcesCatalogViewModel @Inject constructor(
 		externalRepoUrl,
 		installingPackages,
 		refreshTrigger,
+		settings.observeAsFlow(AppSettings.KEY_MIHON_HIDDEN_PACKAGES) { mihonHiddenPackages },
 	) { args ->
 		val q = args[0] as String?
 		val f = args[1] as SourcesCatalogFilter
@@ -166,6 +167,11 @@ class SourcesCatalogViewModel @Inject constructor(
 
 	fun setNsfwDisabled(value: Boolean) {
 		settings.isNsfwContentDisabled = value
+	}
+
+	/** Hides or shows an installed extension in Explore. It stays listed in the manager. */
+	fun setExtensionHidden(packageName: String, hidden: Boolean) {
+		settings.setMihonPackageHidden(packageName, hidden)
 	}
 
 	fun onInstallEntryClick(item: SourceCatalogItem.Extension) {
@@ -315,6 +321,7 @@ class SourcesCatalogViewModel @Inject constructor(
 				iconUrl = null,
 				sourceIconName = source?.name,
 				sourceName = source?.name,
+				isHidden = settings.isMihonPackageHidden(local.pkgName),
 			)
 		}
 
@@ -354,6 +361,7 @@ class SourcesCatalogViewModel @Inject constructor(
 					iconUrl = iconUrl,
 					sourceIconName = source?.name,
 					sourceName = source?.name,
+					isHidden = settings.isMihonPackageHidden(entry.packageName),
 				).also {
 					packagesWithUpdates += entry.packageName
 				}

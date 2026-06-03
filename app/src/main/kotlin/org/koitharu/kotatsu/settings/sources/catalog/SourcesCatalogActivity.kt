@@ -263,6 +263,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		router.openList(MangaSource(sourceName), null, null)
 	}
 
+	override fun onExtensionHideClick(item: SourceCatalogItem.Extension) {
+		viewModel.setExtensionHidden(item.packageName, !item.isHidden)
+	}
+
 	override fun onMenuItemActionExpand(item: MenuItem): Boolean {
 		val sq = (item.actionView as? SearchView)?.query?.trim()?.toString().orEmpty()
 		viewModel.performSearch(sq)

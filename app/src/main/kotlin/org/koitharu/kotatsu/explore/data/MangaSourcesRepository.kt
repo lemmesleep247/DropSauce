@@ -115,6 +115,19 @@ class MangaSourcesRepository @Inject constructor(
 		}
 	}
 
+	/**
+	 * Hides (or unhides) the extension packages backing [sources] from Explore. Returns a
+	 * [ReversibleHandle] that restores the previous state.
+	 */
+	fun setSourcesHidden(sources: Collection<MangaSource>, hidden: Boolean): ReversibleHandle {
+		val packages = sources.mapNotNullTo(HashSet()) { it.unwrapMihon()?.pkgName }
+		val before = settings.mihonHiddenPackages
+		settings.mihonHiddenPackages = if (hidden) before + packages else before - packages
+		return ReversibleHandle {
+			settings.mihonHiddenPackages = before
+		}
+	}
+
 	private val usagePrefs: SharedPreferences by lazy {
 		context.getSharedPreferences("source_usage", Context.MODE_PRIVATE)
 	}
@@ -214,9 +227,11 @@ class MangaSourcesRepository @Inject constructor(
 		val manager = mihonExtensionManager ?: return emptyList()
 		manager.initialize()
 		val hideNsfw = settings.isNsfwContentDisabled
+		val hiddenPackages = settings.mihonHiddenPackages
 		val appLang = appLanguage
 		return manager.getMihonMangaSources()
 			.filterNot { hideNsfw && it.isNsfw }
+			.filterNot { it.pkgName in hiddenPackages }
 			.groupBy { it.pkgName to it.catalogueSource.name }
 			.mapNotNull { (key, group) ->
 				if (group.size == 1) {
@@ -289,7 +304,8 @@ class MangaSourcesRepository @Inject constructor(
 			manager.isLoading,
 			settings.observeAsFlow(AppSettings.KEY_MIHON_PER_EXT_ACTIVE_LANG) { mihonPerExtActiveLangs },
 			settings.observeAsFlow(AppSettings.KEY_DISABLE_NSFW) { isNsfwContentDisabled },
-		) { _: Any?, _: Any?, _: Any?, _: Any? ->
+			settings.observeAsFlow(AppSettings.KEY_MIHON_HIDDEN_PACKAGES) { mihonHiddenPackages },
+		) { _: Any?, _: Any?, _: Any?, _: Any?, _: Any? ->
 			getMihonSources()
 		}.distinctUntilChanged()
 	}

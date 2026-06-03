@@ -16,6 +16,8 @@ sealed interface SourceCatalogItem : ListModel {
 		val iconUrl: String? = null,
 		val sourceIconName: String? = null,
 		val sourceName: String? = null,
+		/** True when this extension is hidden from Explore (installed extensions only). */
+		val isHidden: Boolean = false,
 	) : SourceCatalogItem {
 
 		enum class Action(

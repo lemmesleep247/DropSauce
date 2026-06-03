@@ -119,9 +119,22 @@ class ExploreViewModel @Inject constructor(
 		}
 	}
 
+	fun hideSources(sources: Collection<MangaSource>) {
+		launchJob(Dispatchers.Default) {
+			val handle = sourcesRepository.setSourcesHidden(sources, hidden = true)
+			val message = if (sources.size == 1) R.string.extension_hidden else R.string.extensions_hidden
+			onActionDone.call(ReversibleAction(message, handle))
+		}
+	}
+
 	fun respondSuggestionTip(isAccepted: Boolean) {
 		settings.isSuggestionsEnabled = isAccepted
 		settings.closeTip(TIP_SUGGESTIONS)
+	}
+
+	/** Permanently dismisses the multi-language note at the bottom of Explore. */
+	fun dismissLanguageTip() {
+		settings.closeTip(TIP_LANGUAGES)
 	}
 
 	fun sourcesSnapshot(ids: LongSet): List<MangaSourceInfo> {
@@ -138,6 +151,7 @@ class ExploreViewModel @Inject constructor(
 		isGrid,
 		isRandomLoading,
 		sourcesRepository.observeHasMultiLanguageSources(),
+		settings.observeAsFlow(AppSettings.KEY_TIPS_CLOSED) { isTipEnabled(TIP_LANGUAGES) },
 	) { args ->
 		buildList(
 			sources = args[0] as List<MangaSourceInfo>,
@@ -146,6 +160,7 @@ class ExploreViewModel @Inject constructor(
 			isGrid = args[3] as Boolean,
 			randomLoading = args[4] as Boolean,
 			hasMultiLanguageSources = args[5] as Boolean,
+			isLanguageTipEnabled = args[6] as Boolean,
 		)
 	}.withErrorHandling()
 
@@ -156,6 +171,7 @@ class ExploreViewModel @Inject constructor(
 		isGrid: Boolean,
 		randomLoading: Boolean,
 		hasMultiLanguageSources: Boolean,
+		isLanguageTipEnabled: Boolean,
 	): List<ListModel> {
 		val result = ArrayList<ListModel>(sources.size + 4)
 		result += ExploreButtons(randomLoading)
@@ -179,8 +195,8 @@ class ExploreViewModel @Inject constructor(
 				actionStringRes = NO_ACTION_STRING_RES,
 			)
 		}
-		// Footer note: only relevant when a multi-language source is actually installed.
-		if (sources.isNotEmpty() && hasMultiLanguageSources) {
+		// Footer note: only relevant when a multi-language source is installed and not dismissed.
+		if (sources.isNotEmpty() && hasMultiLanguageSources && isLanguageTipEnabled) {
 			result += TipModel(
 				key = TIP_LANGUAGES,
 				title = R.string.multi_language_sources,
@@ -188,6 +204,7 @@ class ExploreViewModel @Inject constructor(
 				icon = R.drawable.ic_language,
 				primaryButtonText = NO_ACTION_STRING_RES,
 				secondaryButtonText = NO_ACTION_STRING_RES,
+				isClosable = true,
 			)
 		}
 		return result

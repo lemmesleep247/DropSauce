@@ -64,6 +64,8 @@ class TipView @JvmOverloads constructor(
 
 	var onButtonClickListener: OnButtonClickListener? = null
 
+	var onCloseListener: OnClickListener? = null
+
 	init {
 		orientation = VERTICAL
 		setPadding(context.resources.getDimensionPixelOffset(R.dimen.margin_normal))
@@ -85,13 +87,20 @@ class TipView @JvmOverloads constructor(
 		}
 		binding.buttonPrimary.setOnClickListener(this)
 		binding.buttonSecondary.setOnClickListener(this)
+		binding.buttonClose.setOnClickListener(this)
 	}
 
 	override fun onClick(v: View) {
 		when (v.id) {
 			R.id.button_primary -> onButtonClickListener?.onPrimaryButtonClick(this)
 			R.id.button_secondary -> onButtonClickListener?.onSecondaryButtonClick(this)
+			R.id.button_close -> onCloseListener?.onClick(this)
 		}
+	}
+
+	/** Shows/hides the small close (×) button in the top-right corner. */
+	fun setClosable(closable: Boolean) {
+		binding.buttonClose.isVisible = closable
 	}
 
 	fun setTitle(@StringRes resId: Int) {

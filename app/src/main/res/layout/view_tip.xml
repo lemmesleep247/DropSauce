@@ -11,15 +11,36 @@
 	tools:orientation="vertical"
 	tools:parentTag="android.widget.LinearLayout">
 
-	<TextView
-		android:id="@+id/textView_title"
+	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:drawablePadding="10dp"
 		android:gravity="center_vertical"
-		android:textAppearance="?textAppearanceTitleMedium"
-		tools:drawableStartCompat="@drawable/ic_app_update"
-		tools:text="Уведомления отключены" />
+		android:orientation="horizontal">
+
+		<TextView
+			android:id="@+id/textView_title"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:drawablePadding="10dp"
+			android:gravity="center_vertical"
+			android:textAppearance="?textAppearanceTitleMedium"
+			tools:drawableStartCompat="@drawable/ic_app_update"
+			tools:text="Уведомления отключены" />
+
+		<ImageButton
+			android:id="@+id/button_close"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:layout_marginStart="8dp"
+			android:background="?selectableItemBackgroundBorderless"
+			android:contentDescription="@string/close"
+			android:scaleType="centerInside"
+			android:src="@drawable/ic_close_small"
+			android:visibility="gone"
+			tools:visibility="visible" />
+
+	</LinearLayout>
 
 	<TextView
 		android:id="@+id/textView_body"

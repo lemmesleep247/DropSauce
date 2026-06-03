@@ -1,6 +1,10 @@
 package org.koitharu.kotatsu.search.ui
 
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.drawable.toDrawable
@@ -113,12 +117,34 @@ class MangaListActivity :
 		}
 	}
 
-	/** Source name with the active language appended after it, e.g. "MangaDex (Français)". */
+	/**
+	 * Shows the source name with the active language appended after it on the same line, but kept
+	 * smaller and muted (the same size it had as a subheader).
+	 */
 	private fun applyTitle() {
 		val name = source.getTitle(this)
-		val fullTitle = activeLanguageName?.let { "$name ($it)" } ?: name
-		title = fullTitle
-		viewBinding.collapsingToolbarLayout?.title = fullTitle
+		val lang = activeLanguageName
+		val titleText: CharSequence = if (lang.isNullOrEmpty()) {
+			name
+		} else {
+			SpannableStringBuilder(name).apply {
+				append("  ")
+				val start = length
+				append(lang)
+				setSpan(RelativeSizeSpan(0.7f), start, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+				setSpan(
+					ForegroundColorSpan(getThemeColor(materialR.attr.colorOnSurfaceVariant)),
+					start,
+					length,
+					Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+				)
+			}
+		}
+		title = titleText
+		viewBinding.collapsingToolbarLayout?.let {
+			it.title = titleText
+			it.subtitle = null
+		}
 	}
 
 	/**

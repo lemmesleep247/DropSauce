@@ -10,6 +10,8 @@ data class TipModel(
 	@DrawableRes val icon: Int,
 	@StringRes val primaryButtonText: Int,
 	@StringRes val secondaryButtonText: Int,
+	/** When true, the tip shows a small close (×) button in its top-right corner. */
+	val isClosable: Boolean = false,
 ) : ListModel {
 
 	override fun areItemsTheSame(other: ListModel): Boolean {

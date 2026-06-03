@@ -413,28 +413,33 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getStringSet(KEY_SOURCES_PREFERRED_LANGUAGES, emptySet()).orEmpty()
 		set(value) = prefs.edit { putStringSet(KEY_SOURCES_PREFERRED_LANGUAGES, value) }
 
-	var mihonPreferredLanguages: Set<String>
-		get() = prefs.getStringSet(KEY_MIHON_PREFERRED_LANGUAGES, emptySet()).orEmpty()
-		set(value) = prefs.edit { putStringSet(KEY_MIHON_PREFERRED_LANGUAGES, value) }
-
 	/**
-	 * Stores "pkgName:lang" pairs for disabled language-source combinations.
-	 * When a language is disabled for a specific extension package, its "pkgName:lang" entry
-	 * is present in this set.
+	 * The active language chosen per logical source (a package + source-name pair) for
+	 * multi-language extensions. Each entry is encoded as "lang\npkgName\nsourceName" (newline
+	 * delimited; none of the parts can contain a newline), so a single source collapses its
+	 * language variants into one Explore entity and the user picks exactly one active language
+	 * for it. Unset sources fall back to the install-time default (app language -> English ->
+	 * any), resolved at read time.
 	 */
-	var mihonPerExtDisabledLangs: Set<String>
-		get() = prefs.getStringSet(KEY_MIHON_PER_EXT_DISABLED_LANGS, emptySet()).orEmpty()
-		set(value) = prefs.edit { putStringSet(KEY_MIHON_PER_EXT_DISABLED_LANGS, value) }
+	var mihonPerExtActiveLangs: Set<String>
+		get() = prefs.getStringSet(KEY_MIHON_PER_EXT_ACTIVE_LANG, emptySet()).orEmpty()
+		set(value) = prefs.edit { putStringSet(KEY_MIHON_PER_EXT_ACTIVE_LANG, value) }
 
-	fun isMihonSourceLangEnabled(pkgName: String, lang: String): Boolean =
-		"$pkgName:$lang" !in mihonPerExtDisabledLangs
-
-	fun setMihonSourceLangEnabled(pkgName: String, lang: String, enabled: Boolean) {
-		val current = mihonPerExtDisabledLangs.toMutableSet()
-		val key = "$pkgName:$lang"
-		if (enabled) current.remove(key) else current.add(key)
-		mihonPerExtDisabledLangs = current
+	fun getMihonActiveLang(pkgName: String, sourceName: String): String? {
+		val suffix = "\n" + mihonSourceKey(pkgName, sourceName)
+		return mihonPerExtActiveLangs.firstOrNull { it.endsWith(suffix) }
+			?.substringBefore('\n')
+			?.takeIf { it.isNotEmpty() }
 	}
+
+	fun setMihonActiveLang(pkgName: String, sourceName: String, lang: String) {
+		val suffix = "\n" + mihonSourceKey(pkgName, sourceName)
+		val updated = mihonPerExtActiveLangs.filterNot { it.endsWith(suffix) }.toMutableSet()
+		updated.add(lang + suffix)
+		mihonPerExtActiveLangs = updated
+	}
+
+	private fun mihonSourceKey(pkgName: String, sourceName: String): String = "$pkgName\n$sourceName"
 
 	var externalExtensionsRepoUrl: String?
 		get() = prefs.getString(KEY_EXTERNAL_EXTENSIONS_REPO_URL, null)?.takeIf { it.isNotBlank() }
@@ -929,8 +934,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_32BIT_COLOR = "enhanced_colors"
 		const val KEY_SOURCES_ORDER = "sources_sort_order"
 		const val KEY_SOURCES_PREFERRED_LANGUAGES = "sources_preferred_languages"
-		const val KEY_MIHON_PREFERRED_LANGUAGES = "mihon_preferred_languages"
-		const val KEY_MIHON_PER_EXT_DISABLED_LANGS = "mihon_per_ext_disabled_langs"
+		const val KEY_MIHON_PER_EXT_ACTIVE_LANG = "mihon_per_ext_active_lang"
 		const val KEY_EXTERNAL_EXTENSIONS_REPO_URL = "external_extensions_repo_url"
 		const val KEY_BACKUP_INCLUDE_LIBRARY = "backup_include_library"
 		const val KEY_BACKUP_INCLUDE_APP_SETTINGS = "backup_include_app_settings"

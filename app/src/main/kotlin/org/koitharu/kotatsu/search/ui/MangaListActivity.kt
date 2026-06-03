@@ -40,6 +40,7 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
 import org.koitharu.kotatsu.core.util.ext.start
 import org.koitharu.kotatsu.databinding.ActivityMangaListBinding
+import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
 import org.koitharu.kotatsu.filter.ui.FilterHeaderFragment
 import org.koitharu.kotatsu.filter.ui.sheet.FilterSheetFragment
@@ -69,7 +70,13 @@ class MangaListActivity :
 			"Cannot find FilterCoordinator.Owner fragment in ${supportFragmentManager.fragments}"
 		}.filterCoordinator
 
+	@javax.inject.Inject
+	lateinit var sourcesRepository: MangaSourcesRepository
+
 	private lateinit var source: MangaSource
+
+	// The active language's native name, appended after the source name in the top bar.
+	private var activeLanguageName: String? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -79,14 +86,60 @@ class MangaListActivity :
 		}
 		val filter = intent.getParcelableExtraCompat<ParcelableMangaListFilter>(AppRouter.KEY_FILTER)?.filter
 		val sortOrder = intent.getSerializableExtraCompat<SortOrder>(AppRouter.KEY_SORT_ORDER)
-		source = MangaSource(intent.getStringExtra(AppRouter.KEY_SOURCE))
+		// Collapse multi-language sources to their active variant so the screen always reflects the
+		// language chosen in source settings, even if it was opened via a different variant.
+		val resolved = sourcesRepository.resolveActiveSource(MangaSource(intent.getStringExtra(AppRouter.KEY_SOURCE)))
+		source = resolved.source
+		activeLanguageName = resolved.languageSubtitle
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
 		if (viewBinding.containerFilterHeader != null) {
 			viewBinding.appbar.addOnOffsetChangedListener(this)
 		}
 		viewBinding.buttonOrder?.setOnClickListener(this)
-		title = source.getTitle(this)
+		applyTitle()
 		initList(source, filter, sortOrder)
+	}
+
+	override fun onResume() {
+		super.onResume()
+		// If the active language was changed in source settings, reload the list in place for the new
+		// variant so the user doesn't have to back out to Explore and reopen the extension.
+		val resolved = sourcesRepository.resolveActiveSource(source)
+		if (resolved.source.name != source.name) {
+			source = resolved.source
+			activeLanguageName = resolved.languageSubtitle
+			applyTitle()
+			reloadList(source)
+		}
+	}
+
+	/** Source name with the active language appended after it, e.g. "MangaDex (Français)". */
+	private fun applyTitle() {
+		val name = source.getTitle(this)
+		val fullTitle = activeLanguageName?.let { "$name ($it)" } ?: name
+		title = fullTitle
+		viewBinding.collapsingToolbarLayout?.title = fullTitle
+	}
+
+	/**
+	 * Replaces the list (and filter header/side) with a fresh fragment for [newSource]. A plain
+	 * recreate() can't be used here: the FragmentManager would restore the previous source's list
+	 * fragment, so only the title would change while the content stayed on the old language.
+	 */
+	private fun reloadList(newSource: MangaSource) {
+		supportFragmentManager.commit {
+			setReorderingAllowed(true)
+			replace(R.id.container, RemoteListFragment.newInstance(newSource))
+			// The filter header/side capture their FilterCoordinator at creation, so recreate them
+			// too — otherwise they keep driving the old source's list.
+			if (viewBinding.containerFilterHeader != null) {
+				replace(R.id.container_filter_header, FilterHeaderFragment::class.java, null)
+			}
+			if (viewBinding.containerSide != null) {
+				replace(R.id.container_side, FilterSheetFragment::class.java, null)
+			}
+			runOnCommit { findFilterOwner()?.let { initFilter(it) } }
+		}
 	}
 
 	override fun isNsfwContent(): Flow<Boolean> = flowOf(source.isNsfw())

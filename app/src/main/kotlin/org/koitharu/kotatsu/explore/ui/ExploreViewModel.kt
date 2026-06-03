@@ -33,6 +33,7 @@ import org.koitharu.kotatsu.list.ui.model.ListHeader
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.list.ui.model.MangaCompactListModel
+import org.koitharu.kotatsu.list.ui.model.TipModel
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -136,6 +137,7 @@ class ExploreViewModel @Inject constructor(
 		getSuggestionFlow(),
 		isGrid,
 		isRandomLoading,
+		sourcesRepository.observeHasMultiLanguageSources(),
 	) { args ->
 		buildList(
 			sources = args[0] as List<MangaSourceInfo>,
@@ -143,6 +145,7 @@ class ExploreViewModel @Inject constructor(
 			recommendation = args[2] as List<Manga>,
 			isGrid = args[3] as Boolean,
 			randomLoading = args[4] as Boolean,
+			hasMultiLanguageSources = args[5] as Boolean,
 		)
 	}.withErrorHandling()
 
@@ -152,8 +155,9 @@ class ExploreViewModel @Inject constructor(
 		recommendation: List<Manga>,
 		isGrid: Boolean,
 		randomLoading: Boolean,
+		hasMultiLanguageSources: Boolean,
 	): List<ListModel> {
-		val result = ArrayList<ListModel>(sources.size + 3)
+		val result = ArrayList<ListModel>(sources.size + 4)
 		result += ExploreButtons(randomLoading)
 		if (recommendation.isNotEmpty()) {
 			result += ListHeader(R.string.suggestions, R.string.more, R.id.nav_suggestions)
@@ -173,6 +177,17 @@ class ExploreViewModel @Inject constructor(
 				textPrimary = R.string.no_external_source_installed,
 				textSecondary = R.string.manage_manga_extensions_from_settings_icon,
 				actionStringRes = NO_ACTION_STRING_RES,
+			)
+		}
+		// Footer note: only relevant when a multi-language source is actually installed.
+		if (sources.isNotEmpty() && hasMultiLanguageSources) {
+			result += TipModel(
+				key = TIP_LANGUAGES,
+				title = R.string.multi_language_sources,
+				text = R.string.explore_language_note,
+				icon = R.drawable.ic_language,
+				primaryButtonText = NO_ACTION_STRING_RES,
+				secondaryButtonText = NO_ACTION_STRING_RES,
 			)
 		}
 		return result
@@ -205,6 +220,7 @@ class ExploreViewModel @Inject constructor(
 	companion object {
 
 		private const val TIP_SUGGESTIONS = "suggestions"
+		private const val TIP_LANGUAGES = "languages_note"
 		private const val SUGGESTIONS_COUNT = 8
 		private const val NO_ACTION_STRING_RES = 0
 	}

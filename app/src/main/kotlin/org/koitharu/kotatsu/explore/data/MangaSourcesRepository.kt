@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.explore.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.os.ConfigurationCompat
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -15,9 +16,16 @@ import org.koitharu.kotatsu.core.prefs.observeAsFlow
 import org.koitharu.kotatsu.core.ui.util.ReversibleHandle
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
+import org.koitharu.kotatsu.mihon.resolveActiveMihonLanguage
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Result of [MangaSourcesRepository.resolveActiveSource]. */
+data class ResolvedSource(
+	val source: MangaSource,
+	val languageSubtitle: String?,
+)
 
 @Singleton
 class MangaSourcesRepository @Inject constructor(
@@ -128,7 +136,8 @@ class MangaSourcesRepository @Inject constructor(
 
 	private fun sourceKeyOf(source: MangaSource): String = when (source) {
 		is MangaSourceInfo -> sourceKeyOf(source.mangaSource)
-		is MihonMangaSource -> "mihon:${source.pkgName}:${source.language}"
+		// Key by package + source name (NOT language) so pins and last-used survive a language switch.
+		is MihonMangaSource -> "mihon:${source.pkgName}:${source.catalogueSource.name}"
 		else -> {
 			val matched = getMihonSources().firstOrNull { it.name == source.name }
 			if (matched != null) {
@@ -195,19 +204,71 @@ class MangaSourcesRepository @Inject constructor(
 		return sources
 	}
 
+	/**
+	 * Collapses each logical source (a package + source-name pair) into a single Explore entity.
+	 * For a multi-language source only the active-language variant is returned — chosen by the
+	 * user, or defaulted (app language → English → any) at read time. Single-language sources are
+	 * returned as-is. Honours the NSFW filter.
+	 */
 	private fun getMihonSources(): List<MihonMangaSource> {
 		val manager = mihonExtensionManager ?: return emptyList()
 		manager.initialize()
-		val sources = manager.getMihonMangaSources()
-		val preferredLangs = settings.mihonPreferredLanguages
-		val disabledLangs = settings.mihonPerExtDisabledLangs
 		val hideNsfw = settings.isNsfwContentDisabled
-		return sources.filter { source ->
-			val isPreferredLang = preferredLangs.isEmpty() || source.language in preferredLangs
-			val isEnabled = "${source.pkgName}:${source.language}" !in disabledLangs
-			val isNsfwOk = !hideNsfw || !source.isNsfw
-			isPreferredLang && isEnabled && isNsfwOk
-		}
+		val appLang = appLanguage
+		return manager.getMihonMangaSources()
+			.filterNot { hideNsfw && it.isNsfw }
+			.groupBy { it.pkgName to it.catalogueSource.name }
+			.mapNotNull { (key, group) ->
+				if (group.size == 1) {
+					group.first()
+				} else {
+					val (pkgName, sourceName) = key
+					val langs = group.map { it.language }
+					val stored = settings.getMihonActiveLang(pkgName, sourceName)
+					val activeLang = resolveActiveMihonLanguage(langs, stored, appLang)
+					group.firstOrNull { it.language == activeLang } ?: group.first()
+				}
+			}
+	}
+
+	/**
+	 * Resolves a (possibly stale) Mihon source to the language variant that is currently active
+	 * for its logical source. Non-Mihon or single-language sources are returned unchanged. The
+	 * returned [ResolvedSource.languageSubtitle] is the active language's native name, or null
+	 * when the source has no language variants.
+	 */
+	fun resolveActiveSource(source: MangaSource): ResolvedSource {
+		val mihon = source.unwrapMihon() ?: return ResolvedSource(source, null)
+		val manager = mihonExtensionManager ?: return ResolvedSource(source, null)
+		manager.initialize()
+		val siblings = manager.getMihonMangaSources()
+			.filter { it.pkgName == mihon.pkgName && it.catalogueSource.name == mihon.catalogueSource.name }
+		if (siblings.size <= 1) return ResolvedSource(source, null)
+		val stored = settings.getMihonActiveLang(mihon.pkgName, mihon.catalogueSource.name)
+		val activeLang = resolveActiveMihonLanguage(siblings.map { it.language }, stored, appLanguage)
+		val active = siblings.firstOrNull { it.language == activeLang } ?: mihon
+		return ResolvedSource(active, active.languageDisplayName)
+	}
+
+	private fun MangaSource.unwrapMihon(): MihonMangaSource? = when (this) {
+		is MihonMangaSource -> this
+		is MangaSourceInfo -> mangaSource as? MihonMangaSource
+		else -> null
+	}
+
+	/** The app's current language code (e.g. "en", "fr"), used to default a source's language. */
+	private val appLanguage: String
+		get() = ConfigurationCompat.getLocales(context.resources.configuration)[0]
+			?.language
+			?.takeIf { it.isNotEmpty() }
+			?: "en"
+
+	/** True when at least one installed source offers more than one language. */
+	private fun hasMultiLanguageSources(): Boolean {
+		val manager = mihonExtensionManager ?: return false
+		return manager.getMihonMangaSources()
+			.groupBy { it.pkgName to it.catalogueSource.name }
+			.any { (_, group) -> group.mapTo(HashSet()) { it.language }.size > 1 }
 	}
 
 	private fun getAllMihonSources(): List<MihonMangaSource> {
@@ -226,11 +287,22 @@ class MangaSourcesRepository @Inject constructor(
 		return combine(
 			manager.installedExtensions,
 			manager.isLoading,
-			settings.observeAsFlow(AppSettings.KEY_MIHON_PREFERRED_LANGUAGES) { mihonPreferredLanguages },
-			settings.observeAsFlow(AppSettings.KEY_MIHON_PER_EXT_DISABLED_LANGS) { mihonPerExtDisabledLangs },
+			settings.observeAsFlow(AppSettings.KEY_MIHON_PER_EXT_ACTIVE_LANG) { mihonPerExtActiveLangs },
 			settings.observeAsFlow(AppSettings.KEY_DISABLE_NSFW) { isNsfwContentDisabled },
-		) { _: Any?, _: Any?, _: Any?, _: Any?, _: Any? ->
+		) { _: Any?, _: Any?, _: Any?, _: Any? ->
 			getMihonSources()
+		}.distinctUntilChanged()
+	}
+
+	/** Emits `true` while any installed source offers more than one language. */
+	fun observeHasMultiLanguageSources(): Flow<Boolean> {
+		val manager = mihonExtensionManager ?: return kotlinx.coroutines.flow.flowOf(false)
+		manager.initialize()
+		return combine(
+			manager.installedExtensions,
+			manager.isLoading,
+		) { _: Any?, _: Any? ->
+			hasMultiLanguageSources()
 		}.distinctUntilChanged()
 	}
 

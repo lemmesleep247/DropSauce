@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.settings.sources
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -13,22 +14,20 @@ import android.view.ViewGroup
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
-import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.MultiSelectListPreference
@@ -38,6 +37,7 @@ import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
 import androidx.preference.TwoStatePreference
 import dagger.hilt.android.AndroidEntryPoint
+import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import org.koitharu.kotatsu.R
@@ -50,8 +50,8 @@ import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.withArgs
-import org.koitharu.kotatsu.extensions.runtime.getExternalExtensionLanguageDisplayName
 import org.koitharu.kotatsu.mihon.MihonMangaRepository
+import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
@@ -61,6 +61,7 @@ import org.koitharu.kotatsu.settings.compose.InfoSettingsItem
 import org.koitharu.kotatsu.settings.compose.ListSettingsItem
 import org.koitharu.kotatsu.settings.compose.MultiSelectSettingsItem
 import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsItem
 import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 
@@ -69,8 +70,15 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 
 	private val viewModel: SourceSettingsViewModel by viewModels()
 
-	private var mihonPm: PreferenceManager? = null
-	private var mihonScreen: PreferenceScreen? = null
+	// Preference managers/screens are kept alive while the screen is shown — the bridged
+	// Preference objects (read by MihonPreferenceRow) hold no separate references. One entry per
+	// language variant that has been opened.
+	private val mihonPms = mutableListOf<PreferenceManager>()
+	private val mihonScreens = mutableListOf<PreferenceScreen>()
+
+	// Built lazily per language and cached, so a 30-language source only builds the screens the
+	// user actually views, and switching back is instant.
+	private val variantCache = mutableMapOf<String, SourceVariant>()
 
 	override fun onResume() {
 		super.onResume()
@@ -87,26 +95,53 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 		val repo = viewModel.repository
 		val isValidSource = repo !is EmptyMangaRepository
-		val prefsName = SourceSettings.getStorageName(viewModel.source.name)
-		val sourcePrefs = requireContext().getSharedPreferences(prefsName, android.content.Context.MODE_PRIVATE)
-		val mihonSections = buildMihonSections(prefsName)
-		val openBrowserUrl = ((repo as? MihonMangaRepository)?.mihonSource as? HttpSource)
-			?.baseUrl?.takeIf { it.isNotBlank() }
-		val uninstallPkg = (repo as? MihonMangaRepository)?.source?.pkgName
-		val languageToggles = buildLanguageToggles()
+		val mihonSource = (repo as? MihonMangaRepository)?.source
+		val uninstallPkg = mihonSource?.pkgName
+
+		// Language variants of this logical source (same package + name). >1 => show radio picker.
+		val siblings = viewModel.getSiblingMihonSources()
+			.sortedBy { it.languageDisplayName.lowercase() }
+		val isMulti = siblings.size > 1
+		val languageOptions = if (isMulti) {
+			siblings.map { LanguageOption(it.language, it.languageDisplayName) }
+		} else {
+			emptyList()
+		}
+		val initialLang = if (isMulti) {
+			viewModel.getActiveLanguage(siblings) ?: siblings.first().language
+		} else {
+			null
+		}
+
+		val variantProvider: (String?) -> SourceVariant = { lang ->
+			if (lang != null && isMulti) {
+				variantCache.getOrPut(lang) {
+					val src = siblings.first { it.language == lang }
+					buildVariant(src.catalogueSource, src.name)
+				}
+			} else {
+				variantCache.getOrPut(DEFAULT_VARIANT_KEY) {
+					if (mihonSource != null) {
+						buildVariant(mihonSource.catalogueSource, mihonSource.name)
+					} else {
+						buildVariant(null, viewModel.source.name)
+					}
+				}
+			}
+		}
 
 		setContent {
 			DropSauceTheme {
 				SourceSettingsScreen(
-					sourcePrefs = sourcePrefs,
 					isValidSource = isValidSource,
-					mihonSections = mihonSections,
-					languageToggles = languageToggles,
-					openBrowserUrl = openBrowserUrl,
+					languageOptions = languageOptions,
+					initialLang = initialLang,
+					variantProvider = variantProvider,
 					uninstallPkg = uninstallPkg,
 					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenBrowser = { url -> openBrowser(url) },
 					onUninstall = { pkg -> uninstallExtension(pkg) },
+					onLanguageSelected = { lang -> viewModel.setActiveLanguage(lang) },
 				)
 			}
 		}
@@ -119,44 +154,34 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 	}
 
 	override fun onDestroyView() {
-		mihonScreen = null
-		mihonPm = null
+		mihonScreens.clear()
+		mihonPms.clear()
+		variantCache.clear()
 		super.onDestroyView()
 	}
 
+	private fun buildVariant(catalogueSource: CatalogueSource?, sourceName: String): SourceVariant {
+		val prefsName = SourceSettings.getStorageName(sourceName)
+		val prefs = requireContext().getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+		val sections = buildMihonSections(catalogueSource, prefsName)
+		val browserUrl = (catalogueSource as? HttpSource)?.baseUrl?.takeIf { it.isNotBlank() }
+		return SourceVariant(sections = sections, sourcePrefs = prefs, openBrowserUrl = browserUrl)
+	}
+
 	@SuppressLint("RestrictedApi")
-	private fun buildMihonSections(prefsName: String): List<PreferenceSection> {
-		val repo = viewModel.repository as? MihonMangaRepository ?: return emptyList()
-		val mihonSource = repo.mihonSource as? ConfigurableSource ?: return emptyList()
+	private fun buildMihonSections(catalogueSource: CatalogueSource?, prefsName: String): List<PreferenceSection> {
+		val configurable = catalogueSource as? ConfigurableSource ?: return emptyList()
 		val ctx = requireContext()
 		val pm = PreferenceManager(ctx).apply { sharedPreferencesName = prefsName }
 		val screen = pm.createPreferenceScreen(ctx)
 		try {
-			mihonSource.setupPreferenceScreen(screen)
+			configurable.setupPreferenceScreen(screen)
 		} catch (e: Throwable) {
 			Log.e("SourceSettingsFragment", "Failed to setup Mihon preferences", e)
 		}
-		mihonPm = pm
-		mihonScreen = screen
+		mihonPms += pm
+		mihonScreens += screen
 		return buildSections(screen)
-	}
-
-	private fun buildLanguageToggles(): LanguageToggles? {
-		val repo = viewModel.repository as? MihonMangaRepository ?: return null
-		val pkgName = repo.source.pkgName
-		val siblings = viewModel.getSiblingMihonSources().sortedBy { it.language }
-		if (siblings.size <= 1) return null
-		val langs = siblings.map { it.language }
-		return LanguageToggles(
-			pkgName = pkgName,
-			languages = langs.map { lang ->
-				LanguageEntry(lang, getExternalExtensionLanguageDisplayName(lang))
-			},
-			isLangEnabled = { lang -> viewModel.isMihonSourceLangEnabled(pkgName, lang) },
-			setLangEnabled = { lang, enabled -> viewModel.setMihonSourceLangEnabled(pkgName, lang, enabled) },
-			areAllEnabled = { viewModel.areAllMihonSourceLangsEnabled(pkgName, langs) },
-			setAllEnabled = { enabled -> viewModel.setMihonSourceLangsEnabled(pkgName, langs, enabled) },
-		)
 	}
 
 	private fun openBrowser(url: String) {
@@ -206,6 +231,8 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 	}
 
 	companion object {
+		private const val DEFAULT_VARIANT_KEY = " default"
+
 		fun newInstance(source: MangaSource) = SourceSettingsFragment().withArgs(1) {
 			putString(AppRouter.KEY_SOURCE, source.name)
 		}
@@ -214,29 +241,33 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 
 private data class PreferenceSection(val title: String?, val preferences: List<Preference>)
 
-private class LanguageEntry(val lang: String, val displayName: String)
+/** A language choice for the radio picker. [displayName] is the native autonym. */
+private data class LanguageOption(val lang: String, val displayName: String)
 
-private class LanguageToggles(
-	val pkgName: String,
-	val languages: List<LanguageEntry>,
-	val isLangEnabled: (String) -> Boolean,
-	val setLangEnabled: (String, Boolean) -> Unit,
-	val areAllEnabled: () -> Boolean,
-	val setAllEnabled: (Boolean) -> Unit,
+/** Everything that depends on which language variant is currently selected. */
+private class SourceVariant(
+	val sections: List<PreferenceSection>,
+	val sourcePrefs: SharedPreferences,
+	val openBrowserUrl: String?,
 )
 
 @Composable
 private fun SourceSettingsScreen(
-	sourcePrefs: SharedPreferences,
 	isValidSource: Boolean,
-	mihonSections: List<PreferenceSection>,
-	languageToggles: LanguageToggles?,
-	openBrowserUrl: String?,
+	languageOptions: List<LanguageOption>,
+	initialLang: String?,
+	variantProvider: (String?) -> SourceVariant,
 	uninstallPkg: String?,
 	onBack: () -> Unit,
 	onOpenBrowser: (String) -> Unit,
 	onUninstall: (String) -> Unit,
+	onLanguageSelected: (String) -> Unit,
 ) {
+	// The active language drives an in-place reload of the whole screen.
+	var selectedLang by remember { mutableStateOf(initialLang) }
+	val variant = remember(selectedLang) { variantProvider(selectedLang) }
+	val sourcePrefs = variant.sourcePrefs
+
 	// Recomposition trigger for bridged preferences (they read live values from sourcePrefs).
 	var rev by remember { mutableIntStateOf(0) }
 	DisposableEffect(sourcePrefs) {
@@ -277,8 +308,8 @@ private fun SourceSettingsScreen(
 			}
 		}
 
-		// Dynamic extension-provided preferences.
-		mihonSections.forEach { section ->
+		// Dynamic extension-provided preferences (reload with the selected language).
+		variant.sections.forEach { section ->
 			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 			item {
 				SettingsGroup(title = section.title) {
@@ -291,25 +322,35 @@ private fun SourceSettingsScreen(
 			}
 		}
 
-		if (languageToggles != null) {
+		// Language picker (single-select radio buttons) — only for multi-language sources.
+		// Placed below the extension's own settings.
+		if (languageOptions.isNotEmpty()) {
 			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 			item {
-				LanguageTogglesGroup(languageToggles)
+				LanguageRadioGroup(
+					options = languageOptions,
+					selectedLang = selectedLang,
+					onSelect = { lang ->
+						selectedLang = lang
+						onLanguageSelected(lang)
+					},
+				)
 			}
 		}
 
-		if (openBrowserUrl != null || uninstallPkg != null) {
+		if (variant.openBrowserUrl != null || uninstallPkg != null) {
 			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 			item {
 				SettingsGroup {
-					if (openBrowserUrl != null) {
+					val browserUrl = variant.openBrowserUrl
+					if (browserUrl != null) {
 						item { pos ->
 							ActionSettingsItem(
 								title = stringResource(R.string.open_in_browser),
-								subtitle = openBrowserUrl,
+								subtitle = browserUrl,
 								icon = R.drawable.ic_open_external,
 								shape = pos.shape,
-								onClick = { onOpenBrowser(openBrowserUrl) },
+								onClick = { onOpenBrowser(browserUrl) },
 							)
 						}
 					}
@@ -414,37 +455,25 @@ private fun MihonPreferenceRow(
 }
 
 @Composable
-private fun LanguageTogglesGroup(toggles: LanguageToggles) {
-	// Single hoisted source of truth so toggling "All languages" updates every per-language
-	// switch immediately (previously each row kept its own state and only synced on re-entry).
-	val states = remember(toggles) {
-		mutableStateMapOf<String, Boolean>().apply {
-			toggles.languages.forEach { put(it.lang, toggles.isLangEnabled(it.lang)) }
-		}
-	}
-	val allEnabled = toggles.languages.isNotEmpty() && toggles.languages.all { states[it.lang] == true }
-	SettingsGroup(title = stringResource(R.string.languages)) {
-		item { pos ->
-			SwitchSettingsItem(
-				title = stringResource(R.string.all_languages),
-				checked = allEnabled,
-				onCheckedChange = { enabled ->
-					toggles.setAllEnabled(enabled)
-					toggles.languages.forEach { states[it.lang] = enabled }
-				},
-				shape = pos.shape,
-			)
-		}
-		toggles.languages.forEach { entry ->
+private fun LanguageRadioGroup(
+	options: List<LanguageOption>,
+	selectedLang: String?,
+	onSelect: (String) -> Unit,
+) {
+	SettingsGroup(title = stringResource(R.string.language)) {
+		options.forEach { option ->
 			item { pos ->
-				SwitchSettingsItem(
-					title = entry.displayName,
-					checked = states[entry.lang] == true,
-					onCheckedChange = { value ->
-						toggles.setLangEnabled(entry.lang, value)
-						states[entry.lang] = value
-					},
+				val isSelected = option.lang == selectedLang
+				SettingsItem(
+					title = option.displayName,
 					shape = pos.shape,
+					onClick = { onSelect(option.lang) },
+					trailing = {
+						RadioButton(
+							selected = isSelected,
+							onClick = { onSelect(option.lang) },
+						)
+					},
 				)
 			}
 		}

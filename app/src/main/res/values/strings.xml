@@ -789,6 +789,8 @@
     <string name="chapters_read">Chapters read</string>
     <string name="chapters_left">Chapters left</string>
     <string name="external_source">External/plugin</string>
+    <string name="multi_language_sources">Multi-language sources</string>
+    <string name="explore_language_note">Sources that support more than one language show only your selected language here. You can change the language anytime in the source\'s settings.</string>
     <string name="plugin_incompatible">Incompatible plugin or internal error. Make sure you are using the latest version of the plugin and DropSauce</string>
     <string name="plugin_incompatible_with_cause">Plugin error: %s\n Make sure you are using the latest version of the plugin and DropSauce</string>
     <string name="connection_ok">Connection is OK</string>

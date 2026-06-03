@@ -22,6 +22,23 @@ fun getExternalExtensionLanguageDisplayName(langCode: String): String {
 	}
 }
 
+/**
+ * Returns the language's own name (autonym) — e.g. "Français", "日本語", "Español" — instead of
+ * the name translated into the device language. Used wherever an extension's language is shown
+ * natively (source settings language picker, browse top-bar subheading).
+ */
+fun getExternalExtensionLanguageAutonym(langCode: String): String {
+	return when (langCode.lowercase(Locale.ROOT)) {
+		"all" -> "Multi"
+		else -> runCatching {
+			val locale = Locale.forLanguageTag(langCode)
+			locale.getDisplayLanguage(locale).replaceFirstChar { it.uppercase(locale) }
+		}.getOrNull()
+			?.takeIf { it.isNotBlank() }
+			?: langCode.uppercase(Locale.ROOT)
+	}
+}
+
 fun registerExternalExtensionPackageObserver(
 	context: Context,
 	scope: CoroutineScope,

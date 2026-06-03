@@ -15,6 +15,8 @@ import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.mihon.MihonMangaRepository
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
+import org.koitharu.kotatsu.mihon.resolveActiveMihonLanguage
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +32,9 @@ class SourceSettingsViewModel @Inject constructor(
 
 	val onActionDone = MutableEventFlow<ReversibleAction>()
 
+	/** The opened source as a Mihon source, or null if it isn't one. */
+	private val mihonSource: MihonMangaSource? = (repository as? MihonMangaRepository)?.source
+
 	override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
 		if (repository is CachingMangaRepository) {
 			if (key != SourceSettings.KEY_SLOWDOWN && key != SourceSettings.KEY_SORT_ORDER) {
@@ -39,29 +44,26 @@ class SourceSettingsViewModel @Inject constructor(
 	}
 
 	/**
-	 * Returns all [MihonMangaSource] instances belonging to the same extension package
-	 * as the current source. Returns empty list if the source is not a Mihon source.
+	 * Returns all [MihonMangaSource] language variants of the current logical source — same
+	 * extension package AND same source name. Returns an empty list if the source is not a Mihon
+	 * source. (Distinct sources bundled in the same package are intentionally excluded.)
 	 */
 	fun getSiblingMihonSources(): List<MihonMangaSource> {
-		val repo = repository as? MihonMangaRepository ?: return emptyList()
-		val pkgName = repo.source.pkgName
-		return mihonExtensionManager.getMihonMangaSources().filter { it.pkgName == pkgName }
+		val src = mihonSource ?: return emptyList()
+		return mihonExtensionManager.getMihonMangaSources()
+			.filter { it.pkgName == src.pkgName && it.catalogueSource.name == src.catalogueSource.name }
 	}
 
-	fun isMihonSourceLangEnabled(pkgName: String, lang: String): Boolean =
-		settings.isMihonSourceLangEnabled(pkgName, lang)
-
-	fun setMihonSourceLangEnabled(pkgName: String, lang: String, enabled: Boolean) {
-		settings.setMihonSourceLangEnabled(pkgName, lang, enabled)
+	/** The currently active language for the logical source (stored choice, or resolved default). */
+	fun getActiveLanguage(siblings: List<MihonMangaSource>): String? {
+		val src = mihonSource ?: return null
+		val stored = settings.getMihonActiveLang(src.pkgName, src.catalogueSource.name)
+		return resolveActiveMihonLanguage(siblings.map { it.language }, stored, Locale.getDefault().language)
 	}
 
-	fun setMihonSourceLangsEnabled(pkgName: String, langs: Collection<String>, enabled: Boolean) {
-		for (lang in langs) {
-			settings.setMihonSourceLangEnabled(pkgName, lang, enabled)
-		}
-	}
-
-	fun areAllMihonSourceLangsEnabled(pkgName: String, langs: Collection<String>): Boolean {
-		return langs.all { settings.isMihonSourceLangEnabled(pkgName, it) }
+	/** Persists [language] as the active language for the logical source. */
+	fun setActiveLanguage(language: String) {
+		val src = mihonSource ?: return
+		settings.setMihonActiveLang(src.pkgName, src.catalogueSource.name, language)
 	}
 }

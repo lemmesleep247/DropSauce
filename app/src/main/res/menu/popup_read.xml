@@ -2,19 +2,43 @@
 <menu
 	xmlns:android="http://schemas.android.com/apk/res/android">
 
-	<item
-		android:id="@+id/action_incognito"
-		android:icon="@drawable/ic_incognito"
-		android:title="@string/incognito_mode" />
+	<group android:id="@+id/group_read_actions">
+		<item
+			android:id="@+id/action_incognito"
+			android:icon="@drawable/ic_incognito"
+			android:orderInCategory="10"
+			android:title="@string/incognito_mode" />
 
-	<item
-		android:id="@+id/action_forget"
-		android:icon="@drawable/ic_delete"
-		android:title="@string/remove_from_history" />
+		<item
+			android:id="@+id/action_forget"
+			android:icon="@drawable/ic_delete"
+			android:orderInCategory="20"
+			android:title="@string/remove_from_history" />
+	</group>
 
-	<item
-		android:id="@+id/action_download"
-		android:icon="@drawable/ic_download"
-		android:title="@string/download" />
+	<group
+		android:id="@+id/group_chapter_options"
+		android:checkableBehavior="all">
+		<item
+			android:id="@+id/action_downloaded"
+			android:checkable="true"
+			android:icon="@drawable/ic_storage_checked"
+			android:orderInCategory="30"
+			android:title="@string/on_device" />
+
+		<item
+			android:id="@+id/action_reversed"
+			android:checkable="true"
+			android:icon="@drawable/ic_revert"
+			android:orderInCategory="40"
+			android:title="@string/reverse_list" />
+
+		<item
+			android:id="@+id/action_grid_view"
+			android:checkable="true"
+			android:icon="@drawable/ic_grid"
+			android:orderInCategory="50"
+			android:title="@string/chapters_grid_view" />
+	</group>
 
 </menu>

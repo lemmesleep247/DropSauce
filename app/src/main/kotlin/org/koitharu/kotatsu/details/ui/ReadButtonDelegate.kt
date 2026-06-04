@@ -1,19 +1,11 @@
 package org.koitharu.kotatsu.details.ui
 
 import android.content.Context
-import android.graphics.Color
-import android.text.style.DynamicDrawableSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.ImageSpan
-import android.text.style.RelativeSizeSpan
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.text.buildSpannedString
-import androidx.core.text.inSpans
-import androidx.core.view.MenuCompat
 import androidx.core.view.get
 import androidx.lifecycle.LifecycleOwner
 import com.google.android.material.button.MaterialButton
@@ -21,11 +13,10 @@ import com.google.android.material.button.MaterialSplitButton
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.combine
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.ReaderIntent
-import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
+import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.details.ui.model.HistoryInfo
 
 class ReadButtonDelegate(
@@ -51,16 +42,14 @@ class ReadButtonDelegate(
 		when (item.itemId) {
 			R.id.action_incognito -> openReader(isIncognitoMode = true)
 			R.id.action_forget -> viewModel.removeFromHistory()
-			R.id.action_download -> {
-				router.showDownloadDialog(
-					manga = setOf(viewModel.getMangaOrNull() ?: return false),
-					snackbarHost = splitButton,
-				)
+			R.id.action_downloaded -> {
+				viewModel.isDownloadedOnly.value = !item.isChecked
 			}
-
-			Menu.NONE -> {
-				val branch = viewModel.branches.value.getOrNull(item.order) ?: return false
-				viewModel.setSelectedBranch(branch.name)
+			R.id.action_reversed -> {
+				viewModel.setChaptersReversed(!item.isChecked)
+			}
+			R.id.action_grid_view -> {
+				viewModel.setChaptersInGridView(!item.isChecked)
 			}
 
 			else -> return false
@@ -86,6 +75,7 @@ class ReadButtonDelegate(
 		menu.inflate(R.menu.popup_read)
 		prepareMenu(menu.menu)
 		menu.setOnMenuItemClickListener(this)
+		menu.menu.setOptionalIconsVisibleCompat(true)
 		menu.setForceShowIcon(true)
 		menu.setOnDismissListener(this)
 		if (menu.menu.hasVisibleItems()) {
@@ -97,12 +87,16 @@ class ReadButtonDelegate(
 	}
 
 	private fun prepareMenu(menu: Menu) {
-		MenuCompat.setGroupDividerEnabled(menu, true)
-		menu.populateBranchList()
 		val history = viewModel.historyInfo.value
+		menu.setGroupCheckable(R.id.group_chapter_options, true, false)
 		menu.findItem(R.id.action_incognito)?.isVisible = !history.isIncognitoMode
 		menu.findItem(R.id.action_forget)?.isVisible = history.history != null
-		menu.findItem(R.id.action_download)?.isVisible = viewModel.getMangaOrNull()?.isLocal == false
+		menu.findItem(R.id.action_downloaded)?.let { menuItem ->
+			menuItem.isVisible = viewModel.mangaDetails.value?.local != null
+			menuItem.isChecked = viewModel.isDownloadedOnly.value
+		}
+		menu.findItem(R.id.action_reversed)?.isChecked = viewModel.isChaptersReversed.value
+		menu.findItem(R.id.action_grid_view)?.isChecked = viewModel.isChaptersInGridView.value
 	}
 
 	private fun openReader(isIncognitoMode: Boolean) {
@@ -137,44 +131,4 @@ class ReadButtonDelegate(
 		splitButton.isEnabled = !isChaptersLoading && info.isValid
 	}
 
-	private fun Menu.populateBranchList() {
-		val branches = viewModel.branches.value
-		if (branches.size <= 1) {
-			return
-		}
-		for ((i, branch) in branches.withIndex()) {
-			val title = buildSpannedString {
-				if (branch.isCurrent) {
-					inSpans(
-						ImageSpan(
-							context,
-							R.drawable.ic_current_chapter,
-							DynamicDrawableSpan.ALIGN_BASELINE,
-						),
-					) {
-						append(' ')
-					}
-					append(' ')
-				}
-				append(branch.name ?: context.getString(R.string.system_default))
-				append(' ')
-				append(' ')
-				inSpans(
-					ForegroundColorSpan(
-						context.getThemeColor(
-							android.R.attr.textColorSecondary,
-							Color.LTGRAY,
-						),
-					),
-					RelativeSizeSpan(0.74f),
-				) {
-					append(branch.count.toString())
-				}
-			}
-			val item = add(R.id.group_branches, Menu.NONE, i, title)
-			item.isCheckable = true
-			item.isChecked = branch.isSelected
-		}
-		setGroupCheckable(R.id.group_branches, true, true)
-	}
 }

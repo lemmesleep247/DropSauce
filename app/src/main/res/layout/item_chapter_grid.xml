@@ -69,19 +69,6 @@
 			app:srcCompat="@drawable/ic_new"
 			tools:visibility="visible" />
 
-		<ImageView
-			android:id="@+id/imageView_current"
-			android:layout_width="16dp"
-			android:layout_height="16dp"
-			android:layout_marginStart="6dp"
-			android:layout_marginTop="6dp"
-			android:contentDescription="@string/new_chapters"
-			android:visibility="gone"
-			app:layout_constraintStart_toStartOf="@id/textView_title"
-			app:layout_constraintTop_toTopOf="@id/textView_title"
-			app:srcCompat="@drawable/ic_current_chapter"
-			tools:visibility="visible" />
-
 	</androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>

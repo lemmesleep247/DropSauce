@@ -25,11 +25,12 @@ fun chapterListItemAD(
 	AdapterDelegateClickListenerAdapter(this, clickListener).attach(itemView)
 
 	bind {
+		itemView.setBackgroundResource(if (item.isCurrent) R.drawable.bg_current_chapter_item else R.drawable.list_selector)
 		binding.textViewTitle.text = item.getTitle(context.resources)
 		binding.textViewDescription.textAndVisible = item.description
 		when {
 			item.isCurrent -> {
-				binding.textViewTitle.drawableStart = ContextCompat.getDrawable(context, R.drawable.ic_current_chapter)
+				binding.textViewTitle.drawableStart = null
 				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
 				binding.textViewDescription.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
 				binding.textViewTitle.typeface = Typeface.DEFAULT_BOLD

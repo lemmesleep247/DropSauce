@@ -40,12 +40,6 @@ class ChapterPagesMenuProvider(
 					(actionView as? SearchView)?.setupChaptersSearchView()
 				}
 				menu.findItem(R.id.action_search)?.isVisible = viewModel.emptyReason.value == null
-				menu.findItem(R.id.action_reversed)?.isChecked = viewModel.isChaptersReversed.value == true
-				menu.findItem(R.id.action_grid_view)?.isChecked = viewModel.isChaptersInGridView.value == true
-				menu.findItem(R.id.action_downloaded)?.let { menuItem ->
-					menuItem.isVisible = viewModel.mangaDetails.value?.local != null
-					menuItem.isChecked = viewModel.isDownloadedOnly.value == true
-				}
 			}
 
 			TAB_PAGES, TAB_BOOKMARKS -> {
@@ -58,24 +52,7 @@ class ChapterPagesMenuProvider(
 		}
 	}
 
-	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
-		R.id.action_reversed -> {
-			viewModel.setChaptersReversed(!menuItem.isChecked)
-			true
-		}
-
-		R.id.action_grid_view -> {
-			viewModel.setChaptersInGridView(!menuItem.isChecked)
-			true
-		}
-
-		R.id.action_downloaded -> {
-			viewModel.isDownloadedOnly.value = !menuItem.isChecked
-			true
-		}
-
-		else -> false
-	}
+	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = false
 
 	override fun handleOnBackPressed() {
 		expandedItemRef?.get()?.collapseActionView()

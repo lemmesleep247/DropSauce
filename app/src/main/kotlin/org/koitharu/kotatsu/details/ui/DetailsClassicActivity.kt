@@ -81,6 +81,7 @@ import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.parentView
+import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.core.util.ext.setTooltipCompat
 import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
@@ -353,10 +354,9 @@ class DetailsClassicActivity :
 		R.id.button_read -> {
 			val menu = PopupMenu(v.context, v)
 			menu.inflate(R.menu.popup_read)
-			menu.menu.findItem(R.id.action_forget)?.isVisible = viewModel.historyInfo.value.run {
-				!isIncognitoMode && history != null
-			}
+			prepareReadPopupMenu(menu.menu)
 			menu.setOnMenuItemClickListener(this)
+			menu.menu.setOptionalIconsVisibleCompat(true)
 			menu.setForceShowIcon(true)
 			menu.show()
 			true
@@ -377,8 +377,36 @@ class DetailsClassicActivity :
 				true
 			}
 
+			R.id.action_downloaded -> {
+				viewModel.isDownloadedOnly.value = !item.isChecked
+				true
+			}
+
+			R.id.action_reversed -> {
+				viewModel.setChaptersReversed(!item.isChecked)
+				true
+			}
+
+			R.id.action_grid_view -> {
+				viewModel.setChaptersInGridView(!item.isChecked)
+				true
+			}
+
 			else -> false
 		}
+	}
+
+	private fun prepareReadPopupMenu(menu: Menu) {
+		val history = viewModel.historyInfo.value
+		menu.setGroupCheckable(R.id.group_chapter_options, true, false)
+		menu.findItem(R.id.action_incognito)?.isVisible = !history.isIncognitoMode
+		menu.findItem(R.id.action_forget)?.isVisible = !history.isIncognitoMode && history.history != null
+		menu.findItem(R.id.action_downloaded)?.let { menuItem ->
+			menuItem.isVisible = viewModel.mangaDetails.value?.local != null
+			menuItem.isChecked = viewModel.isDownloadedOnly.value
+		}
+		menu.findItem(R.id.action_reversed)?.isChecked = viewModel.isChaptersReversed.value
+		menu.findItem(R.id.action_grid_view)?.isChecked = viewModel.isChaptersInGridView.value
 	}
 
 	override fun onChipClick(chip: Chip, data: Any?) {

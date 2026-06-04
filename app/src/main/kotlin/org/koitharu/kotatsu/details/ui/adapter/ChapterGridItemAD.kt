@@ -5,11 +5,13 @@ import androidx.core.view.isVisible
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.core.ui.list.AdapterDelegateClickListenerAdapter
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeColorStateList
 import org.koitharu.kotatsu.core.util.ext.setTooltipCompat
 import org.koitharu.kotatsu.databinding.ItemChapterGridBinding
 import org.koitharu.kotatsu.details.ui.model.ChapterListItem
 import org.koitharu.kotatsu.list.ui.model.ListModel
+import com.google.android.material.R as materialR
 
 fun chapterGridItemAD(
 	clickListener: OnListItemClickListener<ChapterListItem>,
@@ -26,22 +28,24 @@ fun chapterGridItemAD(
 			itemView.setTooltipCompat(item.chapter.title)
 		}
 		binding.imageViewNew.isVisible = item.isNew
-		binding.imageViewCurrent.isVisible = item.isCurrent
 		binding.imageViewBookmarked.isVisible = item.isBookmarked
 		binding.imageViewDownloaded.isVisible = item.isDownloaded
 
 		when {
 			item.isCurrent -> {
-				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
+				binding.root.setCardBackgroundColor(context.getThemeColor(android.R.attr.textColorPrimary))
+				binding.textViewTitle.setTextColor(context.getThemeColor(materialR.attr.colorSurfaceContainerHigh))
 				binding.textViewTitle.typeface = Typeface.DEFAULT_BOLD
 			}
 
 			item.isUnread -> {
+				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerHigh))
 				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
 				binding.textViewTitle.typeface = Typeface.DEFAULT
 			}
 
 			else -> {
+				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerHigh))
 				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))
 				binding.textViewTitle.typeface = Typeface.DEFAULT
 			}

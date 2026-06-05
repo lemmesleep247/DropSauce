@@ -79,6 +79,7 @@ abstract class MangaListViewModel(
 				|| key == AppSettings.KEY_QUICK_FILTER
 				|| key == AppSettings.KEY_MANGA_LIST_BADGES
 				|| key == AppSettings.KEY_TITLE_OVER_COVER
+				|| key == AppSettings.KEY_GRID_SPACING_INCREASED
 		}.onStart { emit("") },
 	) { mode, _, _ ->
 		mode

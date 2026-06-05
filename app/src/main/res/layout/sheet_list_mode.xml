@@ -99,6 +99,20 @@
 				android:textColor="?colorOnSurfaceVariant"
 				app:drawableStartCompat="@drawable/ic_title" />
 
+			<com.google.android.material.materialswitch.MaterialSwitch
+				android:id="@+id/switch_grid_spacing"
+				android:layout_width="match_parent"
+				android:layout_height="?android:listPreferredItemHeightSmall"
+				android:drawablePadding="?android:listPreferredItemPaddingStart"
+				android:ellipsize="end"
+				android:paddingStart="?android:listPreferredItemPaddingStart"
+				android:paddingEnd="?android:listPreferredItemPaddingEnd"
+				android:singleLine="true"
+				android:text="@string/increase_cover_spacing"
+				android:textAppearance="?attr/textAppearanceListItem"
+				android:textColor="?colorOnSurfaceVariant"
+				app:drawableStartCompat="@drawable/ic_grid" />
+
 			<TextView
 				android:id="@+id/textView_grid_title"
 				android:layout_width="match_parent"

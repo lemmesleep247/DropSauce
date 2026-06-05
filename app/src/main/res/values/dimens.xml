@@ -14,6 +14,7 @@
 	<dimen name="grid_spacing">8dp</dimen>
 	<dimen name="list_spacing">8dp</dimen>
 	<dimen name="grid_spacing_outer">2dp</dimen>
+	<dimen name="grid_spacing_outer_large">6dp</dimen>
 	<dimen name="grid_spacing_outer_double">4dp</dimen>
 	<dimen name="manga_list_details_item_height">120dp</dimen>
 	<dimen name="recommendation_item_height">90dp</dimen>

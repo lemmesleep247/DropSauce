@@ -50,6 +50,8 @@ class ListConfigBottomSheet :
 		binding.adjustGridOptions(mode, withAnimation = false)
 		binding.switchTitleOverCover.isChecked = viewModel.isTitleOverCover
 		binding.switchTitleOverCover.setOnCheckedChangeListener(this)
+		binding.switchGridSpacing.isChecked = viewModel.isGridSpacingIncreased
+		binding.switchGridSpacing.setOnCheckedChangeListener(this)
 
 		binding.sliderGrid.setLabelFormatter(IntPercentLabelFormatter(binding.root.context))
 		binding.sliderGrid.setValueRounded(viewModel.gridSize.toFloat())
@@ -124,12 +126,14 @@ class ListConfigBottomSheet :
 		textViewGridTitle.isVisible = isGridMode
 		sliderGrid.isVisible = isGridMode
 		switchTitleOverCover.isEnabled = isGridMode
+		switchGridSpacing.isEnabled = isGridMode
 	}
 
 	override fun onCheckedChanged(buttonView: CompoundButton, isChecked: Boolean) {
 		when (buttonView.id) {
 			R.id.switch_grouping -> viewModel.isGroupingEnabled = isChecked
 			R.id.switch_title_over_cover -> viewModel.isTitleOverCover = isChecked
+			R.id.switch_grid_spacing -> viewModel.isGridSpacingIncreased = isChecked
 		}
 	}
 

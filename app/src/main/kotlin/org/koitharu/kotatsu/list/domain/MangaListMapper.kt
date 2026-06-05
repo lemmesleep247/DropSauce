@@ -134,6 +134,7 @@ class MangaListMapper @Inject constructor(
 		isSaved = isSaved(manga.id, options),
 		isTitleHidden = isTitleHidden,
 		isTitleOverCover = settings.isTitleOverCover,
+		isGridSpacingIncreased = settings.isGridSpacingIncreased,
 	)
 
 	private suspend fun toListModelImpl(

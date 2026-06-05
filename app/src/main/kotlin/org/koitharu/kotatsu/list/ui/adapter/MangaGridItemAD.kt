@@ -33,6 +33,8 @@ fun mangaGridItemAD(
 	sizeResolver.attachToView(itemView, binding.textViewTitleOverlay, binding.progressView)
 
 	val density = context.resources.displayMetrics.density
+	val gridMargin = context.resources.getDimensionPixelOffset(R.dimen.grid_spacing_outer)
+	val gridMarginIncreased = context.resources.getDimensionPixelOffset(R.dimen.grid_spacing_outer_large)
 	// Title scrim: a short, fairly dark fade of a dark shade of the theme accent, just tall enough
 	// for two lines of title, with its bottom corners matching the cover's rounding.
 	val darkAccent = ColorUtils.blendARGB(context.getThemeColor(appcompatR.attr.colorPrimary), Color.BLACK, 0.78f)
@@ -50,6 +52,17 @@ fun mangaGridItemAD(
 
 	bind { payloads ->
 		itemView.setTooltipCompat(item.getSummary(context))
+		val coverMargin = if (item.isGridSpacingIncreased) gridMarginIncreased else gridMargin
+		itemView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+			if (
+				leftMargin != coverMargin ||
+				topMargin != coverMargin ||
+				rightMargin != coverMargin ||
+				bottomMargin != coverMargin
+			) {
+				setMargins(coverMargin, coverMargin, coverMargin, coverMargin)
+			}
+		}
 		val isTitleOverCover = item.isTitleOverCover && !item.isTitleHidden
 		binding.textViewTitleOverlay.text = item.title
 		binding.textViewTitle.text = item.title
@@ -65,7 +78,7 @@ fun mangaGridItemAD(
 		}
 		// Load at a stable size derived from the grid cell width (not the transient measured view
 		// size), so covers in the ViewPager2-hosted grids stay sharp after rotation/settling.
-		val coverWidth = sizeResolver.cellWidth
+		val coverWidth = sizeResolver.cellWidth - coverMargin * 2
 		binding.imageViewCover.exactImageSize = if (coverWidth > 0) {
 			Size(coverWidth, coverWidth * 18 / 13)
 		} else {

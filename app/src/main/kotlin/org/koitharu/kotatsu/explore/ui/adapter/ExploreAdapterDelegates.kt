@@ -55,6 +55,8 @@ fun exploreRecommendationItemAD(
 		this.adapter = adapter
 		layoutManager = CarouselLayoutManager(MultiBrowseCarouselStrategy())
 		isNestedScrollingEnabled = false
+		clipChildren = false
+		clipToPadding = false
 		if (onFlingListener == null) {
 			CarouselSnapHelper().attachToRecyclerView(this)
 		}

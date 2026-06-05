@@ -7,6 +7,7 @@
 	<!-- List spacing -->
 	<dimen name="list_spacing_small">6dp</dimen>
 	<dimen name="list_spacing_normal">8dp</dimen>
+	<dimen name="list_spacing_normal_negative">-8dp</dimen>
 	<dimen name="list_spacing_large">12dp</dimen>
 	<!-- Navigation -->
 	<dimen name="nav_bar_height_compact">0dp</dimen>

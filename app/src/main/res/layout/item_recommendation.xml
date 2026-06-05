@@ -7,6 +7,8 @@
 	android:id="@+id/recyclerView"
 	android:layout_width="match_parent"
 	android:layout_height="200dp"
+	android:layout_marginStart="@dimen/list_spacing_normal_negative"
+	android:layout_marginEnd="@dimen/list_spacing_normal_negative"
 	android:layout_marginBottom="@dimen/margin_small"
 	android:clipChildren="false"
 	android:clipToPadding="false"

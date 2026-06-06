@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.list.ui.adapter
 
 import android.content.Context
 import android.graphics.Color
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -19,12 +20,12 @@ import org.koitharu.kotatsu.core.model.isExternalSource
 import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.ui.image.FaviconView
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
-import org.koitharu.kotatsu.core.util.ext.getThemeDrawable
 import org.koitharu.kotatsu.core.util.ext.getThemeResId
 import org.koitharu.kotatsu.core.util.ext.resolveDp
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.ui.model.ExtensionFilter
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
+import kotlin.math.ceil
 import com.google.android.material.R as materialR
 import androidx.appcompat.R as appcompatR
 
@@ -36,18 +37,14 @@ internal object ExtensionFilterPopup {
 		listener: QuickFilterClickListener,
 	) {
 		val context = anchor.context
+		val popupWidth = resolvePopupWidth(context, filter)
 		val rows = ArrayList<Row>(filter.options.size)
 		val selectedSourceNames = filter.selectedOptions.mapTo(HashSet()) { it.mangaSource.name }
 		val resetButton = createResetButton(context)
 		val content = LinearLayout(context).apply {
 			orientation = LinearLayout.VERTICAL
-			setPadding(
-				context.resources.resolveDp(18),
-				context.resources.resolveDp(16),
-				context.resources.resolveDp(12),
-				context.resources.resolveDp(12),
-			)
-			addView(createHeader(context))
+			layoutParams = ViewGroup.LayoutParams(popupWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+			addView(createHeader(context), LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 			for (option in filter.options) {
 				val row = createRow(
 					context = context,
@@ -59,12 +56,15 @@ internal object ExtensionFilterPopup {
 					},
 				)
 				rows += row.binding
-				addView(row.view)
+				addView(row.view, LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
 			}
 			addView(
 				resetButton,
 				LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-					topMargin = context.resources.resolveDp(10)
+					topMargin = context.resources.resolveDp(8)
+					bottomMargin = context.resources.resolveDp(12)
+					marginStart = context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal)
+					marginEnd = context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal)
 				},
 			)
 		}
@@ -78,16 +78,11 @@ internal object ExtensionFilterPopup {
 
 		val scrollView = MaxHeightScrollView(context).apply {
 			maxHeight = context.resources.resolveDp(420)
-			addView(content)
+			addView(content, ViewGroup.LayoutParams(popupWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
 			isFillViewport = false
 			clipToPadding = false
 		}
-		val horizontalMargin = context.resources.resolveDp(32)
-		val maxAvailableWidth = context.resources.displayMetrics.widthPixels - horizontalMargin
-		val preferredWidth = context.resources.resolveDp(360)
-		val minWidth = minOf(context.resources.resolveDp(260), maxAvailableWidth)
-		val width = minOf(preferredWidth, maxAvailableWidth).coerceAtLeast(minWidth)
-		PopupWindow(scrollView, width, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
+		PopupWindow(scrollView, popupWidth, ViewGroup.LayoutParams.WRAP_CONTENT, true).apply {
 			setBackgroundDrawable(ContextCompat.getDrawable(context, R.drawable.m3_menu_background))
 			isOutsideTouchable = true
 			elevation = context.resources.resolveDp(8).toFloat()
@@ -100,7 +95,14 @@ internal object ExtensionFilterPopup {
 			setText(R.string.extension_filters)
 			setTextAppearanceAttr(materialR.attr.textAppearanceTitleMedium)
 			setTextColor(context.getThemeColor(android.R.attr.textColorPrimary, Color.BLACK))
-			setPadding(0, 0, 0, context.resources.resolveDp(8))
+			gravity = Gravity.CENTER_VERTICAL
+			minimumHeight = context.resources.resolveDp(48)
+			setPadding(
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal),
+				0,
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal),
+				0,
+			)
 		}
 	}
 
@@ -109,6 +111,7 @@ internal object ExtensionFilterPopup {
 			setText(R.string.reset)
 			gravity = Gravity.CENTER
 			minimumHeight = context.resources.resolveDp(48)
+			minimumWidth = context.resources.getDimensionPixelSize(R.dimen.menu_popup_min_width)
 		}
 	}
 
@@ -122,17 +125,15 @@ internal object ExtensionFilterPopup {
 		val row = LinearLayout(context).apply {
 			orientation = LinearLayout.HORIZONTAL
 			gravity = Gravity.CENTER_VERTICAL
-			minimumHeight = context.resources.resolveDp(56)
-			setPadding(0, context.resources.resolveDp(4), context.resources.resolveDp(6), context.resources.resolveDp(4))
-			background = context.getThemeDrawable(appcompatR.attr.selectableItemBackground)
-		}
-		val checkBox = MaterialCheckBox(context).apply {
-			isClickable = false
-			isFocusable = false
-			isChecked = option.mangaSource.name in selectedSourceNames
-			minimumWidth = context.resources.resolveDp(48)
-			minimumHeight = context.resources.resolveDp(48)
-			gravity = Gravity.CENTER
+			minimumHeight = context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_min_height)
+			minimumWidth = context.resources.getDimensionPixelSize(R.dimen.menu_popup_min_width)
+			setPadding(
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal),
+				0,
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal),
+				0,
+			)
+			background = ContextCompat.getDrawable(context, R.drawable.m3_popup_menu_row_selector)
 		}
 		val icon = FaviconView(context).apply {
 			applyExternalSourceStyle(option.mangaSource.isExternalSource())
@@ -140,17 +141,44 @@ internal object ExtensionFilterPopup {
 		}
 		val title = TextView(context).apply {
 			text = option.getMenuTitle(context)
-			setTextAppearanceAttr(materialR.attr.textAppearanceBodyLarge)
+			setTextAppearanceAttr(appcompatR.attr.textAppearanceLargePopupMenu)
 			setTextColor(context.getThemeColor(android.R.attr.textColorPrimary, Color.BLACK))
 			isSingleLine = true
+			ellipsize = TextUtils.TruncateAt.END
+			maxWidth = context.resources.displayMetrics.widthPixels -
+				context.resources.resolveDp(144)
 		}
-		row.addView(checkBox, LinearLayout.LayoutParams(context.resources.resolveDp(48), context.resources.resolveDp(48)))
-		row.addView(icon, LinearLayout.LayoutParams(context.resources.resolveDp(32), context.resources.resolveDp(32)))
+		val checkBox = MaterialCheckBox(context).apply {
+			isClickable = false
+			isFocusable = false
+			isChecked = option.mangaSource.name in selectedSourceNames
+			minimumWidth = 0
+			minimumHeight = 0
+			gravity = Gravity.CENTER
+			setPadding(0, 0, 0, 0)
+			background = null
+		}
+		row.addView(
+			icon,
+			LinearLayout.LayoutParams(
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_icon_size),
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_icon_size),
+			).apply {
+				marginEnd = context.resources.getDimensionPixelSize(R.dimen.menu_icon_text_spacing_extra)
+			},
+		)
 		row.addView(
 			title,
 			LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-				marginStart = context.resources.resolveDp(16)
+				marginEnd = context.resources.resolveDp(8)
 			},
+		)
+		row.addView(
+			checkBox,
+			LinearLayout.LayoutParams(
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_icon_size),
+				context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_min_height),
+			),
 		)
 		val rowBinding = Row(checkBox)
 		row.setOnClickListener {
@@ -167,6 +195,24 @@ internal object ExtensionFilterPopup {
 		return RowView(row, rowBinding)
 	}
 
+	private fun resolvePopupWidth(context: Context, filter: ExtensionFilter): Int {
+		val horizontalPadding = context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal)
+		val iconSize = context.resources.getDimensionPixelSize(R.dimen.menu_popup_icon_size)
+		val iconTextGap = context.resources.getDimensionPixelSize(R.dimen.menu_icon_text_spacing_extra)
+		val textCheckGap = context.resources.resolveDp(8)
+		val menuMinWidth = context.resources.getDimensionPixelSize(R.dimen.menu_popup_min_width)
+		val maxAvailableWidth = context.resources.displayMetrics.widthPixels - context.resources.resolveDp(32)
+		val widestSourceWidth = filter.options.maxOfOrNull {
+			context.measureTextWidth(it.getMenuTitle(context), appcompatR.attr.textAppearanceLargePopupMenu)
+		} ?: 0
+		val sourceRowWidth = horizontalPadding + iconSize + iconTextGap + widestSourceWidth +
+			textCheckGap + iconSize + horizontalPadding
+		val headerWidth = horizontalPadding +
+			context.measureTextWidth(context.getString(R.string.extension_filters), materialR.attr.textAppearanceTitleMedium) +
+			horizontalPadding
+		return maxOf(menuMinWidth, sourceRowWidth, headerWidth).coerceAtMost(maxAvailableWidth)
+	}
+
 	private fun updateResetButton(resetButton: MaterialButton, isEnabled: Boolean) {
 		resetButton.isEnabled = isEnabled
 	}
@@ -181,6 +227,12 @@ internal object ExtensionFilterPopup {
 
 			else -> mangaSource.getTitle(context)
 		}
+	}
+
+	private fun Context.measureTextWidth(text: CharSequence, @AttrRes textAppearanceAttr: Int): Int {
+		val textView = TextView(this)
+		textView.setTextAppearanceAttr(textAppearanceAttr)
+		return ceil(textView.paint.measureText(text, 0, text.length)).toInt()
 	}
 
 	private fun TextView.setTextAppearanceAttr(@AttrRes attr: Int) {

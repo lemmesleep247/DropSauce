@@ -11,8 +11,6 @@ import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.domain.MangaListQuickFilter
 import org.koitharu.kotatsu.list.ui.model.ExtensionFilter
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
-import org.koitharu.kotatsu.parsers.util.suspendlazy.getOrNull
-import org.koitharu.kotatsu.parsers.util.suspendlazy.suspendLazy
 
 class FavoritesListQuickFilter @AssistedInject constructor(
 	@Assisted private val categoryId: Long,
@@ -22,17 +20,7 @@ class FavoritesListQuickFilter @AssistedInject constructor(
 	private val mihonExtensionManager: MihonExtensionManager,
 ) : MangaListQuickFilter(settings) {
 
-	private val sourceOptions = suspendLazy {
-		mihonExtensionManager.ensureReady(forceRefresh = true)
-		val installedSources = mihonExtensionManager.getMihonMangaSources()
-		repository.findSources(categoryId).mapNotNull { source ->
-			installedSources.firstOrNull { it == source }
-		}.distinctBy {
-			it.name
-		}.map {
-			ListFilterOption.Source(it)
-		}
-	}
+	private var didRefreshExtensions = false
 
 	init {
 		setFilterOption(ListFilterOption.Downloaded, !networkState.value)
@@ -49,7 +37,7 @@ class FavoritesListQuickFilter @AssistedInject constructor(
 	override suspend fun getAdditionalChips(
 		selectedOptions: Set<ListFilterOption>,
 	): List<ChipsView.ChipModel> {
-		val options = sourceOptions.getOrNull().orEmpty()
+		val options = getSourceOptions()
 		pruneStaleSourceFilters(selectedOptions, options)
 		if (options.isEmpty()) {
 			return emptyList()
@@ -71,6 +59,19 @@ class FavoritesListQuickFilter @AssistedInject constructor(
 				),
 			),
 		)
+	}
+
+	private suspend fun getSourceOptions(): List<ListFilterOption.Source> {
+		mihonExtensionManager.ensureReady(forceRefresh = !didRefreshExtensions)
+		didRefreshExtensions = true
+		val installedSources = mihonExtensionManager.getMihonMangaSources()
+		return repository.findSources(categoryId).mapNotNull { source ->
+			installedSources.firstOrNull { it == source }
+		}.distinctBy {
+			it.name
+		}.map {
+			ListFilterOption.Source(it)
+		}
 	}
 
 	private fun pruneStaleSourceFilters(

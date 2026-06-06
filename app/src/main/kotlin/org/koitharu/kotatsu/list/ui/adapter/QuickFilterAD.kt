@@ -4,6 +4,7 @@ import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.databinding.ItemQuickFilterBinding
 import org.koitharu.kotatsu.list.domain.ListFilterOption
+import org.koitharu.kotatsu.list.ui.model.ExtensionFilter
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.QuickFilter
 
@@ -14,8 +15,9 @@ fun quickFilterAD(
 ) {
 
 	binding.chipsTags.onChipClickListener = ChipsView.OnChipClickListener { chip, data ->
-		if (data is ListFilterOption) {
-			listener.onFilterOptionClick(data)
+		when (data) {
+			is ListFilterOption -> listener.onFilterOptionClick(data)
+			is ExtensionFilter -> ExtensionFilterPopup.show(chip, data, listener)
 		}
 	}
 

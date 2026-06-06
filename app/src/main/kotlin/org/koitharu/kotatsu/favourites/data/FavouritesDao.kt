@@ -137,10 +137,19 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT COUNT(category_id) FROM favourites WHERE manga_id = :mangaId AND deleted_at = 0")
 	abstract suspend fun findCategoriesCount(mangaId: Long): Int
 
-	@Query("SELECT manga.source AS count FROM favourites LEFT JOIN manga ON manga.manga_id = favourites.manga_id GROUP BY manga.source ORDER BY COUNT(manga.source) DESC LIMIT :limit")
+	@Query(
+		"SELECT manga.source AS count FROM favourites LEFT JOIN manga ON manga.manga_id = favourites.manga_id " +
+			"WHERE favourites.deleted_at = 0 AND " +
+			"(SELECT show_in_lib FROM favourite_categories WHERE favourite_categories.category_id = favourites.category_id) = 1 " +
+			"GROUP BY manga.source ORDER BY COUNT(manga.source) DESC LIMIT :limit",
+	)
 	abstract suspend fun findPopularSources(limit: Int): List<String>
 
-	@Query("SELECT manga.source AS count FROM favourites LEFT JOIN manga ON manga.manga_id = favourites.manga_id WHERE favourites.category_id = :categoryId GROUP BY manga.source ORDER BY COUNT(manga.source) DESC LIMIT :limit")
+	@Query(
+		"SELECT manga.source AS count FROM favourites LEFT JOIN manga ON manga.manga_id = favourites.manga_id " +
+			"WHERE favourites.category_id = :categoryId AND favourites.deleted_at = 0 " +
+			"GROUP BY manga.source ORDER BY COUNT(manga.source) DESC LIMIT :limit",
+	)
 	abstract suspend fun findPopularSources(categoryId: Long, limit: Int): List<String>
 
 	fun dump(): Flow<FavouriteManga> = flow {

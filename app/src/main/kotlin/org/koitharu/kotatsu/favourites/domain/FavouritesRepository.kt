@@ -170,6 +170,10 @@ class FavouritesRepository @Inject constructor(
 		}.toMangaSources()
 	}
 
+	suspend fun findSources(categoryId: Long): List<MangaSource> {
+		return findPopularSources(categoryId, Int.MAX_VALUE)
+	}
+
 	suspend fun createCategory(
 		title: String,
 		sortOrder: ListSortOrder,

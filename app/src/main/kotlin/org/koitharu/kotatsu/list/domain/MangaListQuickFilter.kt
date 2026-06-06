@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.koitharu.kotatsu.core.model.toChipModel
 import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.list.ui.model.QuickFilter
 import org.koitharu.kotatsu.parsers.util.suspendlazy.getOrNull
 import org.koitharu.kotatsu.parsers.util.suspendlazy.suspendLazy
@@ -51,17 +52,23 @@ abstract class MangaListQuickFilter(
 		if (!settings.isQuickFilterEnabled) {
 			return null
 		}
+		val extraChips = getAdditionalChips(selectedOptions)
 		val availableOptions = availableFilterOptions.getOrNull()?.map { option ->
 			option.toChipModel(isChecked = option in selectedOptions)
 		}.orEmpty()
-		return if (availableOptions.isNotEmpty()) {
-			QuickFilter(availableOptions)
+		val chips = extraChips + availableOptions
+		return if (chips.isNotEmpty()) {
+			QuickFilter(chips)
 		} else {
 			null
 		}
 	}
 
 	protected abstract suspend fun getAvailableFilterOptions(): List<ListFilterOption>
+
+	protected open suspend fun getAdditionalChips(
+		selectedOptions: Set<ListFilterOption>,
+	): List<ChipsView.ChipModel> = emptyList()
 
 	private fun ArraySet<ListFilterOption>.addNoConflicts(option: ListFilterOption) {
 		add(option)

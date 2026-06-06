@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.util.AttributeSet
+import android.view.Gravity
 import android.view.View
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
@@ -33,6 +34,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.image.ChipIconTarget
 import org.koitharu.kotatsu.core.util.ext.enqueueWith
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
+import org.koitharu.kotatsu.core.util.ext.resolveDp
 import org.koitharu.kotatsu.core.util.ext.setProgressIcon
 import org.koitharu.kotatsu.parsers.util.ifZero
 import javax.inject.Inject
@@ -134,6 +136,8 @@ class ChipsView @JvmOverloads constructor(
 		val isLoading: Boolean = false,
 		val isDropdown: Boolean = false,
 		val isCloseable: Boolean = false,
+		val isCheckedIconVisible: Boolean = true,
+		val isIconOnly: Boolean = false,
 		val data: Any? = null,
 	)
 
@@ -144,10 +148,26 @@ class ChipsView @JvmOverloads constructor(
 
 		private val defaultStrokeColor = chipStrokeColor
 		private val defaultTextColor = textColors
+		private var defaultChipStartPadding = 0f
+		private var defaultChipEndPadding = 0f
+		private var defaultIconStartPadding = 0f
+		private var defaultIconEndPadding = 0f
+		private var defaultTextStartPadding = 0f
+		private var defaultTextEndPadding = 0f
+		private var defaultMinimumWidth = 0
+		private var defaultGravity = gravity
 
 		init {
 			val drawable = ChipDrawable.createFromAttributes(context, null, 0, chipStyle)
 			setChipDrawable(drawable)
+			defaultChipStartPadding = chipStartPadding
+			defaultChipEndPadding = chipEndPadding
+			defaultIconStartPadding = iconStartPadding
+			defaultIconEndPadding = iconEndPadding
+			defaultTextStartPadding = textStartPadding
+			defaultTextEndPadding = textEndPadding
+			defaultMinimumWidth = minimumWidth
+			defaultGravity = gravity
 			isChipIconVisible = false
 			setOnCloseIconClickListener(chipOnCloseListener)
 			setEnsureMinTouchTargetSize(false)
@@ -188,6 +208,7 @@ class ChipsView @JvmOverloads constructor(
 			} else {
 				setText(model.titleResId)
 			}
+			applyIconOnlyStyle(model.isIconOnly)
 			isClickable = onChipClickListener != null
 			if (model.isChecked) {
 				isCheckable = true
@@ -205,7 +226,7 @@ class ChipsView @JvmOverloads constructor(
 				setTextColor(tint)
 			}
 			bindIcon(model)
-			isCheckedIconVisible = model.isChecked && !model.isDropdown
+			isCheckedIconVisible = model.isChecked && !model.isDropdown && model.isCheckedIconVisible
 			isCloseIconVisible = if (model.isCloseable || model.isDropdown) {
 				setCloseIconResource(
 					if (model.isDropdown) R.drawable.ic_expand_more else materialR.drawable.ic_m3_chip_close,
@@ -217,22 +238,59 @@ class ChipsView @JvmOverloads constructor(
 			tag = model.data
 		}
 
+		private fun applyIconOnlyStyle(isIconOnly: Boolean) {
+			if (isIconOnly) {
+				text = null
+				minimumWidth = context.resources.resolveDp(40)
+				gravity = Gravity.CENTER
+				chipStartPadding = 0f
+				chipEndPadding = 0f
+				iconStartPadding = 0f
+				iconEndPadding = 0f
+				textStartPadding = 0f
+				textEndPadding = 0f
+			} else {
+				setCompoundDrawablesRelative(null, null, null, null)
+				minimumWidth = defaultMinimumWidth
+				gravity = defaultGravity
+				chipStartPadding = defaultChipStartPadding
+				chipEndPadding = defaultChipEndPadding
+				iconStartPadding = defaultIconStartPadding
+				iconEndPadding = defaultIconEndPadding
+				textStartPadding = defaultTextStartPadding
+				textEndPadding = defaultTextEndPadding
+			}
+		}
+
 		override fun toggle() = Unit
 
 		private fun bindIcon(model: ChipModel) {
 			when {
-				model.isChecked -> disposeIcon()
+				model.isChecked && !model.isDropdown && model.isCheckedIconVisible -> disposeIcon()
 
 				model.isLoading -> {
 					imageRequest?.dispose()
 					imageRequest = null
+					setCompoundDrawablesRelative(null, null, null, null)
 					isChipIconVisible = true
 					setProgressIcon()
 				}
 
 				!iconsVisible -> disposeIcon()
 
+				model.isIconOnly && model.icon != 0 -> {
+					imageRequest?.dispose()
+					imageRequest = null
+					chipIcon = null
+					isChipIconVisible = false
+					val icon = ContextCompat.getDrawable(context, model.icon)?.mutate()
+					val size = resources.getDimensionPixelSize(materialR.dimen.m3_chip_icon_size)
+					icon?.setBounds(0, 0, size, size)
+					setCompoundDrawablesRelative(null, icon, null, null)
+				}
+
 				model.iconData != null -> {
+					setCompoundDrawablesRelative(null, null, null, null)
 					val placeholder = model.icon.ifZero { materialR.drawable.navigation_empty_icon }
 					imageRequest = ImageRequest.Builder(context)
 						.data(model.iconData)
@@ -252,6 +310,7 @@ class ChipsView @JvmOverloads constructor(
 				model.icon != 0 -> {
 					imageRequest?.dispose()
 					imageRequest = null
+					setCompoundDrawablesRelative(null, null, null, null)
 					setChipIconResource(model.icon)
 					isChipIconVisible = true
 				}
@@ -263,6 +322,7 @@ class ChipsView @JvmOverloads constructor(
 		private fun disposeIcon() {
 			imageRequest?.dispose()
 			imageRequest = null
+			setCompoundDrawablesRelative(null, null, null, null)
 			chipIcon = null
 			isChipIconVisible = false
 		}

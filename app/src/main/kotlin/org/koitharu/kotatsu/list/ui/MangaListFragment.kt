@@ -229,6 +229,19 @@ abstract class MangaListFragment :
 		(viewModel as? QuickFilterListener)?.toggleFilterOption(option)
 	}
 
+	override fun onFilterOptionChanged(option: ListFilterOption, isApplied: Boolean) {
+		selectionController?.clear()
+		(viewModel as? QuickFilterListener)?.setFilterOption(option, isApplied)
+	}
+
+	override fun onFilterOptionsCleared(options: Collection<ListFilterOption>) {
+		selectionController?.clear()
+		val filter = viewModel as? QuickFilterListener ?: return
+		for (option in options) {
+			filter.setFilterOption(option, false)
+		}
+	}
+
 	override fun onFilterClick(view: View?) = Unit
 
 	override fun onEmptyActionClick() = Unit

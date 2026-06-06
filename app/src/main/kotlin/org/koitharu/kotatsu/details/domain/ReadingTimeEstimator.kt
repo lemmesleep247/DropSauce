@@ -7,7 +7,7 @@ import kotlin.math.roundToLong
 object ReadingTimeEstimator {
 
 	const val MIN_CHAPTERS_FOR_PERSONAL_ESTIMATE = 10
-	val DEFAULT_TIME_PER_CHAPTER_MILLIS: Long = TimeUnit.MINUTES.toMillis(4)
+	val DEFAULT_TIME_PER_CHAPTER_MILLIS: Long = TimeUnit.MINUTES.toMillis(3)
 
 	fun getTimePerChapterMillis(totalDurationMillis: Long, chaptersRead: Int): Long {
 		return if (chaptersRead >= MIN_CHAPTERS_FOR_PERSONAL_ESTIMATE && totalDurationMillis > 0L) {

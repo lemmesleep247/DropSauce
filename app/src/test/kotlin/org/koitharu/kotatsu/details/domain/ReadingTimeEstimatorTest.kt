@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 class ReadingTimeEstimatorTest {
 
 	@Test
-	fun `uses four minutes per chapter before ten completed chapters`() {
+	fun `uses three minutes per chapter before ten completed chapters`() {
 		val time = checkNotNull(
 			ReadingTimeEstimator.estimate(
 				remainingChapters = 3,
@@ -19,7 +19,7 @@ class ReadingTimeEstimatorTest {
 		)
 
 		assertEquals(0, time.hours)
-		assertEquals(12, time.minutes)
+		assertEquals(9, time.minutes)
 	}
 
 	@Test

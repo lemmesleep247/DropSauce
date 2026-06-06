@@ -73,7 +73,7 @@ class FeedFragment :
 			RecyclerScrollKeeper(this).attach()
 		}
 		binding.swipeRefreshLayout.setOnRefreshListener(this)
-		addMenuProvider(FeedMenuProvider(binding.recyclerView, viewModel))
+		addMenuProvider(FeedMenuProvider(binding.recyclerView, viewModel, router))
 
 		viewModel.content.observe(viewLifecycleOwner, feedAdapter)
 		viewModel.onError.observeEvent(viewLifecycleOwner, SnackbarErrorObserver(binding.recyclerView, this))

@@ -18,16 +18,28 @@ fun Menu.setOptionalIconsVisibleCompat(isVisible: Boolean) {
 }
 
 fun Menu.adjustPopupMenuIcons(resources: Resources, shouldSkip: (MenuItem) -> Boolean = { false }) {
-	val iconSize = resources.getDimensionPixelSize(R.dimen.menu_popup_icon_size)
+	adjustPopupMenuIcons(
+		resources = resources,
+		shouldSkip = shouldSkip,
+		iconSizeProvider = { resources.getDimensionPixelSize(R.dimen.menu_popup_icon_size) },
+	)
+}
+
+fun Menu.adjustPopupMenuIcons(
+	resources: Resources,
+	shouldSkip: (MenuItem) -> Boolean = { false },
+	iconSizeProvider: (MenuItem) -> Int,
+) {
 	val textGap = resources.getDimensionPixelSize(R.dimen.menu_icon_text_spacing_extra)
 	for (index in 0 until size()) {
 		val item = getItem(index)
 		item.icon?.let { icon ->
 			if (icon !is PopupMenuIconDrawable && !shouldSkip(item)) {
+				val iconSize = iconSizeProvider(item)
 				item.icon = PopupMenuIconDrawable(icon.mutate(), iconSize, textGap)
 			}
 		}
-		item.subMenu?.adjustPopupMenuIcons(resources, shouldSkip)
+		item.subMenu?.adjustPopupMenuIcons(resources, shouldSkip, iconSizeProvider)
 	}
 }
 

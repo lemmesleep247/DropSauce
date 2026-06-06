@@ -121,6 +121,8 @@ class TrackWorker @AssistedInject constructor(
 	private suspend fun checkUpdatesAsync(tracks: List<MangaTracking>) {
 		val semaphore = Semaphore(MAX_PARALLELISM)
 		val groupNotifications = mutableListOf<NotificationInfo>()
+		var failedChecks = 0
+		var isCancelled = false
 
 		try {
 			channelFlow {
@@ -150,6 +152,7 @@ class TrackWorker @AssistedInject constructor(
 
 				when (it) {
 					is MangaUpdates.Failure -> {
+						failedChecks++
 						val e = it.error
 						if (e is CloudFlareException) {
 							captchaHandler.handle(e)
@@ -183,6 +186,7 @@ class TrackWorker @AssistedInject constructor(
 			}.collect()
 
 		} catch (e: CancellationException) {
+			isCancelled = true
 			e.printStackTraceDebug()
 		} finally {
 			withContext(NonCancellable) {
@@ -194,6 +198,16 @@ class TrackWorker @AssistedInject constructor(
 							TAG,
 							TrackerNotificationHelper.GROUP_NOTIFICATION_ID,
 							groupNotification
+						)
+					}
+				}
+				if (!isCancelled && failedChecks > 0 &&
+					applicationContext.checkNotificationPermission(TrackerNotificationHelper.CHANNEL_ID)) {
+					notificationHelper.createFailedChecksNotification(failedChecks)?.let { notification ->
+						notificationManager.notify(
+							TrackerNotificationHelper.TAG_FAILED_CHECKS,
+							TrackerNotificationHelper.FAILED_CHECKS_NOTIFICATION_ID,
+							notification,
 						)
 					}
 				}

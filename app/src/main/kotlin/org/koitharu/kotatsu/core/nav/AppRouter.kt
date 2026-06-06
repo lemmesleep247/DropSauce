@@ -105,6 +105,7 @@ import org.koitharu.kotatsu.settings.tracker.categories.TrackerCategoriesConfigS
 import org.koitharu.kotatsu.stats.ui.StatsActivity
 import org.koitharu.kotatsu.stats.ui.sheet.MangaStatsSheet
 import org.koitharu.kotatsu.suggestions.ui.SuggestionsActivity
+import org.koitharu.kotatsu.tracker.ui.debug.TrackerDebugActivity
 import org.koitharu.kotatsu.tracker.ui.updates.UpdatesActivity
 import java.io.File
 import androidx.appcompat.R as appcompatR
@@ -285,6 +286,10 @@ class AppRouter private constructor(
 
     fun openMangaUpdates() {
         startActivity(mangaUpdatesIntent(contextOrNull() ?: return))
+    }
+
+    fun openTrackerDebug() {
+        startActivity(trackerDebugIntent(contextOrNull() ?: return))
     }
 
     fun openMangaOverrideConfig(manga: Manga) {
@@ -755,6 +760,8 @@ class AppRouter private constructor(
         fun homeIntent(context: Context) = Intent(context, MainActivity::class.java)
 
         fun mangaUpdatesIntent(context: Context) = Intent(context, UpdatesActivity::class.java)
+
+        fun trackerDebugIntent(context: Context) = Intent(context, TrackerDebugActivity::class.java)
 
         fun readerSettingsIntent(context: Context) =
             Intent(context, SettingsActivity::class.java)

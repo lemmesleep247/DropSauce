@@ -150,6 +150,39 @@ class TrackerNotificationHelper @Inject constructor(
 		return builder.build()
 	}
 
+	fun createFailedChecksNotification(failedCount: Int): Notification? {
+		if (failedCount <= 0 || !applicationContext.checkNotificationPermission(CHANNEL_ID)) {
+			return null
+		}
+		val title = applicationContext.resources.getQuantityStringSafe(
+			R.plurals.manga_failed_to_fetch_new_chapters,
+			failedCount,
+			failedCount,
+		)
+		val text = applicationContext.getString(R.string.tap_to_review_affected_manga)
+		val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+		with(builder) {
+			setContentTitle(title)
+			setContentText(text)
+			setStyle(NotificationCompat.BigTextStyle().bigText(text))
+			setSmallIcon(R.drawable.general_notification)
+			setNumber(failedCount)
+			setContentIntent(
+				PendingIntentCompat.getActivity(
+					applicationContext,
+					FAILED_CHECKS_NOTIFICATION_ID,
+					AppRouter.trackerDebugIntent(applicationContext),
+					PendingIntent.FLAG_UPDATE_CURRENT,
+					false,
+				),
+			)
+			setVisibility(VISIBILITY_PRIVATE)
+			applyCommonSettings(this)
+			setCategory(NotificationCompat.CATEGORY_ERROR)
+		}
+		return builder.build()
+	}
+
 	fun updateChannels() {
 		val manager = NotificationManagerCompat.from(applicationContext)
 		manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
@@ -195,8 +228,10 @@ class TrackerNotificationHelper @Inject constructor(
 
 		const val CHANNEL_ID = "tracker_chapters"
 		const val GROUP_NOTIFICATION_ID = 0
+		const val FAILED_CHECKS_NOTIFICATION_ID = 1
 		const val GROUP_NEW_CHAPTERS = "org.koitharu.kotatsu.NEW_CHAPTERS"
 		const val TAG = "tracker"
+		const val TAG_FAILED_CHECKS = "tracker_failed_checks"
 
 		private const val LEGACY_CHANNELS_GROUP_ID = "trackers"
 		private const val LEGACY_CHANNEL_ID_HISTORY = "track_history"

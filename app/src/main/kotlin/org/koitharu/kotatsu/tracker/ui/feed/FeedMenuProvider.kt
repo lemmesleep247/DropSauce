@@ -7,6 +7,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.core.view.MenuProvider
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.ui.dialog.RememberCheckListener
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
@@ -14,6 +15,7 @@ import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 class FeedMenuProvider(
 	private val snackbarHost: View,
 	private val viewModel: FeedViewModel,
+	private val router: AppRouter,
 ) : MenuProvider {
 
 	private val context: Context
@@ -26,6 +28,11 @@ class FeedMenuProvider(
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
 		R.id.action_update -> {
 			viewModel.update()
+			true
+		}
+
+		R.id.action_tracker_debug -> {
+			router.openTrackerDebug()
 			true
 		}
 

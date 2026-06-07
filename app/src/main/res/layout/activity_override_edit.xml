@@ -161,14 +161,14 @@
 						android:layout_marginEnd="16dp"
 						android:gravity="center_horizontal"
 						android:orientation="vertical"
-						android:paddingVertical="12dp"
+						android:paddingVertical="16dp"
 						android:visibility="gone"
 						tools:visibility="visible">
 
 						<org.koitharu.kotatsu.image.ui.CoverImageView
 							android:id="@+id/imageView_original_cover"
-							android:layout_width="58dp"
-							android:layout_height="80dp"
+							android:layout_width="72dp"
+							android:layout_height="100dp"
 							android:background="?colorSurfaceContainerHighest"
 							android:scaleType="centerCrop"
 							app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Medium"
@@ -194,15 +194,14 @@
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginTop="@dimen/margin_normal"
-				android:background="@drawable/bg_settings_tip"
 				android:gravity="center_vertical"
 				android:orientation="horizontal"
-				android:padding="@dimen/margin_normal">
+				android:paddingHorizontal="@dimen/margin_small">
 
 				<ImageView
-					android:layout_width="22dp"
-					android:layout_height="22dp"
-					android:layout_marginEnd="@dimen/margin_normal"
+					android:layout_width="18dp"
+					android:layout_height="18dp"
+					android:layout_marginEnd="@dimen/margin_small"
 					android:contentDescription="@null"
 					android:src="@drawable/ic_info_outline"
 					app:tint="?colorOnSurfaceVariant" />

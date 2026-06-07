@@ -10,6 +10,7 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -71,6 +72,7 @@ class FastScroller @JvmOverloads constructor(
 	private var hideScrollbar = true
 	private var showBubble = true
 	private var showBubbleAlways = false
+	private var isTrackTouchEnabled = true
 	private var bubbleSize = BubbleSize.SMALL
 	private var bubbleImage: Drawable? = null
 	private var handleImage: Drawable? = null
@@ -78,6 +80,7 @@ class FastScroller @JvmOverloads constructor(
 	private var recyclerView: RecyclerView? = null
 	private val scrollbarAnimator = ScrollbarAnimator(binding.scrollbar, scrollbarPaddingEnd)
 	private val bubbleAnimator = BubbleAnimator(binding.bubble)
+	private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
 	private var fastScrollListener: FastScrollListener? = null
 	private var sectionIndexer: SectionIndexer? = null
@@ -182,6 +185,9 @@ class FastScroller @JvmOverloads constructor(
 				if (!isScrollbarVisible || event.x.toInt() !in binding.scrollbar.left..binding.scrollbar.right) {
 					return false
 				}
+				if (!isTrackTouchEnabled && !event.isInThumbDragBounds()) {
+					return false
+				}
 
 				requestDisallowInterceptTouchEvent(true)
 				setHandleSelected(true)
@@ -215,6 +221,12 @@ class FastScroller @JvmOverloads constructor(
 		}
 
 		return super.onTouchEvent(event)
+	}
+
+	private fun MotionEvent.isInThumbDragBounds(): Boolean {
+		val thumbTop = binding.scrollbar.top + binding.thumb.y - touchSlop
+		val thumbBottom = thumbTop + binding.thumb.height + touchSlop * 2
+		return y in thumbTop..thumbBottom
 	}
 
 	/**
@@ -391,6 +403,10 @@ class FastScroller @JvmOverloads constructor(
 			this.hideScrollbar = hideScrollbar
 			binding.scrollbar.isGone = hideScrollbar
 		}
+	}
+
+	fun setTrackTouchEnabled(isEnabled: Boolean) {
+		isTrackTouchEnabled = isEnabled
 	}
 
 	/**

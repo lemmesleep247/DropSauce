@@ -1,10 +1,10 @@
 package org.koitharu.kotatsu.settings.sources.catalog
 
-import android.animation.ValueAnimator
-import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.core.view.isVisible
 import androidx.core.view.updatePaddingRelative
 import androidx.appcompat.widget.TooltipCompat
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.shape.CornerFamily
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.MangaSource
@@ -33,11 +33,6 @@ fun sourceCatalogItemExtensionAD(
 	},
 ) {
 
-	// Hide button corner morph: fully round (circle) when visible, rounded-square when hidden.
-	val density = context.resources.displayMetrics.density
-	val hideCircleRadius = (22 * density).toInt()
-	val hideSquareRadius = (14 * density).toInt()
-
 	binding.imageViewAdd.setOnClickListener {
 		listener.onExtensionActionClick(item)
 	}
@@ -45,20 +40,6 @@ fun sourceCatalogItemExtensionAD(
 		listener.onExtensionSettingsClick(item)
 	}
 	binding.imageViewHide.setOnClickListener {
-		// Start the circle <-> rounded-square morph synchronously on tap. The list rebind that
-		// follows (via the settings flow) is async and must NOT restart or skip this animation.
-		val btn = binding.imageViewHide
-		// item.isHidden is still the pre-toggle value here, so morph to the opposite shape.
-		val target = if (item.isHidden) hideCircleRadius else hideSquareRadius
-		(btn.getTag(R.id.tag_hide_corner_anim) as? ValueAnimator)?.cancel()
-		val animator = ValueAnimator.ofInt(btn.cornerRadius, target).apply {
-			duration = 300L
-			interpolator = FastOutSlowInInterpolator()
-			addUpdateListener { btn.cornerRadius = it.animatedValue as Int }
-		}
-		btn.setTag(R.id.tag_hide_corner_anim, animator)
-		btn.setTag(R.id.tag_hide_state, item.packageName)
-		animator.start()
 		listener.onExtensionHideClick(item)
 	}
 	binding.root.setOnClickListener {
@@ -69,6 +50,8 @@ fun sourceCatalogItemExtensionAD(
 		binding.root.paddingStart,
 	)
 	val compactEndPadding = (basePadding - context.resources.getDimensionPixelOffset(R.dimen.margin_small)).coerceAtLeast(0)
+	val outerCornerSize = context.resources.getDimensionPixelSize(R.dimen.extension_action_button_size) / 2f
+	val innerCornerSize = 8f * context.resources.displayMetrics.density
 
 	bind {
 		val isInProgress = item.isInProgress
@@ -76,26 +59,26 @@ fun sourceCatalogItemExtensionAD(
 		binding.imageViewAdd.isEnabled = !isInProgress
 		binding.imageViewAdd.alpha = if (isInProgress) 0.45f else 1f
 		binding.progressIcon.isVisible = isInProgress
-		binding.imageViewSettings.isVisible = item.action != SourceCatalogItem.Extension.Action.INSTALL && item.sourceName != null
+		val isSettingsVisible = item.action != SourceCatalogItem.Extension.Action.INSTALL && item.sourceName != null
+		binding.imageViewSettings.isVisible = isSettingsVisible
+		binding.imageViewSettings.isEnabled = !isInProgress
+		binding.imageViewSettings.alpha = if (isInProgress) 0.45f else 1f
 		// Hide/unhide toggle for installed extensions only.
 		val isInstalled = item.action != SourceCatalogItem.Extension.Action.INSTALL
 		binding.imageViewHide.isVisible = isInstalled
+		binding.imageViewHide.isEnabled = !isInProgress
+		binding.imageViewHide.alpha = if (isInProgress) 0.45f else 1f
 		if (isInstalled) {
 			val hideButton = binding.imageViewHide
 			hideButton.setIconResource(if (item.isHidden) R.drawable.ic_eye_off else R.drawable.ic_eye)
 			val hideDescription = context.getString(if (item.isHidden) R.string.unhide else R.string.hide)
 			hideButton.contentDescription = hideDescription
 			TooltipCompat.setTooltipText(hideButton, hideDescription)
-
-			// Leave the shape alone while the tap-initiated morph for THIS extension is running;
-			// otherwise snap to the correct shape (first show, or row recycled for another row).
-			val runningAnim = hideButton.getTag(R.id.tag_hide_corner_anim) as? ValueAnimator
-			val morphInProgress = runningAnim?.isRunning == true &&
-				hideButton.getTag(R.id.tag_hide_state) == item.packageName
-			if (!morphInProgress) {
-				runningAnim?.cancel()
-				hideButton.cornerRadius = if (item.isHidden) hideSquareRadius else hideCircleRadius
-			}
+		}
+		binding.buttonGroupActions.isVisible = true
+		binding.buttonGroupActions.applyConnectedActionShapes(outerCornerSize, innerCornerSize)
+		binding.buttonGroupActions.post {
+			binding.buttonGroupActions.applyConnectedActionShapes(outerCornerSize, innerCornerSize)
 		}
 		binding.root.updatePaddingRelative(end = compactEndPadding)
 		binding.imageViewAdd.setIconResource(item.action.iconRes)
@@ -129,6 +112,37 @@ fun sourceCatalogItemExtensionAD(
 			)
 		}
 	}
+}
+
+private fun android.view.ViewGroup.applyConnectedActionShapes(outerCornerSize: Float, innerCornerSize: Float) {
+	val buttons = sequenceOf(0, 1, 2)
+		.mapNotNull { getChildAt(it) as? MaterialButton }
+		.filter { it.isVisible }
+		.toList()
+	buttons.forEachIndexed { index, button ->
+		button.applyConnectedActionShape(
+			isFirst = index == 0,
+			isLast = index == buttons.lastIndex,
+			outerCornerSize = outerCornerSize,
+			innerCornerSize = innerCornerSize,
+		)
+	}
+}
+
+private fun MaterialButton.applyConnectedActionShape(
+	isFirst: Boolean,
+	isLast: Boolean,
+	outerCornerSize: Float,
+	innerCornerSize: Float,
+) {
+	val leftCornerSize = if (isFirst) outerCornerSize else innerCornerSize
+	val rightCornerSize = if (isLast) outerCornerSize else innerCornerSize
+	shapeAppearanceModel = shapeAppearanceModel.toBuilder()
+		.setTopLeftCorner(CornerFamily.ROUNDED, leftCornerSize)
+		.setBottomLeftCorner(CornerFamily.ROUNDED, leftCornerSize)
+		.setTopRightCorner(CornerFamily.ROUNDED, rightCornerSize)
+		.setBottomRightCorner(CornerFamily.ROUNDED, rightCornerSize)
+		.build()
 }
 
 fun sourceCatalogItemHintAD() = adapterDelegateViewBinding<SourceCatalogItem.Hint, ListModel, ItemEmptyCardBinding>(

@@ -196,6 +196,7 @@ class SourcesCatalogViewModel @Inject constructor(
 							InstallRequest(
 								packageName = item.packageName,
 								url = externalRepoRepository.resolveApkUrl(repoUrl, entry.apkName),
+								isUpdate = item.action == SourceCatalogItem.Extension.Action.UPDATE,
 							),
 						),
 					)
@@ -222,6 +223,7 @@ class SourcesCatalogViewModel @Inject constructor(
 					InstallRequest(
 						packageName = entry.packageName,
 						url = externalRepoRepository.resolveApkUrl(repoUrl, entry.apkName),
+						isUpdate = true,
 					)
 				},
 			)
@@ -445,5 +447,6 @@ class SourcesCatalogViewModel @Inject constructor(
 	data class InstallRequest(
 		val packageName: String,
 		val url: String,
+		val isUpdate: Boolean,
 	)
 }

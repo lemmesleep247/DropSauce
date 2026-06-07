@@ -170,11 +170,15 @@ class ExternalExtensionManagerRuntime<ResultT, SuccessT, ErrorT, SourceT, Wrappe
 		if (_isLoading.value) return
 		_isLoading.value = true
 		try {
+			val processed = processResults(loadResults(context))
+			val newSourceCache = LinkedHashMap<Long, SourceT>(processed.sourceById.size)
+			val newWrappedSourceCache = LinkedHashMap<Long, WrappedSourceT>(processed.wrappedSourceById.size)
+			newSourceCache.putAll(processed.sourceById)
+			newWrappedSourceCache.putAll(processed.wrappedSourceById)
 			sourceCache.clear()
 			wrappedSourceCache.clear()
-			val processed = processResults(loadResults(context))
-			sourceCache.putAll(processed.sourceById)
-			wrappedSourceCache.putAll(processed.wrappedSourceById)
+			sourceCache.putAll(newSourceCache)
+			wrappedSourceCache.putAll(newWrappedSourceCache)
 			_installedExtensions.value = processed.successful
 			_failedExtensions.value = processed.failed
 			_isReady.value = true

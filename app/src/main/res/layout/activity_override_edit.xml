@@ -190,31 +190,19 @@
 			</com.google.android.material.card.MaterialCardView>
 
 			<!-- Tip -->
-			<LinearLayout
+			<TextView
+				android:id="@+id/textView_tip"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginTop="@dimen/margin_normal"
+				android:drawablePadding="@dimen/margin_small"
 				android:gravity="center_vertical"
-				android:orientation="horizontal"
-				android:paddingHorizontal="@dimen/margin_small">
-
-				<ImageView
-					android:layout_width="18dp"
-					android:layout_height="18dp"
-					android:layout_marginEnd="@dimen/margin_small"
-					android:contentDescription="@null"
-					android:src="@drawable/ic_info_outline"
-					app:tint="?colorOnSurfaceVariant" />
-
-				<TextView
-					android:id="@+id/textView_tip"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:text="@string/manga_override_hint"
-					android:textAppearance="?attr/textAppearanceBodySmall"
-					android:textColor="?colorOnSurfaceVariant" />
-
-			</LinearLayout>
+				android:paddingHorizontal="@dimen/margin_small"
+				android:text="@string/manga_override_hint"
+				android:textAppearance="?attr/textAppearanceBodySmall"
+				android:textColor="?colorOnSurfaceVariant"
+				app:drawableStartCompat="@drawable/ic_info_outline"
+				app:drawableTint="?colorOnSurfaceVariant" />
 
 			<TextView
 				android:id="@+id/textView_error"

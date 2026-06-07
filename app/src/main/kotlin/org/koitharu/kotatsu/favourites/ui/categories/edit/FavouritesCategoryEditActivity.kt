@@ -52,6 +52,7 @@ class FavouritesCategoryEditActivity :
 		viewModel.onError.observeEvent(this, ::onError)
 		viewModel.isTrackerEnabled.observe(this) {
 			viewBinding.switchTracker.isVisible = it
+			viewBinding.switchDownloadNewChapters.isVisible = it
 		}
 	}
 
@@ -87,6 +88,7 @@ class FavouritesCategoryEditActivity :
 				title = viewBinding.editName.text?.toString()?.trim().orEmpty(),
 				sortOrder = getSelectedSortOrder(),
 				isTrackerEnabled = viewBinding.switchTracker.isChecked,
+				isNewChaptersDownloadEnabled = viewBinding.switchDownloadNewChapters.isChecked,
 				isVisibleOnShelf = viewBinding.switchShelf.isChecked,
 			)
 		}
@@ -110,6 +112,7 @@ class FavouritesCategoryEditActivity :
 		val sortText = getString((category?.order ?: ListSortOrder.NEWEST).titleResId)
 		viewBinding.editSort.setText(sortText, false)
 		viewBinding.switchTracker.setChecked(category?.isTrackingEnabled != false, false)
+		viewBinding.switchDownloadNewChapters.setChecked(category?.isNewChaptersDownloadEnabled == true, false)
 		viewBinding.switchShelf.setChecked(category?.isVisibleInLibrary != false, false)
 	}
 
@@ -123,6 +126,7 @@ class FavouritesCategoryEditActivity :
 		viewBinding.editSort.isEnabled = !isLoading
 		viewBinding.editName.isEnabled = !isLoading
 		viewBinding.switchTracker.isEnabled = !isLoading
+		viewBinding.switchDownloadNewChapters.isEnabled = !isLoading
 		viewBinding.switchShelf.isEnabled = !isLoading
 		if (isLoading) {
 			viewBinding.textViewError.isVisible = false

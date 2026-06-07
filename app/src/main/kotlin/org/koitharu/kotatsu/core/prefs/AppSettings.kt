@@ -260,6 +260,14 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val trackerDownloadStrategy: TrackerDownloadStrategy
 		get() = prefs.getEnumValue(KEY_TRACKER_DOWNLOAD, TrackerDownloadStrategy.DISABLED)
 
+	fun consumeLegacyTrackerDownloadStrategy(): Boolean {
+		val strategy = trackerDownloadStrategy
+		if (strategy != TrackerDownloadStrategy.DISABLED) {
+			prefs.edit { remove(KEY_TRACKER_DOWNLOAD) }
+		}
+		return strategy == TrackerDownloadStrategy.DOWNLOADED
+	}
+
 	var notificationSound: Uri
 		get() = prefs.getString(KEY_NOTIFICATIONS_SOUND, null)?.toUriOrNull()
 			?: Settings.System.DEFAULT_NOTIFICATION_URI

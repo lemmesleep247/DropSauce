@@ -33,12 +33,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.FavouriteCategory
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.prefs.TrackerDownloadStrategy
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.powerManager
-import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.settings.NotificationSettingsLegacyFragment
 import org.koitharu.kotatsu.settings.SettingsActivity
 import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
@@ -90,13 +89,16 @@ class TrackerSettingsFragment : BaseComposeSettingsFragment(R.string.check_for_n
 			DropSauceTheme {
 				val notificationsEnabled by notificationsEnabledState.asStateFlow().collectAsState()
 				val categoriesCount by categoriesCountState.asStateFlow().collectAsState()
+				val categories by viewModel.categories.collectAsState()
 				val dozeAvailable by dozeAvailableState.asStateFlow().collectAsState()
 				TrackerScreen(
 					notificationsEnabled = notificationsEnabled,
 					categoriesCount = categoriesCount,
+					categories = categories,
 					dozeAvailable = dozeAvailable,
 					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onTrackCategories = router::showTrackerCategoriesConfigSheet,
+					onDownloadCategoriesChange = viewModel::setNewChaptersDownloadCategories,
 					onNotificationsSettings = ::openNotificationsSettings,
 					onOpenLegacyNotifications = {
 						(activity as? SettingsActivity)?.openFragment(
@@ -175,9 +177,11 @@ class TrackerSettingsFragment : BaseComposeSettingsFragment(R.string.check_for_n
 private fun TrackerScreen(
 	notificationsEnabled: Boolean,
 	categoriesCount: IntArray?,
+	categories: List<FavouriteCategory>,
 	dozeAvailable: Boolean,
 	onBack: () -> Unit,
 	onTrackCategories: () -> Unit,
+	onDownloadCategoriesChange: (Set<Long>) -> Unit,
 	onNotificationsSettings: () -> Unit,
 	onOpenLegacyNotifications: () -> Unit,
 	onTrackerDebug: () -> Unit,
@@ -191,19 +195,18 @@ private fun TrackerScreen(
 	var frequency by rememberStringPref(AppSettings.KEY_TRACKER_FREQUENCY, "1")
 	var trackSources by rememberStringSetPref(AppSettings.KEY_TRACK_SOURCES, setOf(AppSettings.TRACK_FAVOURITES))
 	var trackerNoNsfw by rememberBooleanPref(AppSettings.KEY_TRACKER_NO_NSFW, false)
-	var downloadStrategy by rememberStringPref(
-		AppSettings.KEY_TRACKER_DOWNLOAD,
-		TrackerDownloadStrategy.DISABLED.name,
-	)
 
 	val freqEntries = remember { ctx.resources.getStringArray(R.array.tracker_frequency).toList() }
 	val freqValues = remember { ctx.resources.getStringArray(R.array.values_tracker_frequency).toList() }
 	val sourceEntries = remember { ctx.resources.getStringArray(R.array.track_sources).toList() }
 	val sourceValues = remember { ctx.resources.getStringArray(R.array.values_track_sources).toList() }
-	val downloadEntries = remember {
-		ctx.resources.getStringArray(R.array.tracker_download_strategies).toList()
+	val downloadEntries = remember(categories) { categories.map { it.title } }
+	val downloadValues = remember(categories) { categories.map { it.id.toString() } }
+	val selectedDownloadValues = remember(categories) {
+		categories
+			.filter { it.isNewChaptersDownloadEnabled }
+			.mapTo(LinkedHashSet()) { it.id.toString() }
 	}
-	val downloadValues = remember { TrackerDownloadStrategy.entries.names().toList() }
 
 	val notificationsSummary = if (notificationsEnabled) {
 		stringResource(R.string.show_notification_new_chapters_on)
@@ -316,16 +319,18 @@ private fun TrackerScreen(
 					)
 				}
 				item { pos ->
-					ListSettingsItem(
+					MultiSelectSettingsItem(
 						title = stringResource(R.string.download_new_chapters),
 						entries = downloadEntries,
 						entryValues = downloadValues,
-						selectedValue = downloadStrategy,
-						onValueChange = { downloadStrategy = it },
+						selectedValues = selectedDownloadValues,
+						onValuesChange = { values ->
+							onDownloadCategoriesChange(values.mapNotNull { it.toLongOrNull() }.toSet())
+						},
 						icon = R.drawable.ic_download,
 						
 						shape = pos.shape,
-						enabled = enabled,
+						enabled = categoriesEnabled && categories.isNotEmpty(),
 					)
 				}
 			}

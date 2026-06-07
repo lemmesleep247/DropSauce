@@ -94,6 +94,16 @@
 						tools:visibility="visible" />
 
 					<com.google.android.material.materialswitch.MaterialSwitch
+						android:id="@+id/switch_download_new_chapters"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:minHeight="48dp"
+						android:gravity="center_vertical"
+						android:text="@string/download_new_chapters"
+						android:visibility="gone"
+						tools:visibility="visible" />
+
+					<com.google.android.material.materialswitch.MaterialSwitch
 						android:id="@+id/switch_shelf"
 						android:layout_width="match_parent"
 						android:layout_height="wrap_content"

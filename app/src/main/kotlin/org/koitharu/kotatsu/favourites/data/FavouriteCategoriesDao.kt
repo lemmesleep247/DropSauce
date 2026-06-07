@@ -31,14 +31,24 @@ abstract class FavouriteCategoriesDao {
 
 	suspend fun delete(id: Long) = setDeletedAt(id, System.currentTimeMillis())
 
-	@Query("UPDATE favourite_categories SET title = :title, `order` = :order, `track` = :tracker, `show_in_lib` = :onShelf WHERE category_id = :id")
-	abstract suspend fun update(id: Long, title: String, order: String, tracker: Boolean, onShelf: Boolean)
+	@Query("UPDATE favourite_categories SET title = :title, `order` = :order, `track` = :tracker, download_new_chapters = :downloadNewChapters, `show_in_lib` = :onShelf WHERE category_id = :id")
+	abstract suspend fun update(
+		id: Long,
+		title: String,
+		order: String,
+		tracker: Boolean,
+		downloadNewChapters: Boolean,
+		onShelf: Boolean,
+	)
 
 	@Query("UPDATE favourite_categories SET `order` = :order WHERE category_id = :id")
 	abstract suspend fun updateOrder(id: Long, order: String)
 
 	@Query("UPDATE favourite_categories SET `track` = :isEnabled WHERE category_id = :id")
 	abstract suspend fun updateTracking(id: Long, isEnabled: Boolean)
+
+	@Query("UPDATE favourite_categories SET download_new_chapters = :isEnabled WHERE category_id = :id")
+	abstract suspend fun updateNewChaptersDownload(id: Long, isEnabled: Boolean)
 
 	@Query("UPDATE favourite_categories SET `show_in_lib` = :isEnabled WHERE category_id = :id")
 	abstract suspend fun updateVisibility(id: Long, isEnabled: Boolean)
@@ -51,6 +61,12 @@ abstract class FavouriteCategoriesDao {
 
 	@Query("SELECT MAX(sort_key) FROM favourite_categories WHERE deleted_at = 0")
 	protected abstract suspend fun getMaxSortKey(): Int?
+
+	@Query("UPDATE favourite_categories SET download_new_chapters = 0 WHERE deleted_at = 0")
+	abstract suspend fun clearNewChaptersDownload()
+
+	@Query("UPDATE favourite_categories SET download_new_chapters = 1 WHERE `track` = 1 AND deleted_at = 0")
+	abstract suspend fun enableNewChaptersDownloadForTracked()
 
 	@SuppressWarnings(RoomWarnings.QUERY_MISMATCH) // for the new_chapters column
 	@Query("SELECT favourite_categories.*, (SELECT SUM(chapters_new) FROM tracks WHERE tracks.manga_id IN (SELECT manga_id FROM favourites WHERE favourites.category_id = favourite_categories.category_id)) AS new_chapters FROM favourite_categories WHERE track = 1 AND show_in_lib = 1 AND deleted_at = 0 AND new_chapters > 0 ORDER BY new_chapters DESC LIMIT :limit")

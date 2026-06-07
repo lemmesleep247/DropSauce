@@ -175,6 +175,7 @@ class CategoryBackup(
 	@SerialName("title") val title: String,
 	@SerialName("order") val order: String = "NEWEST",
 	@SerialName("track") val track: Boolean = true,
+	@SerialName("download_new_chapters") val downloadNewChapters: Boolean = false,
 	@SerialName("show_in_lib") val isVisibleInLibrary: Boolean = true,
 ) {
 
@@ -185,6 +186,7 @@ class CategoryBackup(
 		title = entity.title,
 		order = entity.order,
 		track = entity.track,
+		downloadNewChapters = entity.downloadNewChapters,
 		isVisibleInLibrary = entity.isVisibleInLibrary,
 	)
 
@@ -195,6 +197,7 @@ class CategoryBackup(
 		title = title,
 		order = order,
 		track = track,
+		downloadNewChapters = downloadNewChapters,
 		isVisibleInLibrary = isVisibleInLibrary,
 		deletedAt = 0L,
 	)

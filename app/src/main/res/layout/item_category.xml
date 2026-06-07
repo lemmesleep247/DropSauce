@@ -69,6 +69,19 @@
 		app:srcCompat="@drawable/ic_notification" />
 
 	<ImageView
+		android:id="@+id/imageView_download"
+		android:layout_width="16dp"
+		android:layout_height="16dp"
+		android:layout_marginEnd="4dp"
+		android:contentDescription="@string/download_new_chapters"
+		android:tooltipText="@string/download_new_chapters"
+		app:layout_constraintBottom_toBottomOf="@id/textView_subtitle"
+		app:layout_constraintEnd_toStartOf="@id/imageView_hidden"
+		app:layout_constraintStart_toEndOf="@id/imageView_tracker"
+		app:layout_constraintTop_toTopOf="@id/textView_subtitle"
+		app:srcCompat="@drawable/ic_download" />
+
+	<ImageView
 		android:id="@+id/imageView_hidden"
 		android:layout_width="16dp"
 		android:layout_height="16dp"
@@ -76,7 +89,7 @@
 		android:tooltipText="@string/hide_from_main_screen"
 		app:layout_constraintBottom_toBottomOf="@id/textView_subtitle"
 		app:layout_constraintEnd_toEndOf="@id/textView_title"
-		app:layout_constraintStart_toEndOf="@id/imageView_tracker"
+		app:layout_constraintStart_toEndOf="@id/imageView_download"
 		app:layout_constraintTop_toTopOf="@id/textView_subtitle"
 		app:srcCompat="@drawable/ic_eye_off" />
 

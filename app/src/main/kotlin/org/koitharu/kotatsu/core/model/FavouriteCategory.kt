@@ -15,6 +15,7 @@ data class FavouriteCategory(
 	val order: ListSortOrder,
 	val createdAt: Instant,
 	val isTrackingEnabled: Boolean,
+	val isNewChaptersDownloadEnabled: Boolean,
 	val isVisibleInLibrary: Boolean,
 ) : Parcelable, ListModel {
 
@@ -26,7 +27,11 @@ data class FavouriteCategory(
 		if (previousState !is FavouriteCategory) {
 			return null
 		}
-		return if (isTrackingEnabled != previousState.isTrackingEnabled || isVisibleInLibrary != previousState.isVisibleInLibrary) {
+		return if (
+			isTrackingEnabled != previousState.isTrackingEnabled ||
+			isNewChaptersDownloadEnabled != previousState.isNewChaptersDownloadEnabled ||
+			isVisibleInLibrary != previousState.isVisibleInLibrary
+		) {
 			ListModelDiffCallback.PAYLOAD_CHECKED_CHANGED
 		} else {
 			null

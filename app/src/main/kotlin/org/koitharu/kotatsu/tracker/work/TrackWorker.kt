@@ -47,7 +47,6 @@ import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.ids
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.prefs.TrackerDownloadStrategy
 import org.koitharu.kotatsu.core.prefs.TriStateOption
 import org.koitharu.kotatsu.core.util.ext.awaitUniqueWorkInfoByName
 import org.koitharu.kotatsu.core.util.ext.checkNotificationPermission
@@ -56,7 +55,7 @@ import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.trySetForeground
 import org.koitharu.kotatsu.download.ui.worker.DownloadTask
 import org.koitharu.kotatsu.download.ui.worker.DownloadWorker
-import org.koitharu.kotatsu.local.data.LocalMangaRepository
+import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.parsers.util.toIntUp
 import org.koitharu.kotatsu.settings.work.PeriodicWorkScheduler
@@ -81,7 +80,7 @@ class TrackWorker @AssistedInject constructor(
 	private val getTracksUseCase: GetTracksUseCase,
 	private val checkNewChaptersUseCase: CheckNewChaptersUseCase,
 	private val workManager: WorkManager,
-	private val localRepositoryLazy: Lazy<LocalMangaRepository>,
+	private val favouritesRepository: FavouritesRepository,
 	private val downloadSchedulerLazy: Lazy<DownloadWorker.Scheduler>,
 ) : CoroutineWorker(context, workerParams) {
 
@@ -108,6 +107,7 @@ class TrackWorker @AssistedInject constructor(
 		if (!settings.isTrackerEnabled) {
 			return Result.success()
 		}
+		migrateLegacyDownloadStrategy()
 		val tracks = getTracksUseCase(if (isFullRun) Int.MAX_VALUE else BATCH_SIZE)
 		if (tracks.isEmpty()) {
 			return Result.success()
@@ -290,23 +290,24 @@ class TrackWorker @AssistedInject constructor(
 		if (!mangaUpdates.isValid || mangaUpdates.newChapters.isEmpty()) {
 			return
 		}
-		when (settings.trackerDownloadStrategy) {
-			TrackerDownloadStrategy.DISABLED -> Unit
-			TrackerDownloadStrategy.DOWNLOADED -> {
-				val localManga = localRepositoryLazy.get().findSavedManga(mangaUpdates.manga)
-				if (localManga != null) {
-					val task = DownloadTask(
-						mangaId = mangaUpdates.manga.id,
-						isPaused = false,
-						isSilent = false,
-						chaptersIds = mangaUpdates.newChapters.ids().toLongArray(),
-						destination = null,
-						format = null,
-						allowMeteredNetwork = settings.allowDownloadOnMeteredNetwork != TriStateOption.DISABLED,
-					)
-					downloadSchedulerLazy.get().schedule(setOf(mangaUpdates.manga to task))
-				}
-			}
+		if (!favouritesRepository.isNewChaptersDownloadEnabled(mangaUpdates.manga.id)) {
+			return
+		}
+		val task = DownloadTask(
+			mangaId = mangaUpdates.manga.id,
+			isPaused = false,
+			isSilent = false,
+			chaptersIds = mangaUpdates.newChapters.ids().toLongArray(),
+			destination = null,
+			format = null,
+			allowMeteredNetwork = settings.allowDownloadOnMeteredNetwork != TriStateOption.DISABLED,
+		)
+		downloadSchedulerLazy.get().schedule(setOf(mangaUpdates.manga to task))
+	}
+
+	private suspend fun migrateLegacyDownloadStrategy() {
+		if (settings.consumeLegacyTrackerDownloadStrategy()) {
+			favouritesRepository.enableNewChaptersDownloadForTrackedCategories()
 		}
 	}
 

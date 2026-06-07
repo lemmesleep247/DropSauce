@@ -178,6 +178,7 @@ class FavouritesRepository @Inject constructor(
 		title: String,
 		sortOrder: ListSortOrder,
 		isTrackerEnabled: Boolean,
+		isNewChaptersDownloadEnabled: Boolean,
 		isVisibleOnShelf: Boolean,
 	): FavouriteCategory {
 		val entity = FavouriteCategoryEntity(
@@ -187,6 +188,7 @@ class FavouritesRepository @Inject constructor(
 			categoryId = 0,
 			order = sortOrder.name,
 			track = isTrackerEnabled,
+			downloadNewChapters = isNewChaptersDownloadEnabled,
 			deletedAt = 0L,
 			isVisibleInLibrary = isVisibleOnShelf,
 		)
@@ -200,9 +202,17 @@ class FavouritesRepository @Inject constructor(
 		title: String,
 		sortOrder: ListSortOrder,
 		isTrackerEnabled: Boolean,
+		isNewChaptersDownloadEnabled: Boolean,
 		isVisibleOnShelf: Boolean,
 	) {
-		db.getFavouriteCategoriesDao().update(id, title, sortOrder.name, isTrackerEnabled, isVisibleOnShelf)
+		db.getFavouriteCategoriesDao().update(
+			id = id,
+			title = title,
+			order = sortOrder.name,
+			tracker = isTrackerEnabled,
+			downloadNewChapters = isNewChaptersDownloadEnabled,
+			onShelf = isVisibleOnShelf,
+		)
 	}
 
 	suspend fun updateCategory(id: Long, isVisibleInLibrary: Boolean) {
@@ -211,6 +221,28 @@ class FavouritesRepository @Inject constructor(
 
 	suspend fun updateCategoryTracking(id: Long, isTrackingEnabled: Boolean) {
 		db.getFavouriteCategoriesDao().updateTracking(id, isTrackingEnabled)
+	}
+
+	suspend fun updateCategoryNewChaptersDownload(id: Long, isEnabled: Boolean) {
+		db.getFavouriteCategoriesDao().updateNewChaptersDownload(id, isEnabled)
+	}
+
+	suspend fun setNewChaptersDownloadCategories(ids: Set<Long>) {
+		db.withTransaction {
+			val dao = db.getFavouriteCategoriesDao()
+			dao.clearNewChaptersDownload()
+			for (id in ids) {
+				dao.updateNewChaptersDownload(id, true)
+			}
+		}
+	}
+
+	suspend fun enableNewChaptersDownloadForTrackedCategories() {
+		db.getFavouriteCategoriesDao().enableNewChaptersDownloadForTracked()
+	}
+
+	suspend fun isNewChaptersDownloadEnabled(mangaId: Long): Boolean {
+		return db.getFavouritesDao().isNewChaptersDownloadEnabled(mangaId)
 	}
 
 	suspend fun removeCategories(ids: Collection<Long>) {

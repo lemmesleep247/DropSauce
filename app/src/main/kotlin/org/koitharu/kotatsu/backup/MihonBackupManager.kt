@@ -215,6 +215,7 @@ class MihonBackupManager @Inject constructor(
                 title = "mihon",
                 order = "NEWEST",
                 track = true,
+                downloadNewChapters = false,
                 isVisibleInLibrary = true,
                 deletedAt = 0,
             ),

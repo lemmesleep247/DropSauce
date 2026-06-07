@@ -13,6 +13,7 @@ fun FavouriteCategoryEntity.toFavouriteCategory(id: Long = categoryId.toLong()) 
 	order = ListSortOrder(order, ListSortOrder.NEWEST),
 	createdAt = Instant.ofEpochMilli(createdAt),
 	isTrackingEnabled = track,
+	isNewChaptersDownloadEnabled = downloadNewChapters,
 	isVisibleInLibrary = isVisibleInLibrary,
 )
 

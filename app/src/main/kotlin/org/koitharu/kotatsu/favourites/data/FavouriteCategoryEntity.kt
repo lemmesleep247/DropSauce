@@ -14,6 +14,7 @@ data class FavouriteCategoryEntity(
 	@ColumnInfo(name = "title") val title: String,
 	@ColumnInfo(name = "order") val order: String,
 	@ColumnInfo(name = "track") val track: Boolean,
+	@ColumnInfo(name = "download_new_chapters") val downloadNewChapters: Boolean,
 	@ColumnInfo(name = "show_in_lib") val isVisibleInLibrary: Boolean,
 	@ColumnInfo(name = "deleted_at") val deletedAt: Long,
 ) {
@@ -30,6 +31,7 @@ data class FavouriteCategoryEntity(
 		if (title != other.title) return false
 		if (order != other.order) return false
 		if (track != other.track) return false
+		if (downloadNewChapters != other.downloadNewChapters) return false
 		return isVisibleInLibrary == other.isVisibleInLibrary
 	}
 
@@ -40,6 +42,7 @@ data class FavouriteCategoryEntity(
 		result = 31 * result + title.hashCode()
 		result = 31 * result + order.hashCode()
 		result = 31 * result + track.hashCode()
+		result = 31 * result + downloadNewChapters.hashCode()
 		result = 31 * result + isVisibleInLibrary.hashCode()
 		return result
 	}

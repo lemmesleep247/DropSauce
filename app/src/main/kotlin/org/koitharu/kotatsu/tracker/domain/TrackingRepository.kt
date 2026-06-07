@@ -196,7 +196,7 @@ class TrackingRepository @Inject constructor(
 		}
 		// favorites
 		if (AppSettings.TRACK_FAVOURITES in settings.trackSources) {
-			val favoritesIds = db.getFavouritesDao().findIdsWithTrack()
+			val favoritesIds = db.getFavouritesDao().findIdsWithTrackOrNewChaptersDownload()
 			for (mangaId in favoritesIds) {
 				if (!ids.remove(mangaId)) {
 					dao.upsert(TrackEntity.create(mangaId))

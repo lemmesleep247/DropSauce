@@ -45,10 +45,8 @@ class AlternativesActivity : BaseActivity<ActivityAlternativesBinding>(),
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityAlternativesBinding.inflate(layoutInflater))
-		supportActionBar?.run {
-			setDisplayHomeAsUpEnabled(true)
-			subtitle = viewModel.manga.title
-		}
+		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+		viewBinding.collapsingToolbarLayout.subtitle = null
 		val listAdapter = BaseListAdapter<ListModel>()
 			.addDelegate(ListItemType.MANGA_LIST_DETAILED, alternativeAD(coil, this, this))
 			.addDelegate(ListItemType.STATE_EMPTY, emptyStateListAD(null))

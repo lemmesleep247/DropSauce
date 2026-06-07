@@ -66,7 +66,7 @@ class TagsCatalogSheet : BaseAdaptiveSheet<SheetTagsBinding>(),
 		val barsInsets = insets.getInsets(typeBask)
 		viewBinding?.recyclerView?.setPadding(
 			barsInsets.left,
-			barsInsets.top,
+			0,
 			barsInsets.right,
 			barsInsets.bottom,
 		)

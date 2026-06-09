@@ -140,6 +140,14 @@ class PagesFragment :
 		}
 		viewModel.isLoadingUp.observe(viewLifecycleOwner) { binding.progressBarTop.showOrHide(it) }
 		viewModel.isLoadingDown.observe(viewLifecycleOwner) { binding.progressBarBottom.showOrHide(it) }
+		// Cover accent shared from the activity; recolors the spinner and the pagination loading bars.
+		parentViewModel.accentColor.observe(viewLifecycleOwner) { color ->
+			if (color != null) {
+				binding.progressBar.setIndicatorColor(color)
+				binding.progressBarTop.setIndicatorColor(color)
+				binding.progressBarBottom.setIndicatorColor(color)
+			}
+		}
 	}
 
 	override fun onDestroyView() {

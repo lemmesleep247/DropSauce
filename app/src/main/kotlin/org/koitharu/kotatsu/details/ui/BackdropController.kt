@@ -35,6 +35,7 @@ class BackdropController(
 	private val imageLoader: ImageLoader,
 	private val lifecycle: LifecycleOwner,
 	private val settings: AppSettings,
+	private val isExtended: Boolean = true,
 ) : DefaultLifecycleObserver {
 	private val backdropRef = WeakReference(backdrop)
 	private val gradientRef = WeakReference(backdropGradient)
@@ -82,8 +83,9 @@ class BackdropController(
 					view.setImageDrawable(drawable)
 					applyBlur(view)
 					extractAccent(drawable)
+					// Extended mode dims the backdrop (it sits behind text); the classic look stays full.
 					view.animate()
-						.alpha(BACKDROP_ALPHA)
+						.alpha(if (isExtended) BACKDROP_ALPHA else 1f)
 						.setDuration(CROSSFADE_DURATION_MS)
 						.setInterpolator(android.view.animation.DecelerateInterpolator())
 						.start()
@@ -100,15 +102,24 @@ class BackdropController(
 
 	private fun applyGradients(surfaceColor: Int) {
 		fun alpha(a: Int) = ColorUtils.setAlphaComponent(surfaceColor, a)
-		gradientRef.get()?.background = GradientDrawable(
-			GradientDrawable.Orientation.TOP_BOTTOM,
+		val bottomStops = if (isExtended) {
+			// Even, gradual ramp (mirror of the top fade) so the extended backdrop fades smoothly
+			// instead of snapping to opaque near the top of the gradient (which looked like a hard line).
+			intArrayOf(
+				Color.TRANSPARENT,
+				alpha(30), alpha(80), alpha(140),
+				alpha(200), alpha(240), surfaceColor,
+			)
+		} else {
+			// Classic look: a short, denser fade right under the cover (as before this redesign).
 			intArrayOf(
 				Color.TRANSPARENT,
 				alpha(25), alpha(50), alpha(100),
 				alpha(160), alpha(210), alpha(240),
 				alpha(248), alpha(253), surfaceColor,
-			),
-		)
+			)
+		}
+		gradientRef.get()?.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, bottomStops)
 		topGradientRef.get()?.background = GradientDrawable(
 			GradientDrawable.Orientation.TOP_BOTTOM,
 			intArrayOf(

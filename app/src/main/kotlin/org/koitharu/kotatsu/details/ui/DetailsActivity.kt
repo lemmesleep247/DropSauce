@@ -157,6 +157,11 @@ class DetailsActivity :
 	override val bottomSheet: View?
 		get() = viewBinding.containerBottomSheet
 
+	// The extended backdrop (frosted box, fade, dim) is only used when both the backdrop and the
+	// "extend backdrop" option are on; otherwise the classic short backdrop is shown.
+	private val isExtendedBackdrop: Boolean
+		get() = settings.isBackdropEnabled && settings.isBackdropExtended
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityDetailsBinding.inflate(layoutInflater))
@@ -178,11 +183,12 @@ class DetailsActivity :
 			imageLoader = coil,
 			lifecycle = this,
 			settings = settings,
+			isExtended = isExtendedBackdrop,
 		)
 		if (settings.isDetailsDynamicColorEnabled) {
 			backdropController.onColorExtracted = ::applyAccentColor
 		}
-		if (settings.isBackdropEnabled) {
+		if (isExtendedBackdrop) {
 			setupColoredBackdropBox()
 		}
 		viewBinding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
@@ -594,13 +600,19 @@ class DetailsActivity :
 	}
 
 	/**
-	 * Makes the details card a frosted translucent panel and stretches the backdrop so the blurred
-	 * cover (and its colors) sits behind the whole detail box, fading out just before the description.
+	 * Makes the details card a frosted translucent panel, sizes the backdrop so the blurred cover sits
+	 * behind the whole detail box, and pushes the description (and everything below it, which flows from
+	 * it) clear of the backdrop's bottom fade.
 	 */
 	private fun setupColoredBackdropBox() {
 		infoBinding.cardDetails.setCardBackgroundColor(
 			getThemeColor(materialR.attr.colorSurfaceContainerHighest, BACKDROP_BOX_ALPHA),
 		)
+		// The fade gradient sits at the bottom of the backdrop and fades UPWARD into it, finishing exactly
+		// at the backdrop's bottom edge. Its height = how long/gradual the fade is.
+		viewBinding.backdropGradient.updateLayoutParams<ViewGroup.LayoutParams> {
+			height = dp(BACKDROP_FADE_DP)
+		}
 		infoBinding.cardDetails.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
 			viewBinding.backdropContainer.post(::updateBackdropHeight)
 		}
@@ -615,22 +627,18 @@ class DetailsActivity :
 		val loc = IntArray(2)
 		card.getLocationInWindow(loc)
 		val cardBottom = loc[1] + card.height
-		viewBinding.textViewDescriptionTitle.getLocationInWindow(loc)
-		val headerTop = loc[1]
 		container.getLocationInWindow(loc)
 		val containerTop = loc[1]
-		// All these views scroll together (the backdrop parallaxes 1:1 with the content), so these deltas
-		// are scroll-invariant. End the backdrop halfway between the box's bottom and the description
-		// header: that keeps it covering the whole box yet stopping before the header. The short bottom
-		// gradient (anchored to this edge) fades the final sliver to surface.
-		val end = if (headerTop > cardBottom) (cardBottom + headerTop) / 2 else cardBottom
-		// Nudge the backdrop's bottom edge: positive = lower (toward the description), negative = higher.
-		val offset = (resources.displayMetrics.density * BACKDROP_END_OFFSET_DP).toInt()
-		val target = end - containerTop + offset
+		// The backdrop and content scroll together, so this delta is scroll-invariant. The backdrop ends
+		// (fully faded) at BACKDROP_END_OFFSET_DP below the box bottom; the gradient does the fading in the
+		// stretch *above* this edge, so the container stops exactly here.
+		val target = (cardBottom - containerTop) + dp(BACKDROP_END_OFFSET_DP)
 		if (target > 0 && kotlin.math.abs(container.height - target) > 1) {
 			container.updateLayoutParams<ViewGroup.MarginLayoutParams> { height = target }
 		}
 	}
+
+	private fun dp(value: Float): Int = (resources.displayMetrics.density * value).toInt()
 
 	private fun applyAccentColor(@ColorInt color: Int) {
 		viewModel.accentColor.value = color
@@ -650,6 +658,20 @@ class DetailsActivity :
 		infoBinding.progress.setIndicatorColor(color)
 		viewBinding.chipFavorite.chipIconTint = tint
 		viewBinding.swipeRefreshLayout.setIndicatorColor(color)
+		// The clickable author name is drawn with the link color, so steer that to the accent too.
+		infoBinding.textViewAuthor.setLinkTextColor(color)
+		// The tinted frosted box only exists in extended mode; leave the classic box untinted.
+		if (isExtendedBackdrop) {
+			infoBinding.cardDetails.setCardBackgroundColor(coloredBoxBackground(color))
+		}
+	}
+
+	// Box background = the theme surface tinted toward the cover accent, at the box's translucency.
+	@ColorInt
+	private fun coloredBoxBackground(@ColorInt accent: Int): Int {
+		val surface = getThemeColor(materialR.attr.colorSurfaceContainerHighest)
+		val tinted = ColorUtils.blendARGB(surface, accent, BACKDROP_BOX_TINT)
+		return ColorUtils.setAlphaComponent(tinted, (BACKDROP_BOX_ALPHA * 255).roundToInt())
 	}
 
 	private fun updateAppBarScrim(scrollY: Int) {
@@ -720,7 +742,11 @@ class DetailsActivity :
 		// ── Backdrop tuning knobs ──────────────────────────────────────────────────────────────────
 		// Opacity of the frosted detail box (0 = fully transparent, 1 = fully opaque/solid surface).
 		private const val BACKDROP_BOX_ALPHA = 0.76f
-		// Moves the backdrop's bottom edge in dp: positive = lower (toward description), negative = higher.
-		private const val BACKDROP_END_OFFSET_DP = 12f
+		// How much of the cover accent is blended into the box background (0 = none, 1 = full accent).
+		private const val BACKDROP_BOX_TINT = 0.22f
+		// Where the backdrop fully fades out, in dp below the detail box's bottom (+ = lower, − = higher).
+		private const val BACKDROP_END_OFFSET_DP = 14f
+		// Height in dp of the fade — the gradient ends at the edge above and fades upward. Bigger = longer.
+		private const val BACKDROP_FADE_DP = 140f
 	}
 }

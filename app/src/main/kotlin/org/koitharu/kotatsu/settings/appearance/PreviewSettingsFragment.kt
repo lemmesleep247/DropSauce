@@ -72,6 +72,7 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 	var uiMode by rememberStringPref(AppSettings.KEY_DETAILS_UI, DetailsUiMode.MODERN.name)
 	var backdrop by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP, true)
 	var blur by rememberIntPref(AppSettings.KEY_DETAILS_BACKDROP_BLUR_AMOUNT, 60)
+	var extendBackdrop by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP_EXTEND, true)
 	var dynamicColor by rememberBooleanPref(AppSettings.KEY_DETAILS_DYNAMIC_COLOR, true)
 
 	val mode = remember(uiMode) {
@@ -127,6 +128,17 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 						unitSuffix = "%",
 						onValueChange = { blur = it },
 						icon = R.drawable.ic_auto_fix,
+						shape = pos.shape,
+						enabled = backdrop,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.details_backdrop_extend),
+						subtitle = stringResource(R.string.details_backdrop_extend_summary),
+						checked = extendBackdrop,
+						onCheckedChange = { extendBackdrop = it },
+						icon = R.drawable.ic_images,
 						shape = pos.shape,
 						enabled = backdrop,
 					)

@@ -14,6 +14,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.scale
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.palette.graphics.Palette
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.request.Disposable
@@ -39,11 +40,19 @@ class BackdropController(
 	private val gradientRef = WeakReference(backdropGradient)
 	private val topGradientRef = WeakReference(backdropTopGradient)
 	private var currentDisposable: Disposable? = null
+	private val isDarkBackground: Boolean
+
+	/**
+	 * Invoked on the main thread once a vibrant accent color has been extracted from the loaded
+	 * cover, already harmonized to be legible on the current theme background.
+	 */
+	var onColorExtracted: ((Int) -> Unit)? = null
 
 	init {
 		val bgColor = context.obtainStyledAttributes(intArrayOf(android.R.attr.colorBackground)).run {
 			getColor(0, Color.WHITE).also { recycle() }
 		}
+		isDarkBackground = ColorUtils.calculateLuminance(bgColor) < 0.5
 		applyGradients(bgColor)
 		lifecycle.lifecycle.addObserver(this)
 	}
@@ -62,16 +71,19 @@ class BackdropController(
 			.target(
 				onSuccess = { image ->
 					val view = backdropRef.get() ?: return@target
+					// Uniform scale + no vertical offset: centerCrop fills the (tall) container without
+					// distorting the cover. The 1.1 vertical scale used previously stretched the image.
 					view.scaleX = 1f
-					view.scaleY = 1.1f
-					view.translationY = -view.height * 0.08f
+					view.scaleY = 1f
+					view.translationY = 0f
 					val drawable = image.asDrawable(view.context.resources)
 					view.animate().cancel()
 					view.alpha = 0f
 					view.setImageDrawable(drawable)
 					applyBlur(view)
+					extractAccent(drawable)
 					view.animate()
-						.alpha(1f)
+						.alpha(BACKDROP_ALPHA)
 						.setDuration(CROSSFADE_DURATION_MS)
 						.setInterpolator(android.view.animation.DecelerateInterpolator())
 						.start()
@@ -146,6 +158,44 @@ class BackdropController(
 		view.setImageBitmap(scaled)
 	}
 
+	private fun extractAccent(drawable: Drawable) {
+		if (onColorExtracted == null) return
+		val bitmap = try {
+			drawableToBitmap(drawable)
+		} catch (e: Throwable) {
+			return
+		}
+		Palette.from(bitmap)
+			.maximumColorCount(24)
+			.generate { palette ->
+				val cb = onColorExtracted ?: return@generate
+				palette ?: return@generate
+				val raw = palette.vibrantSwatch?.rgb
+					?: palette.lightVibrantSwatch?.rgb
+					?: palette.darkVibrantSwatch?.rgb
+					?: palette.mutedSwatch?.rgb
+					?: palette.dominantSwatch?.rgb
+					?: return@generate
+				cb(harmonizeAccent(raw))
+			}
+	}
+
+	/**
+	 * Pushes the extracted color into a saturation/lightness band that stays legible on the
+	 * current theme background, so the accent reads well in both light and dark mode.
+	 */
+	private fun harmonizeAccent(color: Int): Int {
+		val hsl = FloatArray(3)
+		ColorUtils.colorToHSL(color, hsl)
+		hsl[1] = hsl[1].coerceIn(0.4f, 0.95f)
+		hsl[2] = if (isDarkBackground) {
+			hsl[2].coerceIn(0.62f, 0.82f)
+		} else {
+			hsl[2].coerceIn(0.3f, 0.46f)
+		}
+		return ColorUtils.HSLToColor(hsl)
+	}
+
 	private fun drawableToBitmap(drawable: Drawable): Bitmap {
 		if (drawable is android.graphics.drawable.BitmapDrawable)
 			return drawable.bitmap.copy(Bitmap.Config.ARGB_8888, true)
@@ -161,6 +211,10 @@ class BackdropController(
 
 	companion object {
 		private const val CROSSFADE_DURATION_MS = 400L
+
+		// Uniform dim applied to the backdrop so it blends toward the theme surface, keeping the title
+		// and other content over it legible. Lower = dimmer.
+		private const val BACKDROP_ALPHA = 0.65f
 		private const val BLUR_SCALE_FACTOR = 0.4f
 		private const val MAX_BLUR_RADIUS_API31 = 25f
 		private const val MAX_BLUR_RADIUS_RS = 25f

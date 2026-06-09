@@ -33,7 +33,7 @@
 		<View
 			android:id="@+id/backdrop_gradient"
 			android:layout_width="match_parent"
-			android:layout_height="330dp"
+			android:layout_height="20dp"
 			android:layout_gravity="bottom" />
 
 		<View

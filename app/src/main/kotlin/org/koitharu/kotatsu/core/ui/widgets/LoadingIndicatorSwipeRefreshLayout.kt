@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
+import androidx.annotation.ColorInt
 import androidx.core.view.isVisible
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.loadingindicator.LoadingIndicator
@@ -56,6 +57,11 @@ class LoadingIndicatorSwipeRefreshLayout @JvmOverloads constructor(
 	override fun onFinishInflate() {
 		super.onFinishInflate()
 		addView(indicator, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+	}
+
+	/** Tints the Material 3 loading indicator (the native circle is hidden, so [setColorSchemeColors] is a no-op here). */
+	fun setIndicatorColor(@ColorInt color: Int) {
+		indicator.setIndicatorColor(color)
 	}
 
 	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

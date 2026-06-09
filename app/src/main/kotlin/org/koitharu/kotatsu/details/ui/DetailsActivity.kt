@@ -10,6 +10,7 @@ import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.text.SpannedString
 import android.view.Gravity
+import androidx.annotation.ColorInt
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -86,6 +87,7 @@ import org.koitharu.kotatsu.core.util.ext.drawableStart
 import org.koitharu.kotatsu.core.util.ext.end
 import org.koitharu.kotatsu.core.util.ext.enqueueWith
 import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
 import org.koitharu.kotatsu.core.util.ext.isTextTruncated
 import org.koitharu.kotatsu.core.util.ext.setTextSafely
@@ -161,7 +163,10 @@ class DetailsActivity :
 		infoBinding = LayoutDetailsTableBinding.bind(viewBinding.root)
 		WindowCompat.setDecorFitsSystemWindows(window, false)
 		enableEdgeToEdge()
-		WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
+		// Backdrop now fades to the theme surface near the top, so status-bar icons must match the theme
+		// (dark icons on a light surface) instead of always being light — otherwise they vanish in light mode.
+		WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars =
+			ColorUtils.calculateLuminance(getThemeColor(android.R.attr.colorBackground)) > 0.5
 		if (savedInstanceState == null && intent.getBooleanExtra(CoverSharedTransition.EXTRA_ENABLED, false)) {
 			CoverSharedTransition.setup(this, viewBinding.imageViewCover)
 		}
@@ -174,6 +179,12 @@ class DetailsActivity :
 			lifecycle = this,
 			settings = settings,
 		)
+		if (settings.isDetailsDynamicColorEnabled) {
+			backdropController.onColorExtracted = ::applyAccentColor
+		}
+		if (settings.isBackdropEnabled) {
+			setupColoredBackdropBox()
+		}
 		viewBinding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
 			if (settings.isBackdropEnabled) {
 				viewBinding.backdropContainer.translationY = -scrollY.toFloat()
@@ -582,6 +593,65 @@ class DetailsActivity :
 		}
 	}
 
+	/**
+	 * Makes the details card a frosted translucent panel and stretches the backdrop so the blurred
+	 * cover (and its colors) sits behind the whole detail box, fading out just before the description.
+	 */
+	private fun setupColoredBackdropBox() {
+		infoBinding.cardDetails.setCardBackgroundColor(
+			getThemeColor(materialR.attr.colorSurfaceContainerHighest, BACKDROP_BOX_ALPHA),
+		)
+		infoBinding.cardDetails.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+			viewBinding.backdropContainer.post(::updateBackdropHeight)
+		}
+		viewBinding.backdropContainer.post(::updateBackdropHeight)
+	}
+
+	private fun updateBackdropHeight() {
+		if (!settings.isBackdropEnabled) return
+		val container = viewBinding.backdropContainer
+		val card = infoBinding.cardDetails
+		if (card.height == 0) return
+		val loc = IntArray(2)
+		card.getLocationInWindow(loc)
+		val cardBottom = loc[1] + card.height
+		viewBinding.textViewDescriptionTitle.getLocationInWindow(loc)
+		val headerTop = loc[1]
+		container.getLocationInWindow(loc)
+		val containerTop = loc[1]
+		// All these views scroll together (the backdrop parallaxes 1:1 with the content), so these deltas
+		// are scroll-invariant. End the backdrop halfway between the box's bottom and the description
+		// header: that keeps it covering the whole box yet stopping before the header. The short bottom
+		// gradient (anchored to this edge) fades the final sliver to surface.
+		val end = if (headerTop > cardBottom) (cardBottom + headerTop) / 2 else cardBottom
+		// Nudge the backdrop's bottom edge: positive = lower (toward the description), negative = higher.
+		val offset = (resources.displayMetrics.density * BACKDROP_END_OFFSET_DP).toInt()
+		val target = end - containerTop + offset
+		if (target > 0 && kotlin.math.abs(container.height - target) > 1) {
+			container.updateLayoutParams<ViewGroup.MarginLayoutParams> { height = target }
+		}
+	}
+
+	private fun applyAccentColor(@ColorInt color: Int) {
+		viewModel.accentColor.value = color
+		val tint = ColorStateList.valueOf(color)
+		viewBinding.textViewDescriptionTitle.setTextColor(color)
+		viewBinding.textViewScrobblingTitle.setTextColor(color)
+		viewBinding.textViewRelatedTitle.setTextColor(color)
+		for (button in arrayOf(
+			viewBinding.buttonDescriptionMore,
+			viewBinding.buttonScrobblingMore,
+			viewBinding.buttonRelatedMore,
+		)) {
+			button.setTextColor(color)
+			button.iconTint = tint
+			button.rippleColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(color, 40))
+		}
+		infoBinding.progress.setIndicatorColor(color)
+		viewBinding.chipFavorite.chipIconTint = tint
+		viewBinding.swipeRefreshLayout.setIndicatorColor(color)
+	}
+
 	private fun updateAppBarScrim(scrollY: Int) {
 		val alpha = if (!settings.isBackdropEnabled) 255 else {
 			val threshold = resources.displayMetrics.density * SCRIM_SCROLL_THRESHOLD_DP
@@ -646,5 +716,11 @@ class DetailsActivity :
 	companion object {
 		private const val FAV_LABEL_LIMIT = 16
 		private const val SCRIM_SCROLL_THRESHOLD_DP = 160f
+
+		// ── Backdrop tuning knobs ──────────────────────────────────────────────────────────────────
+		// Opacity of the frosted detail box (0 = fully transparent, 1 = fully opaque/solid surface).
+		private const val BACKDROP_BOX_ALPHA = 0.76f
+		// Moves the backdrop's bottom edge in dp: positive = lower (toward description), negative = higher.
+		private const val BACKDROP_END_OFFSET_DP = 12f
 	}
 }

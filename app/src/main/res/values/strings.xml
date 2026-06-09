@@ -983,6 +983,8 @@
     <string name="details_backdrop">Set large cover as backdrop</string>
     <string name="details_backdrop_summary">Show a large cover image at the top as a backdrop image (like Tachiyomi)</string>
     <string name="details_backdrop_blur">Backdrop blur intensity</string>
+    <string name="details_dynamic_color">Colors from cover</string>
+    <string name="details_dynamic_color_summary">Tint the details page with an accent color taken from the cover instead of the app theme</string>
     <string name="details_appearance">Details screen appearance</string>
     <string name="details_appearance_summary">Screen style, backdrop image and blur effect</string>
     <string name="cover_transition_animation">Animate cover loading (beta)</string>

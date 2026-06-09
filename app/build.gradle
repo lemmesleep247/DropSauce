@@ -198,6 +198,7 @@ dependencies {
 	implementation libs.androidx.constraintlayout
 	implementation libs.androidx.documentfile
 	implementation libs.androidx.swiperefreshlayout
+	implementation libs.androidx.palette
 	implementation libs.androidx.recyclerview
 	implementation libs.androidx.viewpager2
 	implementation libs.androidx.preference

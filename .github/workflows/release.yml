@@ -198,13 +198,11 @@ jobs:
         cat > "$NOTES_FILE" <<'EOF'
         ## DropSauce v${{ inputs.version_name }}
 
-        ### Download
-        ${{ steps.assets.outputs.download_notes }}
-
         ### Installation Instructions
-        1. Download the APK file
-        2. Install it on your Android device
-        3. If this is your first time installing, you may need to allow installation of apps from unknown sources
+        1. Download and install the apk file first
+        2. go to the Explore menu> Manage and click the pen icon to add an extension repo
+        3. install and use the extensions, read, add items to the favorites and ENJOY!
+        If this is your first time using the app, I recommend uninstalling any extension you find when opening the app for the first time and then installing latest extensions from your preferred repository"
 
         ### Changelog
         ${{ steps.changelog.outputs.changelog }}

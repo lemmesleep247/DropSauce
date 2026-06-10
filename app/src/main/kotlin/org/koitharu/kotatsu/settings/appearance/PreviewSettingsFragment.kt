@@ -73,7 +73,7 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 	var backdrop by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP, true)
 	var blur by rememberIntPref(AppSettings.KEY_DETAILS_BACKDROP_BLUR_AMOUNT, 60)
 	var extendBackdrop by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP_EXTEND, true)
-	var dynamicColor by rememberBooleanPref(AppSettings.KEY_DETAILS_DYNAMIC_COLOR, true)
+	var dynamicColor by rememberBooleanPref(AppSettings.KEY_DETAILS_DYNAMIC_COLOR, false)
 
 	val mode = remember(uiMode) {
 		DetailsUiMode.entries.firstOrNull { it.name == uiMode } ?: DetailsUiMode.MODERN

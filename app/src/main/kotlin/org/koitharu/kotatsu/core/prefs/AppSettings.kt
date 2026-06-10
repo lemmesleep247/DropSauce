@@ -162,7 +162,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_DETAILS_BACKDROP, true)
 
 	val isDetailsDynamicColorEnabled: Boolean
-		get() = prefs.getBoolean(KEY_DETAILS_DYNAMIC_COLOR, true)
+		get() = prefs.getBoolean(KEY_DETAILS_DYNAMIC_COLOR, false)
 
 	val isBackdropExtended: Boolean
 		get() = prefs.getBoolean(KEY_DETAILS_BACKDROP_EXTEND, true)
@@ -421,7 +421,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		}
 
 	var sourcesSortOrder: SourcesSortOrder
-		get() = prefs.getEnumValue(KEY_SOURCES_ORDER, SourcesSortOrder.LAST_USED)
+		get() = prefs.getEnumValue(KEY_SOURCES_ORDER, SourcesSortOrder.ALPHABETIC)
 		set(value) = prefs.edit { putEnumValue(KEY_SOURCES_ORDER, value) }
 
 	var isSourcesGridMode: Boolean

@@ -196,7 +196,7 @@ class DetailsActivity :
 		}
 		if (isExtendedBackdrop) {
 			setupColoredBackdropBox()
-			// Once the backdrop bitmap is set, recompute the box-blur matrix so it aligns with it.
+			// Once the backdrop bitmap is set, (re)compute the box-blur matrix so it aligns with it.
 			backdropController.onBackdropApplied = { viewBinding.backdropContainer.post(::updateBackdropHeight) }
 		}
 		viewBinding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
@@ -608,25 +608,22 @@ class DetailsActivity :
 	}
 
 	/**
-	 * Makes the details card a frosted translucent panel, sizes the backdrop so the blurred cover sits
-	 * behind the whole detail box, and pushes the description (and everything below it, which flows from
-	 * it) clear of the backdrop's bottom fade.
+	 * Makes the details card a solid accent-tinted panel with a thin accent border, and sizes the
+	 * backdrop so it fades out right at the bottom of the detail box.
 	 */
 	private fun setupColoredBackdropBox() {
-		// The card is just the rounded shape; the frosted fill is the blurred cover (imageBoxBlur) on top,
-		// which lives in the scrolling content so it stays locked to the card (no scroll "split").
+		// Frosted glass: the card itself is transparent and a heavily-blurred copy of the backdrop sits
+		// inside it, with a slightly-transparent theme-surface scrim on top so the box still reads like a
+		// normal menu surface while revealing the blurred backdrop behind it.
 		infoBinding.cardDetails.setCardBackgroundColor(Color.TRANSPARENT)
-		// A thin border around the box; recolored to the cover accent once it loads (applyAccentColor).
 		infoBinding.cardDetails.strokeWidth = dp(BACKDROP_BOX_STROKE_DP)
 		infoBinding.cardDetails.setStrokeColor(getThemeColor(materialR.attr.colorOutlineVariant))
 		val boxBlur = infoBinding.imageBoxBlur
-		// MATRIX scaling lets us show the exact backdrop region behind the box (see updateBackdropBoxMatrix).
+		boxBlur.visibility = View.VISIBLE
+		// MATRIX scaling lets the box show the exact backdrop region behind it (see updateBackdropBoxMatrix).
 		boxBlur.scaleType = ImageView.ScaleType.MATRIX
-		// A translucent surface scrim over the blur keeps the text legible; the accent is layered in once
-		// the cover loads (see applyAccentColor).
-		boxBlur.setColorFilter(boxScrim(null), PorterDuff.Mode.SRC_OVER)
-		// Clip the blur to the card's rounded rectangle, inset by the stroke width so the accent border
-		// around the card stays visible (otherwise the blur would paint right over it).
+		boxBlur.setColorFilter(boxScrim(), PorterDuff.Mode.SRC_OVER)
+		// Clip the blur to the card's rounded rect, inset by the stroke width so the accent border shows.
 		val strokeInset = dp(BACKDROP_BOX_STROKE_DP)
 		boxBlur.outlineProvider = object : ViewOutlineProvider() {
 			override fun getOutline(view: View, outline: Outline) {
@@ -678,9 +675,9 @@ class DetailsActivity :
 
 	/**
 	 * Maps the box-blur's bitmap with the SAME transform the main backdrop uses (centerCrop into the
-	 * container + uniform overscan), then offsets it to the box's position. The result is that the box
-	 * shows exactly the backdrop region behind it — frosted glass over the real backdrop, not a copy.
-	 * Both views scroll 1:1, so this is scroll-invariant and needs no per-frame updates.
+	 * container + uniform overscan), then offsets it to the box's position. The box therefore shows
+	 * exactly the backdrop region behind it — frosted glass over the real backdrop, not a copy. Both
+	 * views scroll 1:1, so this is scroll-invariant and needs no per-frame updates.
 	 */
 	private fun updateBackdropBoxMatrix(containerW: Int, containerH: Int, cardLeft: Int, cardTop: Int) {
 		val boxBlur = infoBinding.imageBoxBlur
@@ -701,6 +698,14 @@ class DetailsActivity :
 		boxBlur.imageMatrix = matrix
 		boxBlur.invalidate()
 	}
+
+	// Slightly-transparent theme-surface scrim painted over the box blur: keeps the box reading like a
+	// normal menu surface while the blurred backdrop shows through underneath.
+	@ColorInt
+	private fun boxScrim(): Int = ColorUtils.setAlphaComponent(
+		getThemeColor(materialR.attr.colorSurfaceContainerHighest),
+		(BACKDROP_BOX_ALPHA * 255).roundToInt(),
+	)
 
 	private fun dp(value: Float): Int = (resources.displayMetrics.density * value).toInt()
 
@@ -731,24 +736,10 @@ class DetailsActivity :
 		)
 		// The clickable author name is drawn with the link color, so steer that to the accent too.
 		infoBinding.textViewAuthor.setLinkTextColor(color)
-		// The tinted frosted box only exists in extended mode; leave the classic box untinted.
+		// The box stays on the theme surface; only its thin outline takes the accent (extended mode only).
 		if (isExtendedBackdrop) {
-			infoBinding.imageBoxBlur.setColorFilter(boxScrim(color), PorterDuff.Mode.SRC_OVER)
-			// Thin accent line around the box.
 			infoBinding.cardDetails.setStrokeColor(color)
 		}
-	}
-
-	// Scrim drawn over the frosted box blur: the theme surface (optionally tinted toward the cover
-	// accent), pushed darker in dark mode / lighter in light mode for text contrast, at the box's
-	// translucency, so the blurred cover still reads as frosted glass behind the text.
-	@ColorInt
-	private fun boxScrim(@ColorInt accent: Int?): Int {
-		val surface = getThemeColor(materialR.attr.colorSurfaceContainerHighest)
-		var base = if (accent != null) ColorUtils.blendARGB(surface, accent, BACKDROP_BOX_TINT) else surface
-		val isDark = ColorUtils.calculateLuminance(getThemeColor(android.R.attr.colorBackground)) < 0.5
-		base = ColorUtils.blendARGB(base, if (isDark) Color.BLACK else Color.WHITE, BACKDROP_BOX_CONTRAST)
-		return ColorUtils.setAlphaComponent(base, (BACKDROP_BOX_ALPHA * 255).roundToInt())
 	}
 
 	private fun updateAppBarScrim(scrollY: Int) {
@@ -817,13 +808,8 @@ class DetailsActivity :
 		private const val SCRIM_SCROLL_THRESHOLD_DP = 160f
 
 		// ── Backdrop tuning knobs ──────────────────────────────────────────────────────────────────
-		// Opacity of the frosted detail box (0 = fully transparent, 1 = fully opaque/solid surface).
-		// Kept fairly translucent so the heavy Gaussian blur behind the box reads as frosted glass.
-		private const val BACKDROP_BOX_ALPHA = 0.62f
-		// How much of the cover accent is blended into the box background (0 = none, 1 = full accent).
-		private const val BACKDROP_BOX_TINT = 0.12f
-		// How far the box background is pushed toward black (dark mode) / white (light mode) for contrast.
-		private const val BACKDROP_BOX_CONTRAST = 0.30f
+		// Opacity of the theme-surface scrim over the box blur (1 = solid, lower = more backdrop shows).
+		private const val BACKDROP_BOX_ALPHA = 0.72f
 		// Thickness in dp of the accent line drawn around the detail box.
 		private const val BACKDROP_BOX_STROKE_DP = 1.5f
 		// Where the backdrop fully fades out, in dp below the detail box's bottom (+ = lower, − = higher).

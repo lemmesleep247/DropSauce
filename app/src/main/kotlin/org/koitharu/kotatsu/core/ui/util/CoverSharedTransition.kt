@@ -176,6 +176,9 @@ object CoverSharedTransition {
 		excludeTarget(R.id.progress, true)
 		excludeTarget(R.id.textView_progress, true)
 		excludeTarget(R.id.textView_progress_label, true)
+		// The frosted detail-box blur has its alpha set asynchronously (once the backdrop bitmap loads),
+		// so the fade would capture/restore it at alpha 0 and leave the box with no background or blur.
+		excludeTarget(R.id.image_box_blur, true)
 	}
 
 	private fun Context.motionDuration(attrResId: Int, default: Int): Long =

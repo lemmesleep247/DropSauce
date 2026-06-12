@@ -1,47 +1,54 @@
 package org.koitharu.kotatsu.settings.appearance
 
-import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import androidx.core.graphics.ColorUtils
-import androidx.transition.TransitionManager
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.DetailsUiMode
-import org.koitharu.kotatsu.details.ui.BackdropController.Companion.blurRadius
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
 import org.koitharu.kotatsu.settings.compose.ListSettingsItem
 import org.koitharu.kotatsu.settings.compose.SettingsGroup
 import org.koitharu.kotatsu.settings.compose.SettingsScaffold
-import org.koitharu.kotatsu.settings.compose.SliderSettingsItem
 import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
-import org.koitharu.kotatsu.settings.compose.rememberIntPref
 import org.koitharu.kotatsu.settings.compose.rememberStringPref
 
 @AndroidEntryPoint
@@ -71,8 +78,6 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 
 	var uiMode by rememberStringPref(AppSettings.KEY_DETAILS_UI, DetailsUiMode.EXPRESSIVE.name)
 	var backdrop by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP, true)
-	var blur by rememberIntPref(AppSettings.KEY_DETAILS_BACKDROP_BLUR_AMOUNT, 60)
-	var extendBackdrop by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP_EXTEND, true)
 	var dynamicColor by rememberBooleanPref(AppSettings.KEY_DETAILS_DYNAMIC_COLOR, false)
 
 	val mode = remember(uiMode) {
@@ -81,13 +86,7 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 
 	SettingsScaffold(title = stringResource(R.string.details_appearance), onBack = onBack) {
 		item {
-			AndroidView(
-				modifier = Modifier.fillMaxWidth(),
-				factory = { c ->
-					LayoutInflater.from(c).inflate(R.layout.preference_details_preview, null, false)
-				},
-				update = { root -> applyPreview(root, mode, backdrop, blur) },
-			)
+			DetailsStylePreview(centered = mode != DetailsUiMode.COMPACT, backdropEnabled = backdrop)
 		}
 		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 		item {
@@ -119,31 +118,6 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 					)
 				}
 				item { pos ->
-					SliderSettingsItem(
-						title = stringResource(R.string.details_backdrop_blur),
-						value = blur.coerceIn(0, 100),
-						valueFrom = 0,
-						valueTo = 100,
-						stepSize = 5,
-						unitSuffix = "%",
-						onValueChange = { blur = it },
-						icon = R.drawable.ic_auto_fix,
-						shape = pos.shape,
-						enabled = backdrop,
-					)
-				}
-				item { pos ->
-					SwitchSettingsItem(
-						title = stringResource(R.string.details_backdrop_extend),
-						subtitle = stringResource(R.string.details_backdrop_extend_summary),
-						checked = extendBackdrop,
-						onCheckedChange = { extendBackdrop = it },
-						icon = R.drawable.ic_images,
-						shape = pos.shape,
-						enabled = backdrop,
-					)
-				}
-				item { pos ->
 					SwitchSettingsItem(
 						title = stringResource(R.string.details_dynamic_color),
 						subtitle = stringResource(R.string.details_dynamic_color_summary),
@@ -151,7 +125,6 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 						onCheckedChange = { dynamicColor = it },
 						icon = R.drawable.ic_appearance,
 						shape = pos.shape,
-						enabled = backdrop,
 					)
 				}
 			}
@@ -160,204 +133,112 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 	}
 }
 
-// region Live preview rendering (ported from the legacy PreviewSettingsPreference)
-
-private const val MAX_PREVIEW_BLUR_RADIUS = 20f
-
-@Suppress("DEPRECATION")
-private fun applyPreview(root: View, mode: DetailsUiMode, backdropOn: Boolean, blur: Int) {
-	val backdropView = root.findViewById<ImageView>(R.id.preview_backdrop)
-	val gradientView = root.findViewById<View>(R.id.preview_gradient)
-	val titleBar = root.findViewById<View>(R.id.preview_title)
-	val subtitleBar = root.findViewById<View>(R.id.preview_subtitle)
-	val infoColumn = root.findViewById<LinearLayout>(R.id.preview_info_column)
-
-	val bgColor = com.google.android.material.color.MaterialColors.getColor(
-		root, com.google.android.material.R.attr.colorSurface, Color.WHITE,
-	)
-	val fgColor = obtainAttrColor(root.context, android.R.attr.colorForeground, Color.DKGRAY)
-
-	gradientView.background = GradientDrawable(
-		GradientDrawable.Orientation.TOP_BOTTOM,
-		intArrayOf(
-			Color.TRANSPARENT,
-			ColorUtils.setAlphaComponent(bgColor, 30),
-			ColorUtils.setAlphaComponent(bgColor, 140),
-			bgColor,
-		),
-	)
-	titleBar.background = roundedBar(fgColor, 0xCC)
-	subtitleBar.background = roundedBar(fgColor, 0x88)
-
-	backdropView.visibility = if (backdropOn) View.VISIBLE else View.INVISIBLE
-	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-		backdropView.setRenderEffect(
-			if (blur <= 0) {
-				null
-			} else {
-				android.graphics.RenderEffect.createBlurEffect(
-					blurRadius(blur, MAX_PREVIEW_BLUR_RADIUS),
-					blurRadius(blur, MAX_PREVIEW_BLUR_RADIUS),
-					android.graphics.Shader.TileMode.CLAMP,
+/**
+ * A small, theme-aware mock of the details page that reflects the selected layout: a centered cover
+ * for "Centralized" or a side cover for "Compact", with an optional blurred-cover backdrop band.
+ */
+@Composable
+private fun DetailsStylePreview(centered: Boolean, backdropEnabled: Boolean) {
+	val scheme = MaterialTheme.colorScheme
+	Surface(
+		modifier = Modifier
+			.fillMaxWidth()
+			.padding(horizontal = 16.dp)
+			.height(216.dp),
+		shape = RoundedCornerShape(20.dp),
+		color = scheme.surface,
+		border = BorderStroke(1.dp, scheme.outlineVariant),
+	) {
+		Box(Modifier.fillMaxSize()) {
+			if (backdropEnabled) {
+				Box(
+					Modifier
+						.fillMaxWidth()
+						.fillMaxHeight(0.52f)
+						.background(
+							Brush.verticalGradient(
+								listOf(scheme.primary.copy(alpha = 0.28f), Color.Transparent),
+							),
+						),
 				)
-			},
-		)
-	} else {
-		backdropView.alpha = if (blur <= 0) 0.9f else 0.5f + (1f - blur / 100f) * 0.4f
-	}
-
-	val lastMode = infoColumn.getTag(R.id.preview_info_column) as? DetailsUiMode
-	if (lastMode != mode) {
-		infoColumn.setTag(R.id.preview_info_column, mode)
-		(infoColumn.parent as? ViewGroup)?.let { TransitionManager.beginDelayedTransition(it) }
-		infoColumn.removeAllViews()
-		when (mode) {
-			DetailsUiMode.EXPRESSIVE -> buildExpressiveContent(infoColumn, bgColor, fgColor)
-			DetailsUiMode.COMPACT -> buildCompactContent(infoColumn, bgColor, fgColor)
+			}
+			if (centered) PreviewCentered(scheme) else PreviewCompact(scheme)
 		}
 	}
 }
 
-// Expressive mock: a row of large rounded "stat pills" followed by a big rounded hero card with a
-// pronounced filled action pill - echoing the real screen's playful, large-radius Material 3 look.
-private fun buildExpressiveContent(parent: LinearLayout, bgColor: Int, fgColor: Int) {
-	val ctx = parent.context
-	val gap = ctx.dp(8)
-
-	val pillRow = LinearLayout(ctx).apply {
-		orientation = LinearLayout.HORIZONTAL
-		layoutParams = LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.WRAP_CONTENT,
-		)
-	}
-	val pillH = ctx.dp(26)
-	listOf(ctx.dp(58), ctx.dp(46), ctx.dp(64)).forEachIndexed { ci, w ->
-		pillRow.addView(View(ctx).apply {
-			layoutParams = LinearLayout.LayoutParams(w, pillH).also {
-				if (ci > 0) it.marginStart = gap
-			}
-			background = GradientDrawable().apply {
-				shape = GradientDrawable.RECTANGLE
-				cornerRadius = pillH / 2f
-				setColor(ColorUtils.setAlphaComponent(fgColor, 0x1F))
-			}
-		})
-	}
-	parent.addView(pillRow)
-
-	val card = LinearLayout(ctx).apply {
-		orientation = LinearLayout.VERTICAL
-		background = GradientDrawable().apply {
-			shape = GradientDrawable.RECTANGLE
-			cornerRadius = ctx.dp(22).toFloat()
-			setColor(ColorUtils.setAlphaComponent(fgColor, 0x14))
+@Composable
+private fun PreviewCentered(scheme: ColorScheme) {
+	Column(
+		modifier = Modifier
+			.fillMaxSize()
+			.padding(top = 22.dp, start = 16.dp, end = 16.dp),
+		horizontalAlignment = Alignment.CenterHorizontally,
+	) {
+		PreviewCover(scheme, 50.dp, 72.dp)
+		Spacer(Modifier.height(13.dp))
+		PreviewBar(122.dp, 10.dp, scheme.onSurface.copy(alpha = 0.9f))
+		Spacer(Modifier.height(7.dp))
+		PreviewBar(82.dp, 7.dp, scheme.onSurfaceVariant.copy(alpha = 0.6f))
+		Spacer(Modifier.height(13.dp))
+		Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+			PreviewPill(42.dp, scheme)
+			PreviewPill(30.dp, scheme)
+			PreviewPill(48.dp, scheme)
 		}
-		layoutParams = LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.WRAP_CONTENT,
-		).also { it.topMargin = gap + ctx.dp(2) }
-		setPadding(ctx.dp(12), ctx.dp(12), ctx.dp(12), ctx.dp(12))
 	}
-	listOf(ctx.dp(120), ctx.dp(150), ctx.dp(96)).forEachIndexed { i, w ->
-		card.addView(View(ctx).apply {
-			layoutParams = LinearLayout.LayoutParams(w, ctx.dp(7)).also {
-				if (i > 0) it.topMargin = ctx.dp(7)
-			}
-			background = roundedBar(fgColor, if (i == 0) 0xCC else 0x66)
-		})
-	}
-	// Big filled action pill at the bottom of the hero card.
-	card.addView(View(ctx).apply {
-		layoutParams = LinearLayout.LayoutParams(ctx.dp(110), ctx.dp(30)).also {
-			it.topMargin = ctx.dp(12)
-		}
-		background = GradientDrawable().apply {
-			shape = GradientDrawable.RECTANGLE
-			cornerRadius = ctx.dp(15).toFloat()
-			setColor(ColorUtils.setAlphaComponent(fgColor, 0x99))
-		}
-	})
-	parent.addView(card)
 }
 
-// Compact mock: a small cover block on the left with the title/lines stacked beside it, then a
-// row of pills underneath - echoing the side-cover layout.
-private fun buildCompactContent(parent: LinearLayout, bgColor: Int, fgColor: Int) {
-	val ctx = parent.context
-	val row = LinearLayout(ctx).apply {
-		orientation = LinearLayout.HORIZONTAL
-		layoutParams = LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.WRAP_CONTENT,
-		)
-	}
-	row.addView(View(ctx).apply {
-		layoutParams = LinearLayout.LayoutParams(ctx.dp(52), ctx.dp(74))
-		background = GradientDrawable().apply {
-			shape = GradientDrawable.RECTANGLE
-			cornerRadius = ctx.dp(10).toFloat()
-			setColor(ColorUtils.setAlphaComponent(fgColor, 0x33))
+@Composable
+private fun PreviewCompact(scheme: ColorScheme) {
+	Row(
+		modifier = Modifier
+			.fillMaxSize()
+			.padding(top = 26.dp, start = 16.dp, end = 16.dp),
+	) {
+		PreviewCover(scheme, 58.dp, 84.dp)
+		Spacer(Modifier.width(14.dp))
+		Column(modifier = Modifier.padding(top = 6.dp)) {
+			PreviewBar(132.dp, 11.dp, scheme.onSurface.copy(alpha = 0.9f))
+			Spacer(Modifier.height(9.dp))
+			PreviewBar(110.dp, 8.dp, scheme.onSurfaceVariant.copy(alpha = 0.6f))
+			Spacer(Modifier.height(6.dp))
+			PreviewBar(96.dp, 8.dp, scheme.onSurfaceVariant.copy(alpha = 0.6f))
+			Spacer(Modifier.height(14.dp))
+			Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+				PreviewPill(42.dp, scheme)
+				PreviewPill(32.dp, scheme)
+			}
 		}
-	})
-	val column = LinearLayout(ctx).apply {
-		orientation = LinearLayout.VERTICAL
-		layoutParams = LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.WRAP_CONTENT,
-		).also { it.marginStart = ctx.dp(12) }
 	}
-	listOf(ctx.dp(110) to 0xCC, ctx.dp(150) to 0x66, ctx.dp(96) to 0x66).forEachIndexed { i, (w, a) ->
-		column.addView(View(ctx).apply {
-			layoutParams = LinearLayout.LayoutParams(w, ctx.dp(8)).also {
-				if (i > 0) it.topMargin = ctx.dp(8)
-			}
-			background = roundedBar(fgColor, a)
-		})
-	}
-	row.addView(column)
-	parent.addView(row)
-
-	val pillRow = LinearLayout(ctx).apply {
-		orientation = LinearLayout.HORIZONTAL
-		layoutParams = LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.WRAP_CONTENT,
-		).also { it.topMargin = ctx.dp(12) }
-	}
-	val pillH = ctx.dp(24)
-	listOf(ctx.dp(50), ctx.dp(40), ctx.dp(58)).forEachIndexed { ci, w ->
-		pillRow.addView(View(ctx).apply {
-			layoutParams = LinearLayout.LayoutParams(w, pillH).also {
-				if (ci > 0) it.marginStart = ctx.dp(8)
-			}
-			background = GradientDrawable().apply {
-				shape = GradientDrawable.RECTANGLE
-				cornerRadius = pillH / 2f
-				setColor(ColorUtils.setAlphaComponent(fgColor, 0x1F))
-			}
-		})
-	}
-	parent.addView(pillRow)
 }
 
-private fun roundedBar(color: Int, alpha: Int): GradientDrawable =
-	GradientDrawable().apply {
-		shape = GradientDrawable.RECTANGLE
-		cornerRadius = 100f
-		setColor(ColorUtils.setAlphaComponent(color, alpha))
-	}
+@Composable
+private fun PreviewCover(scheme: ColorScheme, width: Dp, height: Dp) {
+	Box(
+		Modifier
+			.size(width, height)
+			.clip(RoundedCornerShape(10.dp))
+			.background(scheme.surfaceVariant),
+	)
+}
 
-private fun obtainAttrColor(context: Context, attr: Int, default: Int): Int =
-	runCatching {
-		context.obtainStyledAttributes(intArrayOf(attr)).run {
-			getColor(0, default).also { recycle() }
-		}
-	}.getOrDefault(default)
+@Composable
+private fun PreviewBar(width: Dp, height: Dp, color: Color) {
+	Box(
+		Modifier
+			.size(width, height)
+			.clip(RoundedCornerShape(50))
+			.background(color),
+	)
+}
 
-private fun Context.dp(value: Int): Int =
-	TypedValue.applyDimension(
-		TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), resources.displayMetrics,
-	).toInt()
-
-// endregion
+@Composable
+private fun PreviewPill(width: Dp, scheme: ColorScheme) {
+	Box(
+		Modifier
+			.size(width, 18.dp)
+			.clip(RoundedCornerShape(50))
+			.background(scheme.secondaryContainer),
+	)
+}

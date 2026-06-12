@@ -33,9 +33,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
@@ -57,6 +59,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -115,6 +120,7 @@ private val COVER_HEIGHT = 236.dp
 private val COMPACT_COVER_WIDTH = 120.dp
 private val COMPACT_COVER_HEIGHT = 178.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailsExpressiveScreen(
 	details: MangaDetails?,
@@ -135,39 +141,56 @@ fun DetailsExpressiveScreen(
 	topInset: Dp,
 	bottomContentPadding: Dp,
 	onScroll: (Int) -> Unit,
+	onRefresh: () -> Unit,
 	actions: DetailsExpressiveActions,
 ) {
 	val manga = details?.toManga()
-	val accentColor = accent ?: MaterialTheme.colorScheme.primary
-	val scheme = MaterialTheme.colorScheme
-	val scrollState = rememberScrollState()
-	val centered = style != DetailsUiMode.COMPACT
-
-	LaunchedEffect(scrollState) {
-		snapshotFlow { scrollState.value }.collect(onScroll)
+	val baseScheme = MaterialTheme.colorScheme
+	val typography = MaterialTheme.typography
+	val isDark = baseScheme.surface.luminance() < 0.5f
+	// "Colors from cover": when an accent was extracted, re-theme the whole details page so every
+	// MaterialTheme.colorScheme accent role (primary/secondary/tertiary + containers) is derived from
+	// the cover color. Surfaces stay neutral for readability. When null, the app theme is used as-is.
+	val themedScheme = remember(accent, baseScheme, isDark) {
+		if (accent != null) coverColorScheme(baseScheme, accent, isDark) else baseScheme
 	}
 
-	Box(
-		modifier = Modifier
-			.fillMaxSize()
-			.background(scheme.surface),
-	) {
-		if (isBackdropEnabled && backdropUrl != null) {
-			ExpressiveBackdrop(
-				url = backdropUrl,
-				manga = manga,
-				imageLoader = imageLoader,
-				surface = scheme.surface,
-			)
+	MaterialTheme(colorScheme = themedScheme, typography = typography) {
+		val scheme = MaterialTheme.colorScheme
+		val accentColor = scheme.primary
+		val scrollState = rememberScrollState()
+		val centered = style != DetailsUiMode.COMPACT
+
+		LaunchedEffect(scrollState) {
+			snapshotFlow { scrollState.value }.collect(onScroll)
 		}
 
-		Column(
+		Box(
 			modifier = Modifier
 				.fillMaxSize()
-				.verticalScroll(scrollState)
-				.padding(bottom = bottomContentPadding),
-			horizontalAlignment = Alignment.CenterHorizontally,
+				.background(scheme.surface),
 		) {
+			if (isBackdropEnabled && backdropUrl != null) {
+				ExpressiveBackdrop(
+					url = backdropUrl,
+					manga = manga,
+					imageLoader = imageLoader,
+					surface = scheme.surface,
+				)
+			}
+
+			PullToRefreshBox(
+				isRefreshing = isLoading,
+				onRefresh = onRefresh,
+				modifier = Modifier.fillMaxSize(),
+			) {
+				Column(
+					modifier = Modifier
+						.fillMaxSize()
+						.verticalScroll(scrollState)
+						.padding(bottom = bottomContentPadding),
+					horizontalAlignment = Alignment.CenterHorizontally,
+				) {
 			// Push the hero clear of the translucent top bar / back button.
 			Spacer(Modifier.height(topInset + if (centered) 84.dp else 72.dp))
 
@@ -223,9 +246,11 @@ fun DetailsExpressiveScreen(
 					LocalSizeRow(size = localSize, manga = manga, onClick = actions.onLocalClick)
 				}
 
-				Spacer(Modifier.height(28.dp))
+					Spacer(Modifier.height(28.dp))
+				}
 			}
 		}
+	}
 	}
 }
 
@@ -930,6 +955,39 @@ private fun LoadingHero() {
 
 private fun Color.luminanceIsLight(): Boolean =
 	(0.299f * red + 0.587f * green + 0.114f * blue) > 0.5f
+
+/**
+ * Derives a [ColorScheme] whose accent roles (primary/secondary/tertiary and their containers) are
+ * built from the cover [seed] colour, leaving surfaces from [base] untouched so backgrounds stay
+ * neutral and readable. Used for the per-manga "colors from cover" option.
+ */
+private fun coverColorScheme(base: ColorScheme, seed: Color, dark: Boolean): ColorScheme {
+	val seedArgb = seed.toArgb()
+	fun tone(lightness: Float): Color {
+		val hsl = FloatArray(3)
+		ColorUtils.colorToHSL(seedArgb, hsl)
+		hsl[2] = lightness
+		return Color(ColorUtils.HSLToColor(hsl))
+	}
+	val onSeed = if (seed.luminance() > 0.5f) Color.Black else Color.White
+	val container = tone(if (dark) 0.28f else 0.88f)
+	val onContainer = tone(if (dark) 0.90f else 0.18f)
+	return base.copy(
+		primary = seed,
+		onPrimary = onSeed,
+		primaryContainer = container,
+		onPrimaryContainer = onContainer,
+		inversePrimary = tone(if (dark) 0.42f else 0.78f),
+		secondary = seed,
+		onSecondary = onSeed,
+		secondaryContainer = container,
+		onSecondaryContainer = onContainer,
+		tertiary = seed,
+		onTertiary = onSeed,
+		tertiaryContainer = container,
+		onTertiaryContainer = onContainer,
+	)
+}
 
 private fun withTime(base: String, info: HistoryInfo, res: android.content.res.Resources): String {
 	val time = info.estimatedTime?.formatShort(res) ?: return base

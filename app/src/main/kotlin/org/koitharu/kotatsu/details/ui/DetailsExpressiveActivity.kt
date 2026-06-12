@@ -199,6 +199,7 @@ class DetailsExpressiveActivity :
 					topInset = with(density) { topInset.intValue.toDp() },
 					bottomContentPadding = with(density) { peekHeightPx.toDp() } + with(density) { bottomInset.intValue.toDp() },
 					onScroll = ::onContentScroll,
+					onRefresh = viewModel::reload,
 					actions = actions,
 				)
 			}
@@ -251,6 +252,11 @@ class DetailsExpressiveActivity :
 	}
 
 	private fun extractAccent(coverUrl: String?) {
+		// "Colors from cover" is opt-in; when disabled, keep the app theme (null accent).
+		if (!settings.isDetailsDynamicColorEnabled) {
+			viewModel.accentColor.value = null
+			return
+		}
 		coverUrl ?: return
 		val source = viewModel.getMangaOrNull()?.source
 		lifecycleScope.launch {

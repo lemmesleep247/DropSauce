@@ -70,13 +70,15 @@ android {
 			}
 		}
 		// Standalone, sideload-friendly build used by the "Preview Build" GitHub Action.
-		// It inherits everything from release (not debuggable, R8 + resource shrinking, and none
-		// of the debug-only sources/dependencies such as LeakCanary/StrictMode; BuildConfig.DEBUG
-		// is false), but uses its own applicationId suffix so it installs alongside the store build,
-		// and is signed with the auto-generated debug keystore so CI can produce an installable APK
-		// without any release signing secrets.
+		// It inherits release's non-debug nature (not debuggable, no debug-only sources/deps such
+		// as LeakCanary/StrictMode, BuildConfig.DEBUG=false) but deliberately keeps R8/resource
+		// shrinking OFF so the APK is structurally identical to a plain build and installs cleanly
+		// when sideloaded. It uses its own applicationId suffix so it installs alongside the store
+		// build, and is signed with the auto-generated debug keystore so CI needs no release secrets.
 		preview {
 			initWith release
+			minifyEnabled = false
+			shrinkResources = false
 			applicationIdSuffix = '.preview'
 			versionNameSuffix = '-preview'
 			signingConfig signingConfigs.getByName('debug')

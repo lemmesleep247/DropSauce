@@ -1,11 +1,15 @@
 name: Preview Build
 
 # Builds a standalone "preview" APK for every branch on push, and on manual dispatch.
-# The preview variant is a release-style build (not debuggable, R8 + resource shrinking,
-# no debug-only tooling like LeakCanary/StrictMode) with its own applicationId suffix so it
-# installs alongside the store build, signed with the debug keystore so it's sideload-ready.
-# The APK and its checksums are uploaded as a workflow artifact (downloadable from the run's
-# "Artifacts" section) and the hashes are printed to the run summary. Nothing is committed.
+# The preview variant is a non-debuggable build with none of the debug-only tooling
+# (no LeakCanary/StrictMode/debug settings/ACRA-debug) and its own applicationId suffix, so it
+# installs alongside the store build. R8/resource shrinking is intentionally OFF so the APK
+# installs cleanly when sideloaded. It's signed with the debug keystore (no secrets needed).
+#
+# The APK is published two ways:
+#   1. As a direct-download asset on a rolling per-branch pre-release (just the .apk, no zip).
+#   2. As a workflow artifact (zipped by GitHub) for anyone who prefers the Actions tab.
+# The SHA-256/SHA-1/MD5 hashes are printed to the run summary and the release notes.
 on:
   push:
     branches:
@@ -13,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 # Only keep the latest preview build per branch/ref running.
 concurrency:
@@ -78,24 +82,16 @@ jobs:
           MD5=$(md5sum "$DEST" | awk '{print $1}')
           SIZE=$(du -h "$DEST" | cut -f1)
 
-          # Standalone checksums files shipped alongside the APK.
-          {
-            echo "file:   ${DEST}"
-            echo "branch: ${GITHUB_REF_NAME}"
-            echo "commit: ${GITHUB_SHA}"
-            echo "size:   ${SIZE}"
-            echo "sha256: ${SHA256}"
-            echo "sha1:   ${SHA1}"
-            echo "md5:    ${MD5}"
-          } > "${DEST}.sha256.txt"
-          # sha256sum-verifiable file (sha256 + filename): verify with `sha256sum -c`.
+          # Checksums file shipped alongside the APK (verify with `sha256sum -c`).
           sha256sum "$DEST" > "${DEST}.sha256sum"
 
           echo "apk_name=${DEST}" >> "$GITHUB_OUTPUT"
+          echo "tag=preview-${SAFE_REF}" >> "$GITHUB_OUTPUT"
 
-          # Surface everything in the run summary.
+          # Release notes (also reused for the run summary).
           {
-            echo "### 📦 Preview APK"
+            echo "**Preview build of \`${GITHUB_REF_NAME}\`** — non-debuggable, no dev tooling, installs"
+            echo "as a separate app (\`org.haziffe.dropsauce.preview\`, \"DropSauce Preview\")."
             echo ""
             echo "| Field | Value |"
             echo "| --- | --- |"
@@ -106,15 +102,32 @@ jobs:
             echo "| SHA-256 | \`${SHA256}\` |"
             echo "| SHA-1 | \`${SHA1}\` |"
             echo "| MD5 | \`${MD5}\` |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } > release-notes.md
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload preview APK
+      - name: Publish APK as a downloadable pre-release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.apk.outputs.tag }}"
+          # Roll the per-branch pre-release: drop the previous one so only the latest APK is attached.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          # Small delay so the tag deletion is visible before recreating it.
+          sleep 5
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Preview build — ${GITHUB_REF_NAME}" \
+            --prerelease \
+            --notes-file release-notes.md \
+            "${{ steps.apk.outputs.apk_name }}" \
+            "${{ steps.apk.outputs.apk_name }}.sha256sum"
+          echo "Release published: $(gh release view "$TAG" --json url --jq .url)"
+
+      - name: Upload preview APK as a workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.apk.outputs.apk_name }}
-          path: |
-            ${{ steps.apk.outputs.apk_name }}
-            ${{ steps.apk.outputs.apk_name }}.sha256.txt
-            ${{ steps.apk.outputs.apk_name }}.sha256sum
+          path: ${{ steps.apk.outputs.apk_name }}
           if-no-files-found: error
           retention-days: 30

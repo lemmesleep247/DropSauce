@@ -197,6 +197,7 @@ class DetailsExpressiveActivity :
 					isBackdropEnabled = settings.isBackdropEnabled,
 					topInset = with(density) { topInset.intValue.toDp() },
 					bottomContentPadding = with(density) { peekHeightPx.toDp() } + with(density) { bottomInset.intValue.toDp() },
+					onScroll = ::onContentScroll,
 					actions = actions,
 				)
 			}
@@ -215,6 +216,17 @@ class DetailsExpressiveActivity :
 				}
 			},
 		)
+	}
+
+	// Drives the top app bar from the Compose scroll position: the bar fades from transparent
+	// (over the backdrop) to the theme surface, and the manga title appears once it scrolls past.
+	private fun onContentScroll(scrollY: Int) {
+		val density = resources.displayMetrics.density
+		val scrim = (scrollY / (density * SCRIM_THRESHOLD_DP)).coerceIn(0f, 1f)
+		viewBinding.appbar.setBackgroundColor(
+			ColorUtils.setAlphaComponent(getThemeColor(android.R.attr.colorBackground), (scrim * 255f).toInt()),
+		)
+		supportActionBar?.setDisplayShowTitleEnabled(scrollY > density * TITLE_THRESHOLD_DP)
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -287,5 +299,12 @@ class DetailsExpressiveActivity :
 			val item = value.find { it.isCurrent } ?: value.first()
 			MangaPrefetchService.prefetchPages(context, item.chapter)
 		}
+	}
+
+	private companion object {
+		// Scroll distance (dp) over which the top bar fades in to the theme surface.
+		private const val SCRIM_THRESHOLD_DP = 260f
+		// Scroll distance (dp) after which the toolbar title becomes visible.
+		private const val TITLE_THRESHOLD_DP = 300f
 	}
 }

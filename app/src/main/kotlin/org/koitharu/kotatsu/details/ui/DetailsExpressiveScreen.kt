@@ -2,7 +2,14 @@ package org.koitharu.kotatsu.details.ui
 
 import android.os.Build
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +23,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,29 +31,39 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -59,6 +75,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.titleResId
+import org.koitharu.kotatsu.core.parser.favicon.faviconUri
 import org.koitharu.kotatsu.core.util.FileSize
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.details.data.MangaDetails
@@ -70,9 +87,11 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
- * Navigation/action hooks for the expressive details screen. The activity owns the [router]
+ * Navigation/action hooks for the expressive details screen. The activity owns the router
  * and supplies these so the Compose layer stays free of Android navigation plumbing.
  */
 class DetailsExpressiveActions(
@@ -88,10 +107,10 @@ class DetailsExpressiveActions(
 	val onRelatedClick: (MangaListModel) -> Unit,
 )
 
-private val HERO_CORNER = 26.dp
-private val CARD_CORNER = 24.dp
-private val COVER_WIDTH = 142.dp
-private val SCREEN_PADDING = 18.dp
+private val SCREEN_PADDING = 20.dp
+private val CARD_CORNER = 26.dp
+private val COVER_WIDTH = 158.dp
+private val COVER_HEIGHT = 236.dp
 
 @Composable
 fun DetailsExpressiveScreen(
@@ -111,11 +130,17 @@ fun DetailsExpressiveScreen(
 	isBackdropEnabled: Boolean,
 	topInset: Dp,
 	bottomContentPadding: Dp,
+	onScroll: (Int) -> Unit,
 	actions: DetailsExpressiveActions,
 ) {
 	val manga = details?.toManga()
 	val accentColor = accent ?: MaterialTheme.colorScheme.primary
 	val scheme = MaterialTheme.colorScheme
+	val scrollState = rememberScrollState()
+
+	LaunchedEffect(scrollState) {
+		snapshotFlow { scrollState.value }.collect(onScroll)
+	}
 
 	Box(
 		modifier = Modifier
@@ -134,11 +159,12 @@ fun DetailsExpressiveScreen(
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
-				.verticalScroll(rememberScrollState())
+				.verticalScroll(scrollState)
 				.padding(bottom = bottomContentPadding),
+			horizontalAlignment = Alignment.CenterHorizontally,
 		) {
-			// Clear the translucent top app bar / back button.
-			Spacer(Modifier.height(topInset + 56.dp))
+			// Push the hero clear of the translucent top bar / back button.
+			Spacer(Modifier.height(topInset + 84.dp))
 
 			if (manga == null) {
 				LoadingHero()
@@ -153,7 +179,7 @@ fun DetailsExpressiveScreen(
 					actions = actions,
 				)
 
-				Spacer(Modifier.height(14.dp))
+				Spacer(Modifier.height(20.dp))
 				FavouriteButton(
 					label = favouriteLabel ?: stringResource(R.string.add_to_favourites),
 					isFavourite = favouriteCount > 0,
@@ -161,7 +187,7 @@ fun DetailsExpressiveScreen(
 					onClick = { actions.onFavoriteClick(manga) },
 				)
 
-				Spacer(Modifier.height(16.dp))
+				Spacer(Modifier.height(8.dp))
 				ProgressCard(historyInfo = historyInfo, isLoading = isLoading, accent = accentColor)
 
 				DescriptionCard(description = details.description)
@@ -191,7 +217,7 @@ fun DetailsExpressiveScreen(
 					LocalSizeRow(size = localSize, manga = manga, onClick = actions.onLocalClick)
 				}
 
-				Spacer(Modifier.height(24.dp))
+				Spacer(Modifier.height(28.dp))
 			}
 		}
 	}
@@ -215,10 +241,10 @@ private fun ExpressiveBackdrop(
 	Box(
 		modifier = Modifier
 			.fillMaxWidth()
-			.height(440.dp),
+			.height(480.dp),
 	) {
 		val blurMod = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-			Modifier.blur(36.dp)
+			Modifier.blur(40.dp)
 		} else {
 			Modifier
 		}
@@ -236,9 +262,9 @@ private fun ExpressiveBackdrop(
 				.fillMaxSize()
 				.background(
 					Brush.verticalGradient(
-						0f to surface.copy(alpha = 0.32f),
-						0.45f to surface.copy(alpha = 0.55f),
-						0.82f to surface.copy(alpha = 0.92f),
+						0f to surface.copy(alpha = 0.30f),
+						0.4f to surface.copy(alpha = 0.55f),
+						0.78f to surface.copy(alpha = 0.94f),
 						1f to surface,
 					),
 				),
@@ -257,19 +283,20 @@ private fun HeroSection(
 	actions: DetailsExpressiveActions,
 ) {
 	val ctx = LocalContext.current
-	Row(
+	Column(
 		modifier = Modifier
 			.fillMaxWidth()
 			.padding(horizontal = SCREEN_PADDING),
+		horizontalAlignment = Alignment.CenterHorizontally,
 	) {
 		Surface(
-			shape = RoundedCornerShape(HERO_CORNER),
+			shape = RoundedCornerShape(24.dp),
 			color = MaterialTheme.colorScheme.surfaceVariant,
-			tonalElevation = 3.dp,
-			shadowElevation = 8.dp,
+			tonalElevation = 4.dp,
+			shadowElevation = 16.dp,
 			modifier = Modifier
 				.width(COVER_WIDTH)
-				.height(COVER_WIDTH * 1.45f),
+				.height(COVER_HEIGHT),
 		) {
 			val coverRequest = remember(coverUrl, manga.source) {
 				ImageRequest.Builder(ctx)
@@ -289,53 +316,52 @@ private fun HeroSection(
 			)
 		}
 
-		Spacer(Modifier.width(16.dp))
-
-		Column(
-			modifier = Modifier
-				.weight(1f)
-				.heightIn(min = COVER_WIDTH * 1.45f),
-			verticalArrangement = Arrangement.spacedBy(8.dp),
-		) {
+		Spacer(Modifier.height(20.dp))
+		Text(
+			text = manga.title,
+			style = MaterialTheme.typography.headlineMedium,
+			fontWeight = FontWeight.Bold,
+			color = MaterialTheme.colorScheme.onSurface,
+			textAlign = TextAlign.Center,
+			maxLines = 4,
+			overflow = TextOverflow.Ellipsis,
+			modifier = Modifier.clickable { actions.onTitleClick(manga.title) },
+		)
+		val altTitle = manga.altTitles.firstOrNull()?.takeIf { it.isNotBlank() }
+		if (altTitle != null) {
+			Spacer(Modifier.height(6.dp))
 			Text(
-				text = manga.title,
-				style = MaterialTheme.typography.headlineSmall,
-				fontWeight = FontWeight.Bold,
-				color = MaterialTheme.colorScheme.onSurface,
-				maxLines = 4,
+				text = altTitle,
+				style = MaterialTheme.typography.bodyMedium,
+				color = MaterialTheme.colorScheme.onSurfaceVariant,
+				textAlign = TextAlign.Center,
+				maxLines = 2,
 				overflow = TextOverflow.Ellipsis,
-				modifier = Modifier.clickable { actions.onTitleClick(manga.title) },
-			)
-			val altTitle = manga.altTitles.firstOrNull()?.takeIf { it.isNotBlank() }
-			if (altTitle != null) {
-				Text(
-					text = altTitle,
-					style = MaterialTheme.typography.bodyMedium,
-					color = MaterialTheme.colorScheme.onSurfaceVariant,
-					maxLines = 2,
-					overflow = TextOverflow.Ellipsis,
-				)
-			}
-			val authors = manga.authors.filter { it.isNotBlank() }
-			if (authors.isNotEmpty()) {
-				Text(
-					text = authors.joinToString(", "),
-					style = MaterialTheme.typography.labelLarge,
-					color = accent,
-					fontWeight = FontWeight.Medium,
-					maxLines = 1,
-					overflow = TextOverflow.Ellipsis,
-					modifier = Modifier.clickable { actions.onAuthorClick(authors.first()) },
-				)
-			}
-			StatPills(
-				manga = manga,
-				details = details,
-				sourceTitle = sourceTitle,
-				accent = accent,
-				onSourceClick = { actions.onSourceClick(manga) },
 			)
 		}
+		val authors = manga.authors.filter { it.isNotBlank() }
+		if (authors.isNotEmpty()) {
+			Spacer(Modifier.height(8.dp))
+			Text(
+				text = authors.joinToString(", "),
+				style = MaterialTheme.typography.labelLarge,
+				color = accent,
+				fontWeight = FontWeight.Medium,
+				textAlign = TextAlign.Center,
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis,
+				modifier = Modifier.clickable { actions.onAuthorClick(authors.first()) },
+			)
+		}
+		Spacer(Modifier.height(16.dp))
+		StatPills(
+			manga = manga,
+			details = details,
+			sourceTitle = sourceTitle,
+			accent = accent,
+			imageLoader = imageLoader,
+			onSourceClick = { actions.onSourceClick(manga) },
+		)
 	}
 }
 
@@ -346,45 +372,65 @@ private fun StatPills(
 	details: MangaDetails?,
 	sourceTitle: String?,
 	accent: Color,
+	imageLoader: ImageLoader,
 	onSourceClick: () -> Unit,
 ) {
 	val ctx = LocalContext.current
 	FlowRow(
-		horizontalArrangement = Arrangement.spacedBy(8.dp),
+		modifier = Modifier.fillMaxWidth(),
+		horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
 		verticalArrangement = Arrangement.spacedBy(8.dp),
 	) {
 		if (manga.hasRating) {
-			Pill(
-				text = String.format(Locale.ROOT, "%.1f", manga.rating * 5f),
-				icon = R.drawable.ic_star_small,
-				accent = accent,
-				highlighted = true,
-			)
+			Pill(text = String.format(Locale.ROOT, "%.1f", manga.rating * 5f), accent = accent, highlighted = true) {
+				Icon(
+					painter = painterResource(R.drawable.ic_star_small),
+					contentDescription = null,
+					tint = accent,
+					modifier = Modifier.size(15.dp),
+				)
+			}
 		}
 		manga.state?.let { state ->
-			Pill(text = stringResource(state.titleResId), icon = null, accent = accent)
+			Pill(text = stringResource(state.titleResId), accent = accent)
 		}
-		if (manga.contentRating == ContentRating.SUGGESTIVE) {
-			Pill(text = "16+", icon = null, accent = accent)
-		} else if (manga.contentRating == ContentRating.ADULT) {
-			Pill(text = "18+", icon = null, accent = accent, highlighted = true)
+		when (manga.contentRating) {
+			ContentRating.SUGGESTIVE -> Pill(text = "16+", accent = accent)
+			ContentRating.ADULT -> Pill(text = "18+", accent = accent, highlighted = true)
+			else -> Unit
 		}
 		val locale = details?.getLocale()
 		if (locale != null) {
-			Pill(
-				text = locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) },
-				icon = R.drawable.ic_language,
-				accent = accent,
-			)
+			Pill(text = locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) }, accent = accent) {
+				Icon(
+					painter = painterResource(R.drawable.ic_language),
+					contentDescription = null,
+					tint = MaterialTheme.colorScheme.onSurfaceVariant,
+					modifier = Modifier.size(15.dp),
+				)
+			}
 		}
 		if (!manga.isLocal) {
 			val srcText = sourceTitle?.takeUnless { it.isBlank() } ?: manga.source.getTitle(ctx)
-			Pill(
-				text = srcText,
-				icon = R.drawable.ic_manga_source,
-				accent = accent,
-				onClick = onSourceClick,
-			)
+			val faviconRequest = remember(manga.source) {
+				ImageRequest.Builder(ctx)
+					.data(manga.source.faviconUri())
+					.mangaSourceExtra(manga.source)
+					.crossfade(true)
+					.build()
+			}
+			Pill(text = srcText, accent = accent, onClick = onSourceClick) {
+				AsyncImage(
+					model = faviconRequest,
+					imageLoader = imageLoader,
+					contentDescription = null,
+					error = painterResource(R.drawable.ic_manga_source),
+					fallback = painterResource(R.drawable.ic_manga_source),
+					modifier = Modifier
+						.size(16.dp)
+						.clip(RoundedCornerShape(4.dp)),
+				)
+			}
 		}
 	}
 }
@@ -392,16 +438,12 @@ private fun StatPills(
 @Composable
 private fun Pill(
 	text: String,
-	icon: Int?,
 	accent: Color,
 	highlighted: Boolean = false,
 	onClick: (() -> Unit)? = null,
+	leading: (@Composable () -> Unit)? = null,
 ) {
-	val container = if (highlighted) {
-		accent.copy(alpha = 0.20f)
-	} else {
-		MaterialTheme.colorScheme.surfaceContainerHigh
-	}
+	val container = if (highlighted) accent.copy(alpha = 0.20f) else MaterialTheme.colorScheme.surfaceContainerHigh
 	val content = if (highlighted) accent else MaterialTheme.colorScheme.onSurfaceVariant
 	Surface(
 		shape = RoundedCornerShape(50),
@@ -409,18 +451,11 @@ private fun Pill(
 		modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
 	) {
 		Row(
-			modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+			modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
 			verticalAlignment = Alignment.CenterVertically,
-			horizontalArrangement = Arrangement.spacedBy(5.dp),
+			horizontalArrangement = Arrangement.spacedBy(6.dp),
 		) {
-			if (icon != null) {
-				Icon(
-					painter = painterResource(icon),
-					contentDescription = null,
-					tint = content,
-					modifier = Modifier.size(15.dp),
-				)
-			}
+			leading?.invoke()
 			Text(
 				text = text,
 				style = MaterialTheme.typography.labelMedium,
@@ -440,16 +475,20 @@ private fun FavouriteButton(
 	accent: Color,
 	onClick: () -> Unit,
 ) {
-	val container = if (isFavourite) accent.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceContainerHigh
 	Surface(
 		onClick = onClick,
-		shape = RoundedCornerShape(20.dp),
-		color = container,
+		shape = RoundedCornerShape(22.dp),
+		color = if (isFavourite) accent else accent.copy(alpha = 0.16f),
 		modifier = Modifier
 			.fillMaxWidth()
 			.padding(horizontal = SCREEN_PADDING)
-			.height(56.dp),
+			.height(58.dp),
 	) {
+		val contentColor = if (isFavourite) {
+			if (accent.luminanceIsLight()) Color.Black else Color.White
+		} else {
+			accent
+		}
 		Row(
 			modifier = Modifier.fillMaxSize(),
 			verticalAlignment = Alignment.CenterVertically,
@@ -458,7 +497,7 @@ private fun FavouriteButton(
 			Icon(
 				painter = painterResource(if (isFavourite) R.drawable.ic_heart else R.drawable.ic_heart_outline),
 				contentDescription = null,
-				tint = accent,
+				tint = contentColor,
 				modifier = Modifier.size(22.dp),
 			)
 			Spacer(Modifier.width(10.dp))
@@ -466,7 +505,7 @@ private fun FavouriteButton(
 				text = label,
 				style = MaterialTheme.typography.titleMedium,
 				fontWeight = FontWeight.SemiBold,
-				color = MaterialTheme.colorScheme.onSurface,
+				color = contentColor,
 				maxLines = 1,
 				overflow = TextOverflow.Ellipsis,
 			)
@@ -493,6 +532,7 @@ private fun ProgressCard(historyInfo: HistoryInfo, isLoading: Boolean, accent: C
 	}
 	val hasHistory = historyInfo.history != null
 	val percent = historyInfo.percent.coerceIn(0f, 1f)
+	val showProgress = hasHistory && percent > 0f
 	val displayPercent = if (ReadingProgress.isCompleted(historyInfo.percent)) 100 else (percent * 100f).toInt()
 
 	SectionCard {
@@ -510,27 +550,76 @@ private fun ProgressCard(historyInfo: HistoryInfo, isLoading: Boolean, accent: C
 				color = MaterialTheme.colorScheme.onSurface,
 				modifier = Modifier.weight(1f),
 			)
-			if (hasHistory && percent > 0f) {
+			if (showProgress) {
 				Text(
 					text = stringResource(R.string.percent_string_pattern, displayPercent.toString()),
-					style = MaterialTheme.typography.labelLarge,
+					style = MaterialTheme.typography.titleMedium,
 					fontWeight = FontWeight.Bold,
 					color = accent,
 				)
 			}
 		}
-		if (hasHistory && percent > 0f) {
-			Spacer(Modifier.height(12.dp))
-			val animated by animateFloatAsState(targetValue = percent, label = "progress")
-			LinearProgressIndicator(
-				progress = { animated },
+		if (showProgress) {
+			Spacer(Modifier.height(14.dp))
+			WavyProgressBar(
+				progress = percent,
 				color = accent,
-				trackColor = accent.copy(alpha = 0.18f),
-				strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+				trackColor = accent.copy(alpha = 0.22f),
 				modifier = Modifier
 					.fillMaxWidth()
-					.height(8.dp)
-					.clip(RoundedCornerShape(50)),
+					.height(14.dp),
+			)
+		}
+	}
+}
+
+/**
+ * A Material 3 Expressive style "squiggly" progress indicator: the played portion is an animated
+ * sine wave, the remaining portion a rounded straight track. (The stock wavy indicator only ships
+ * in material3 1.4+, so this is drawn by hand to get the same look on the current version.)
+ */
+@Composable
+private fun WavyProgressBar(progress: Float, color: Color, trackColor: Color, modifier: Modifier) {
+	val transition = rememberInfiniteTransition(label = "wave")
+	val phase by transition.animateFloat(
+		initialValue = 0f,
+		targetValue = (2f * PI).toFloat(),
+		animationSpec = infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
+		label = "phase",
+	)
+	val animatedProgress by animateFloatAsState(
+		targetValue = progress.coerceIn(0f, 1f),
+		animationSpec = tween(600),
+		label = "progress",
+	)
+	Canvas(modifier = modifier) {
+		val midY = size.height / 2f
+		val stroke = 4.5.dp.toPx()
+		val activeW = size.width * animatedProgress
+		val amplitude = (size.height / 2f - stroke / 2f) * 0.9f
+		val waveLength = 24.dp.toPx()
+		if (animatedProgress < 1f) {
+			drawLine(
+				color = trackColor,
+				start = Offset(activeW, midY),
+				end = Offset(size.width, midY),
+				strokeWidth = stroke,
+				cap = StrokeCap.Round,
+			)
+		}
+		if (activeW > 0f) {
+			val path = Path().apply {
+				moveTo(0f, midY + amplitude * sin(phase))
+				var x = 0f
+				while (x <= activeW) {
+					lineTo(x, midY + amplitude * sin((x / waveLength) * 2f * PI.toFloat() + phase))
+					x += 3f
+				}
+			}
+			drawPath(
+				path = path,
+				color = color,
+				style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round),
 			)
 		}
 	}
@@ -547,7 +636,7 @@ private fun DescriptionCard(description: CharSequence?) {
 			fontWeight = FontWeight.SemiBold,
 			color = MaterialTheme.colorScheme.onSurface,
 		)
-		Spacer(Modifier.height(8.dp))
+		Spacer(Modifier.height(10.dp))
 		Text(
 			text = text.ifEmpty { stringResource(R.string.no_description) },
 			style = MaterialTheme.typography.bodyMedium,
@@ -569,13 +658,13 @@ private fun TagsSection(tags: Set<MangaTag>, onTagClick: (MangaTag) -> Unit) {
 	FlowRow(
 		modifier = Modifier
 			.fillMaxWidth()
-			.padding(horizontal = SCREEN_PADDING, vertical = 4.dp),
+			.padding(horizontal = SCREEN_PADDING, vertical = 7.dp),
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalArrangement = Arrangement.spacedBy(8.dp),
 	) {
 		tags.forEach { tag ->
 			Surface(
-				shape = RoundedCornerShape(14.dp),
+				shape = RoundedCornerShape(15.dp),
 				color = MaterialTheme.colorScheme.secondaryContainer,
 				onClick = { onTagClick(tag) },
 			) {
@@ -604,13 +693,13 @@ private fun ScrobblingSection(
 	) {
 		items(items, key = { it.scrobbler.name + it.targetId }) { info ->
 			Surface(
-				shape = RoundedCornerShape(18.dp),
+				shape = RoundedCornerShape(20.dp),
 				color = MaterialTheme.colorScheme.surfaceContainerHigh,
 				onClick = onMore,
-				modifier = Modifier.width(220.dp),
+				modifier = Modifier.width(230.dp),
 			) {
 				Row(
-					modifier = Modifier.padding(10.dp),
+					modifier = Modifier.padding(12.dp),
 					verticalAlignment = Alignment.CenterVertically,
 				) {
 					AsyncImage(
@@ -619,10 +708,10 @@ private fun ScrobblingSection(
 						contentDescription = null,
 						contentScale = ContentScale.Crop,
 						modifier = Modifier
-							.size(48.dp, 64.dp)
-							.clip(RoundedCornerShape(10.dp)),
+							.size(48.dp, 66.dp)
+							.clip(RoundedCornerShape(12.dp)),
 					)
-					Spacer(Modifier.width(10.dp))
+					Spacer(Modifier.width(12.dp))
 					Column {
 						Text(
 							text = info.title,
@@ -646,6 +735,7 @@ private fun ScrobblingSection(
 	}
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RelatedSection(
 	items: List<MangaListModel>,
@@ -655,40 +745,38 @@ private fun RelatedSection(
 	onItemClick: (MangaListModel) -> Unit,
 ) {
 	SectionHeader(title = stringResource(R.string.related_manga), action = stringResource(R.string.show_all), accent = accent, onAction = onMore)
-	LazyRow(
+	val carouselState = rememberCarouselState { items.size }
+	HorizontalMultiBrowseCarousel(
+		state = carouselState,
+		preferredItemWidth = 150.dp,
+		itemSpacing = 10.dp,
 		contentPadding = PaddingValues(horizontal = SCREEN_PADDING),
-		horizontalArrangement = Arrangement.spacedBy(12.dp),
-	) {
-		items(items, key = { it.id }) { item ->
-			Column(
+		modifier = Modifier
+			.fillMaxWidth()
+			.height(232.dp),
+	) { i ->
+		val item = items[i]
+		Column(
+			modifier = Modifier.clickable { onItemClick(item) },
+		) {
+			AsyncImage(
+				model = item.coverUrl,
+				imageLoader = imageLoader,
+				contentDescription = null,
+				contentScale = ContentScale.Crop,
 				modifier = Modifier
-					.width(120.dp)
-					.clickable { onItemClick(item) },
-			) {
-				Surface(
-					shape = RoundedCornerShape(18.dp),
-					color = MaterialTheme.colorScheme.surfaceVariant,
-					modifier = Modifier
-						.width(120.dp)
-						.height(168.dp),
-				) {
-					AsyncImage(
-						model = item.coverUrl,
-						imageLoader = imageLoader,
-						contentDescription = null,
-						contentScale = ContentScale.Crop,
-						modifier = Modifier.fillMaxSize(),
-					)
-				}
-				Spacer(Modifier.height(6.dp))
-				Text(
-					text = item.title,
-					style = MaterialTheme.typography.labelMedium,
-					color = MaterialTheme.colorScheme.onSurface,
-					maxLines = 2,
-					overflow = TextOverflow.Ellipsis,
-				)
-			}
+					.height(200.dp)
+					.fillMaxWidth()
+					.maskClip(RoundedCornerShape(20.dp)),
+			)
+			Spacer(Modifier.height(8.dp))
+			Text(
+				text = item.title,
+				style = MaterialTheme.typography.labelMedium,
+				color = MaterialTheme.colorScheme.onSurface,
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis,
+			)
 		}
 	}
 }
@@ -716,7 +804,7 @@ private fun LocalSizeRow(size: Long, manga: Manga, onClick: (Manga) -> Unit) {
 
 @Composable
 private fun SectionHeader(title: String, action: String, accent: Color, onAction: () -> Unit) {
-	Spacer(Modifier.height(18.dp))
+	Spacer(Modifier.height(20.dp))
 	Row(
 		modifier = Modifier
 			.fillMaxWidth()
@@ -744,7 +832,7 @@ private fun SectionHeader(title: String, action: String, accent: Color, onAction
 			)
 		}
 	}
-	Spacer(Modifier.height(10.dp))
+	Spacer(Modifier.height(12.dp))
 }
 
 @Composable
@@ -754,13 +842,13 @@ private fun SectionCard(
 ) {
 	val base = Modifier
 		.fillMaxWidth()
-		.padding(horizontal = SCREEN_PADDING, vertical = 7.dp)
+		.padding(horizontal = SCREEN_PADDING, vertical = 8.dp)
 	Surface(
 		shape = RoundedCornerShape(CARD_CORNER),
 		color = MaterialTheme.colorScheme.surfaceContainerHigh,
 		modifier = if (onClick != null) base.clickable(onClick = onClick) else base,
 	) {
-		Column(modifier = Modifier.padding(18.dp), content = content)
+		Column(modifier = Modifier.padding(20.dp), content = content)
 	}
 }
 
@@ -779,6 +867,9 @@ private fun LoadingHero() {
 		)
 	}
 }
+
+private fun Color.luminanceIsLight(): Boolean =
+	(0.299f * red + 0.587f * green + 0.114f * blue) > 0.5f
 
 private fun withTime(base: String, info: HistoryInfo, res: android.content.res.Resources): String {
 	val time = info.estimatedTime?.formatShort(res) ?: return base

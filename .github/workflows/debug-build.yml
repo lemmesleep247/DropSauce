@@ -1,0 +1,117 @@
+name: Debug Build
+
+# Builds a debug APK for every branch on push, and on manual dispatch.
+# The APK and its checksums are uploaded as a workflow artifact, and the
+# hashes are also printed to the run summary.
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only keep the latest debug build per branch/ref running.
+concurrency:
+  group: debug-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debug:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Pre-warm JitPack dependencies
+        run: |
+          PARSERS_VERSION=$(grep 'parsers = ' gradle/libs.versions.toml | sed 's/.*= "\(.*\)"/\1/')
+          echo "Pre-warming JitPack for kotatsu-parsers:${PARSERS_VERSION}"
+          POM_URL="https://jitpack.io/com/github/YakaTeam/kotatsu-parsers/${PARSERS_VERSION}/kotatsu-parsers-${PARSERS_VERSION}.pom"
+          for i in $(seq 1 10); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$POM_URL")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "JitPack artifact is ready (HTTP 200)"
+              exit 0
+            fi
+            echo "Attempt $i: JitPack returned HTTP ${HTTP_STATUS}, waiting 30s..."
+            sleep 30
+          done
+          echo "::error::JitPack artifact for kotatsu-parsers:${PARSERS_VERSION} not available after 10 attempts"
+          exit 1
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Collect APK and compute checksums
+        id: apk
+        run: |
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' | head -n1)
+          if [ -z "$APK" ]; then
+            echo "::error::No debug APK found under app/build/outputs/apk/debug"
+            exit 1
+          fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          SAFE_REF=$(echo "${GITHUB_REF_NAME}" | tr '/ ' '__')
+          DEST="DropSauce-debug-${SAFE_REF}-${SHORT_SHA}.apk"
+          cp "$APK" "$DEST"
+
+          SHA256=$(sha256sum "$DEST" | awk '{print $1}')
+          SHA1=$(sha1sum "$DEST" | awk '{print $1}')
+          MD5=$(md5sum "$DEST" | awk '{print $1}')
+          SIZE=$(du -h "$DEST" | cut -f1)
+
+          # Standalone checksums file shipped alongside the APK.
+          {
+            echo "file:   ${DEST}"
+            echo "branch: ${GITHUB_REF_NAME}"
+            echo "commit: ${GITHUB_SHA}"
+            echo "size:   ${SIZE}"
+            echo "sha256: ${SHA256}"
+            echo "sha1:   ${SHA1}"
+            echo "md5:    ${MD5}"
+          } > "${DEST}.sha256.txt"
+          # Also a sha256sum-verifiable file (sha256 + filename).
+          sha256sum "$DEST" > "${DEST}.sha256sum"
+
+          echo "apk_name=${DEST}" >> "$GITHUB_OUTPUT"
+
+          # Surface everything in the run summary.
+          {
+            echo "### 📦 Debug APK"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| File | \`${DEST}\` |"
+            echo "| Branch | \`${GITHUB_REF_NAME}\` |"
+            echo "| Commit | \`${SHORT_SHA}\` |"
+            echo "| Size | ${SIZE} |"
+            echo "| SHA-256 | \`${SHA256}\` |"
+            echo "| SHA-1 | \`${SHA1}\` |"
+            echo "| MD5 | \`${MD5}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.apk_name }}
+          path: |
+            ${{ steps.apk.outputs.apk_name }}
+            ${{ steps.apk.outputs.apk_name }}.sha256.txt
+            ${{ steps.apk.outputs.apk_name }}.sha256sum
+          if-no-files-found: error
+          retention-days: 30

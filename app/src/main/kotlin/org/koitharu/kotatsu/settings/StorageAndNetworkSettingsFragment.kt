@@ -32,6 +32,7 @@ import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
 import org.koitharu.kotatsu.settings.compose.CategoryPalette
 import org.koitharu.kotatsu.settings.compose.ComposeOwnedScreen
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.EditTextSettingsItem
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
 import org.koitharu.kotatsu.settings.compose.InfoSettingsItem
 import org.koitharu.kotatsu.settings.compose.ListSettingsItem
@@ -143,6 +144,8 @@ private fun StorageNetworkScreen(
 	var prefetchContent by rememberStringPref(AppSettings.KEY_PREFETCH_CONTENT, "0")
 	var pagesPreload by rememberStringPref(AppSettings.KEY_PAGES_PRELOAD, "2")
 	var doh by rememberStringPref(AppSettings.KEY_DOH, DoHProvider.NONE.name)
+	// Blank = use the device WebView UA (kept in sync with Cloudflare challenge solving).
+	var userAgent by rememberStringPref(AppSettings.KEY_MIHON_USER_AGENT, "")
 	var imageProxy by rememberStringPref(AppSettings.KEY_IMAGES_PROXY, "-1")
 	var sslBypass by rememberBooleanPref(AppSettings.KEY_SSL_BYPASS, false)
 	var noOffline by rememberBooleanPref(AppSettings.KEY_OFFLINE_DISABLED, false)
@@ -234,7 +237,18 @@ private fun StorageNetworkScreen(
 						selectedValue = doh,
 						onValueChange = { doh = it },
 						icon = R.drawable.ic_web,
-						
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					EditTextSettingsItem(
+						title = stringResource(R.string.user_agent),
+						value = userAgent,
+						// Blank uses the device default; AppSettings.mihonUserAgentOverride returns null.
+						hint = "Default (device WebView)",
+						onValueChange = { userAgent = it.trim() },
+						icon = R.drawable.ic_web,
 						shape = pos.shape,
 					)
 				}

@@ -1,11 +1,9 @@
 package org.koitharu.kotatsu.details.ui
 
 import android.app.assist.AssistContent
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
-import androidx.annotation.ColorInt
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -17,16 +15,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
-import androidx.lifecycle.lifecycleScope
-import androidx.palette.graphics.Palette
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.os.AppShortcutManager
@@ -38,10 +31,8 @@ import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.copyToClipboard
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
-import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
-import org.koitharu.kotatsu.core.util.ext.toBitmapOrNull
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.databinding.ActivityDetailsExpressiveBinding
@@ -51,8 +42,6 @@ import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
 import org.koitharu.kotatsu.main.ui.owners.BottomSheetOwner
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import coil3.ImageLoader
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
 import javax.inject.Inject
 
 /**
@@ -76,6 +65,11 @@ class DetailsExpressiveActivity :
 	private val topInset = mutableIntStateOf(0)
 	private val bottomInset = mutableIntStateOf(0)
 	private var isDarkTheme = false
+
+	// Pull-to-refresh is only allowed when the content is scrolled to the top and the chapters sheet
+	// is collapsed, so the gesture never fires mid-scroll or while dragging the sheet.
+	private var contentAtTop = true
+	private var sheetCollapsed = true
 
 	override val bottomSheet: View?
 		get() = viewBinding.containerBottomSheet
@@ -128,7 +122,6 @@ class DetailsExpressiveActivity :
 			.filterNot { router.isChapterPagesSheetShown() }
 			.observeEvent(this, DownloadStartedObserver(viewBinding.composeView))
 		viewModel.chapters.observe(this, PrefetchObserver(this))
-		viewModel.coverUrl.observe(this, ::extractAccent)
 	}
 
 	override fun onProvideAssistContent(outContent: AssistContent) {
@@ -197,10 +190,12 @@ class DetailsExpressiveActivity :
 					coverUrl = coverUrl,
 					backdropUrl = backdropUrl,
 					isBackdropEnabled = settings.isBackdropEnabled,
+					dynamicColorEnabled = settings.isDetailsDynamicColorEnabled,
 					style = settings.detailsUiMode,
 					topInset = with(density) { topInset.intValue.toDp() },
 					bottomContentPadding = with(density) { peekHeightPx.toDp() } + with(density) { bottomInset.intValue.toDp() },
 					onScroll = ::onContentScroll,
+					onAccentExtracted = { viewModel.accentColor.value = it },
 					actions = actions,
 				)
 			}
@@ -214,9 +209,8 @@ class DetailsExpressiveActivity :
 		BottomSheetBehavior.from(sheet).addBottomSheetCallback(
 			object : BottomSheetBehavior.BottomSheetCallback() {
 				override fun onStateChanged(bottomSheet: View, newState: Int) {
-					// Pull-to-refresh only while the chapters sheet is fully collapsed, so dragging the
-					// sheet up never fights the refresh gesture.
-					viewBinding.swipeRefreshLayout.isEnabled = newState == BottomSheetBehavior.STATE_COLLAPSED
+					sheetCollapsed = newState == BottomSheetBehavior.STATE_COLLAPSED
+					updateSwipeRefreshEnabled()
 				}
 
 				override fun onSlide(bottomSheet: View, slideOffset: Float) {
@@ -236,6 +230,11 @@ class DetailsExpressiveActivity :
 				swipeRefresh.setIndicatorColor(color)
 			}
 		}
+		updateSwipeRefreshEnabled()
+	}
+
+	private fun updateSwipeRefreshEnabled() {
+		viewBinding.swipeRefreshLayout.isEnabled = contentAtTop && sheetCollapsed
 	}
 
 	// Drives the top app bar from the Compose scroll position: the bar fades from transparent
@@ -247,6 +246,8 @@ class DetailsExpressiveActivity :
 			ColorUtils.setAlphaComponent(getThemeColor(android.R.attr.colorBackground), (scrim * 255f).toInt()),
 		)
 		supportActionBar?.setDisplayShowTitleEnabled(scrollY > density * TITLE_THRESHOLD_DP)
+		contentAtTop = scrollY <= 0
+		updateSwipeRefreshEnabled()
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -255,7 +256,25 @@ class DetailsExpressiveActivity :
 		bottomInset.intValue = bars.bottom
 		viewBinding.appbar.updatePadding(top = bars.top)
 		viewBinding.navbarDim.updateLayoutParams { height = bars.bottom }
+		// Drop the refresh indicator below the (transparent) top bar so it lands where it does on the
+		// rest of the app, instead of up under the status bar.
+		val actionBarSize = resolveActionBarSize()
+		val start = bars.top + actionBarSize
+		viewBinding.swipeRefreshLayout.setProgressViewOffset(
+			false,
+			start,
+			start + (resources.displayMetrics.density * 64f).toInt(),
+		)
 		return insets
+	}
+
+	private fun resolveActionBarSize(): Int {
+		val tv = android.util.TypedValue()
+		return if (theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
+			android.util.TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
+		} else {
+			(resources.displayMetrics.density * 56f).toInt()
+		}
 	}
 
 	private fun showTitleDialog(title: String) {
@@ -267,51 +286,6 @@ class DetailsExpressiveActivity :
 				copyToClipboard(getString(R.string.content_type_manga), text)
 			}
 		}.show()
-	}
-
-	private fun extractAccent(coverUrl: String?) {
-		// "Colors from cover" is opt-in; when disabled, keep the app theme (null accent).
-		if (!settings.isDetailsDynamicColorEnabled) {
-			viewModel.accentColor.value = null
-			return
-		}
-		coverUrl ?: return
-		val source = viewModel.getMangaOrNull()?.source
-		lifecycleScope.launch {
-			val color = runCatching {
-				withContext(Dispatchers.Default) {
-					val request = ImageRequest.Builder(this@DetailsExpressiveActivity)
-						.data(coverUrl)
-						.allowHardware(false)
-						.mangaSourceExtra(source)
-						.build()
-					val bitmap = coil.execute(request).toBitmapOrNull() ?: return@withContext null
-					extractSwatch(bitmap)
-				}
-			}.getOrNull() ?: return@launch
-			viewModel.accentColor.value = color
-		}
-	}
-
-	private fun extractSwatch(bitmap: Bitmap): Int? {
-		val palette = Palette.from(bitmap).maximumColorCount(24).generate()
-		val raw = palette.vibrantSwatch?.rgb
-			?: palette.lightVibrantSwatch?.rgb
-			?: palette.darkVibrantSwatch?.rgb
-			?: palette.mutedSwatch?.rgb
-			?: palette.dominantSwatch?.rgb
-			?: return null
-		return harmonizeAccent(raw)
-	}
-
-	@ColorInt
-	private fun harmonizeAccent(@ColorInt color: Int): Int {
-		// Uses the precomputed theme brightness (no off-main-thread theme access during extraction).
-		val hsl = FloatArray(3)
-		ColorUtils.colorToHSL(color, hsl)
-		hsl[1] = hsl[1].coerceIn(0.28f, 0.62f)
-		hsl[2] = if (isDarkTheme) hsl[2].coerceIn(0.56f, 0.72f) else hsl[2].coerceIn(0.34f, 0.46f)
-		return ColorUtils.HSLToColor(hsl)
 	}
 
 	private class PrefetchObserver(

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowOverflow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -71,16 +73,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.palette.graphics.Palette
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.ImageResult
+import coil3.request.allowHardware
 import coil3.request.crossfade
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.prefs.DetailsUiMode
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
+import org.koitharu.kotatsu.core.util.ext.toBitmapOrNull
 import org.koitharu.kotatsu.core.util.FileSize
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.details.data.MangaDetails
@@ -118,6 +126,7 @@ private val COVER_WIDTH = 158.dp
 private val COVER_HEIGHT = 236.dp
 private val COMPACT_COVER_WIDTH = 120.dp
 private val COMPACT_COVER_HEIGHT = 178.dp
+private const val TAGS_COLLAPSED_ROWS = 3
 
 @Composable
 fun DetailsExpressiveScreen(
@@ -135,10 +144,12 @@ fun DetailsExpressiveScreen(
 	coverUrl: String?,
 	backdropUrl: String?,
 	isBackdropEnabled: Boolean,
+	dynamicColorEnabled: Boolean,
 	style: DetailsUiMode,
 	topInset: Dp,
 	bottomContentPadding: Dp,
 	onScroll: (Int) -> Unit,
+	onAccentExtracted: (Int) -> Unit,
 	actions: DetailsExpressiveActions,
 ) {
 	val manga = details?.toManga()
@@ -197,6 +208,9 @@ fun DetailsExpressiveScreen(
 					accent = accentColor,
 					imageLoader = imageLoader,
 					coverUrl = coverUrl,
+					dynamicColorEnabled = dynamicColorEnabled,
+					isDark = isDark,
+					onAccentExtracted = onAccentExtracted,
 					actions = actions,
 				)
 
@@ -213,7 +227,7 @@ fun DetailsExpressiveScreen(
 
 				DescriptionCard(description = details.description)
 
-				TagsSection(tags = manga.tags, onTagClick = actions.onTagClick)
+				TagsSection(tags = manga.tags, accent = accentColor, onTagClick = actions.onTagClick)
 
 				if (scrobblings.isNotEmpty()) {
 					ScrobblingSection(
@@ -303,6 +317,9 @@ private fun HeroSection(
 	accent: Color,
 	imageLoader: ImageLoader,
 	coverUrl: String?,
+	dynamicColorEnabled: Boolean,
+	isDark: Boolean,
+	onAccentExtracted: (Int) -> Unit,
 	actions: DetailsExpressiveActions,
 ) {
 	if (centered) {
@@ -312,7 +329,7 @@ private fun HeroSection(
 				.padding(horizontal = SCREEN_PADDING),
 			horizontalAlignment = Alignment.CenterHorizontally,
 		) {
-			CoverCard(manga, coverUrl, imageLoader, COVER_WIDTH, COVER_HEIGHT, 24.dp, actions)
+			CoverCard(manga, coverUrl, imageLoader, COVER_WIDTH, COVER_HEIGHT, 24.dp, dynamicColorEnabled, isDark, onAccentExtracted, actions)
 			Spacer(Modifier.height(20.dp))
 			HeroTexts(centered = true, manga = manga, accent = accent, actions = actions)
 			Spacer(Modifier.height(16.dp))
@@ -332,7 +349,7 @@ private fun HeroSection(
 				.fillMaxWidth()
 				.padding(horizontal = SCREEN_PADDING),
 		) {
-			CoverCard(manga, coverUrl, imageLoader, COMPACT_COVER_WIDTH, COMPACT_COVER_HEIGHT, 20.dp, actions)
+			CoverCard(manga, coverUrl, imageLoader, COMPACT_COVER_WIDTH, COMPACT_COVER_HEIGHT, 20.dp, dynamicColorEnabled, isDark, onAccentExtracted, actions)
 			Spacer(Modifier.width(16.dp))
 			Column(modifier = Modifier.weight(1f)) {
 				HeroTexts(centered = false, manga = manga, accent = accent, actions = actions)
@@ -359,9 +376,13 @@ private fun CoverCard(
 	width: Dp,
 	height: Dp,
 	corner: Dp,
+	dynamicColorEnabled: Boolean,
+	isDark: Boolean,
+	onAccentExtracted: (Int) -> Unit,
 	actions: DetailsExpressiveActions,
 ) {
 	val ctx = LocalContext.current
+	val scope = rememberCoroutineScope()
 	Surface(
 		shape = RoundedCornerShape(corner),
 		color = MaterialTheme.colorScheme.surfaceVariant,
@@ -371,10 +392,13 @@ private fun CoverCard(
 			.width(width)
 			.height(height),
 	) {
-		val coverRequest = remember(coverUrl, manga.source) {
+		// When "colors from cover" is on we decode in software (allowHardware = false) so Palette can
+		// read the pixels of the very bitmap that's displayed, and extract the accent on success.
+		val coverRequest = remember(coverUrl, manga.source, dynamicColorEnabled) {
 			ImageRequest.Builder(ctx)
 				.data(coverUrl)
 				.crossfade(true)
+				.allowHardware(!dynamicColorEnabled)
 				.mangaSourceExtra(manga.source)
 				.build()
 		}
@@ -383,6 +407,16 @@ private fun CoverCard(
 			imageLoader = imageLoader,
 			contentDescription = null,
 			contentScale = ContentScale.Crop,
+			onSuccess = if (dynamicColorEnabled) {
+				{ state ->
+					val result = state.result
+					scope.launch(Dispatchers.Default) {
+						coverAccent(result, isDark)?.let(onAccentExtracted)
+					}
+				}
+			} else {
+				null
+			},
 			modifier = Modifier
 				.fillMaxSize()
 				.clickable { actions.onCoverClick(manga) },
@@ -729,14 +763,24 @@ private fun DescriptionCard(description: CharSequence?) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TagsSection(tags: Set<MangaTag>, onTagClick: (MangaTag) -> Unit) {
+private fun TagsSection(tags: Set<MangaTag>, accent: Color, onTagClick: (MangaTag) -> Unit) {
 	if (tags.isEmpty()) return
+	var expanded by rememberSaveable { mutableStateOf(false) }
 	FlowRow(
 		modifier = Modifier
 			.fillMaxWidth()
 			.padding(horizontal = SCREEN_PADDING, vertical = 7.dp),
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalArrangement = Arrangement.spacedBy(8.dp),
+		maxLines = if (expanded) Int.MAX_VALUE else TAGS_COLLAPSED_ROWS,
+		overflow = FlowRowOverflow.expandOrCollapseIndicator(
+			expandIndicator = {
+				TagToggleChip(text = stringResource(R.string.more), accent = accent) { expanded = true }
+			},
+			collapseIndicator = {
+				TagToggleChip(text = stringResource(R.string.collapse), accent = accent) { expanded = false }
+			},
+		),
 	) {
 		tags.forEach { tag ->
 			Surface(
@@ -752,6 +796,23 @@ private fun TagsSection(tags: Set<MangaTag>, onTagClick: (MangaTag) -> Unit) {
 				)
 			}
 		}
+	}
+}
+
+@Composable
+private fun TagToggleChip(text: String, accent: Color, onClick: () -> Unit) {
+	Surface(
+		shape = RoundedCornerShape(15.dp),
+		color = accent.copy(alpha = 0.16f),
+		onClick = onClick,
+	) {
+		Text(
+			text = text,
+			style = MaterialTheme.typography.labelLarge,
+			fontWeight = FontWeight.Medium,
+			color = accent,
+			modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+		)
 	}
 }
 
@@ -947,6 +1008,26 @@ private fun LoadingHero() {
 
 private fun Color.luminanceIsLight(): Boolean =
 	(0.299f * red + 0.587f * green + 0.114f * blue) > 0.5f
+
+/**
+ * Extracts a representative accent from the loaded cover bitmap (the same one shown on screen) and
+ * tones it into a band that stays legible on the current theme. Returns an ARGB int or null.
+ */
+private fun coverAccent(result: ImageResult, isDark: Boolean): Int? {
+	val bitmap = result.toBitmapOrNull() ?: return null
+	val palette = Palette.from(bitmap).maximumColorCount(24).generate()
+	val raw = palette.vibrantSwatch?.rgb
+		?: palette.lightVibrantSwatch?.rgb
+		?: palette.darkVibrantSwatch?.rgb
+		?: palette.mutedSwatch?.rgb
+		?: palette.dominantSwatch?.rgb
+		?: return null
+	val hsl = FloatArray(3)
+	ColorUtils.colorToHSL(raw, hsl)
+	hsl[1] = hsl[1].coerceIn(0.35f, 0.85f)
+	hsl[2] = if (isDark) hsl[2].coerceIn(0.55f, 0.74f) else hsl[2].coerceIn(0.36f, 0.52f)
+	return ColorUtils.HSLToColor(hsl)
+}
 
 /**
  * Derives a [ColorScheme] whose accent roles (primary/secondary/tertiary and their containers) are

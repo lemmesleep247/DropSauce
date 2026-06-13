@@ -42,10 +42,9 @@
 	<androidx.fragment.app.FragmentContainerView
 		android:id="@+id/container_bottom_sheet"
 		android:name="org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet"
-		style="@style/Widget.Material3.BottomSheet"
+		style="@style/Widget.Kotatsu.BottomSheet.Details"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:background="@drawable/bg_details_sheet"
 		android:elevation="6dp"
 		android:nestedScrollingEnabled="false"
 		android:outlineProvider="background"

@@ -38,6 +38,22 @@
 		<item name="android:paddingBottom">0dp</item>
 	</style>
 
+	<!-- Expressive details chapters sheet: extra-rounded top + card-matching tone so the pull-up
+	     menu reads as part of the new details page. -->
+	<style name="ShapeAppearanceOverlay.Kotatsu.DetailsSheet" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSizeTopLeft">32dp</item>
+		<item name="cornerSizeTopRight">32dp</item>
+		<item name="cornerSizeBottomLeft">0dp</item>
+		<item name="cornerSizeBottomRight">0dp</item>
+	</style>
+
+	<style name="Widget.Kotatsu.BottomSheet.Details" parent="Widget.Material3.BottomSheet">
+		<item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Kotatsu.DetailsSheet</item>
+		<item name="backgroundTint">?attr/colorSurfaceContainerHigh</item>
+		<item name="paddingBottomSystemWindowInsets">false</item>
+	</style>
+
 	<style name="Widget.Kotatsu.Spinner.DropDown" parent="Widget.AppCompat.Spinner.DropDown">
 		<item name="android:popupBackground">@drawable/m3_spinner_popup_background</item>
 		<item name="android:elevation">8dp</item>

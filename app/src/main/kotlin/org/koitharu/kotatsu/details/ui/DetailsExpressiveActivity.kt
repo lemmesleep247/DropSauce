@@ -75,6 +75,7 @@ class DetailsExpressiveActivity :
 
 	private val topInset = mutableIntStateOf(0)
 	private val bottomInset = mutableIntStateOf(0)
+	private var isDarkTheme = false
 
 	override val bottomSheet: View?
 		get() = viewBinding.containerBottomSheet
@@ -83,13 +84,14 @@ class DetailsExpressiveActivity :
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityDetailsExpressiveBinding.inflate(layoutInflater))
 		WindowCompat.setDecorFitsSystemWindows(window, false)
-		WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars =
-			ColorUtils.calculateLuminance(getThemeColor(android.R.attr.colorBackground)) > 0.5
+		isDarkTheme = ColorUtils.calculateLuminance(getThemeColor(android.R.attr.colorBackground)) <= 0.5
+		WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = !isDarkTheme
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
 		supportActionBar?.setDisplayShowTitleEnabled(false)
 
 		setupContent()
 		setupBottomSheet()
+		setupSwipeRefresh()
 
 		menuProvider = DetailsMenuProvider(
 			activity = this,
@@ -199,7 +201,6 @@ class DetailsExpressiveActivity :
 					topInset = with(density) { topInset.intValue.toDp() },
 					bottomContentPadding = with(density) { peekHeightPx.toDp() } + with(density) { bottomInset.intValue.toDp() },
 					onScroll = ::onContentScroll,
-					onRefresh = viewModel::reload,
 					actions = actions,
 				)
 			}
@@ -212,12 +213,29 @@ class DetailsExpressiveActivity :
 		val navbarDim = viewBinding.navbarDim
 		BottomSheetBehavior.from(sheet).addBottomSheetCallback(
 			object : BottomSheetBehavior.BottomSheetCallback() {
-				override fun onStateChanged(bottomSheet: View, newState: Int) = Unit
+				override fun onStateChanged(bottomSheet: View, newState: Int) {
+					// Pull-to-refresh only while the chapters sheet is fully collapsed, so dragging the
+					// sheet up never fights the refresh gesture.
+					viewBinding.swipeRefreshLayout.isEnabled = newState == BottomSheetBehavior.STATE_COLLAPSED
+				}
+
 				override fun onSlide(bottomSheet: View, slideOffset: Float) {
 					navbarDim.alpha = 1f - slideOffset.coerceAtLeast(0f)
 				}
 			},
 		)
+	}
+
+	private fun setupSwipeRefresh() {
+		val swipeRefresh = viewBinding.swipeRefreshLayout
+		swipeRefresh.setOnRefreshListener { viewModel.reload() }
+		viewModel.isLoading.observe(this) { swipeRefresh.isRefreshing = it }
+		// Tint the unified loading indicator with the cover accent when "colors from cover" is on.
+		viewModel.accentColor.observe(this) { color ->
+			if (color != null) {
+				swipeRefresh.setIndicatorColor(color)
+			}
+		}
 	}
 
 	// Drives the top app bar from the Compose scroll position: the bar fades from transparent
@@ -288,11 +306,11 @@ class DetailsExpressiveActivity :
 
 	@ColorInt
 	private fun harmonizeAccent(@ColorInt color: Int): Int {
-		val isDark = ColorUtils.calculateLuminance(getThemeColor(android.R.attr.colorBackground)) <= 0.5
+		// Uses the precomputed theme brightness (no off-main-thread theme access during extraction).
 		val hsl = FloatArray(3)
 		ColorUtils.colorToHSL(color, hsl)
 		hsl[1] = hsl[1].coerceIn(0.28f, 0.62f)
-		hsl[2] = if (isDark) hsl[2].coerceIn(0.56f, 0.72f) else hsl[2].coerceIn(0.34f, 0.46f)
+		hsl[2] = if (isDarkTheme) hsl[2].coerceIn(0.56f, 0.72f) else hsl[2].coerceIn(0.34f, 0.46f)
 		return ColorUtils.HSLToColor(hsl)
 	}
 

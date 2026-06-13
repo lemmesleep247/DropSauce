@@ -8,10 +8,17 @@
 	android:layout_height="match_parent"
 	android:fitsSystemWindows="false">
 
-	<androidx.compose.ui.platform.ComposeView
-		android:id="@+id/composeView"
+	<org.koitharu.kotatsu.core.ui.widgets.LoadingIndicatorSwipeRefreshLayout
+		android:id="@+id/swipeRefreshLayout"
 		android:layout_width="match_parent"
-		android:layout_height="match_parent" />
+		android:layout_height="match_parent">
+
+		<androidx.compose.ui.platform.ComposeView
+			android:id="@+id/composeView"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent" />
+
+	</org.koitharu.kotatsu.core.ui.widgets.LoadingIndicatorSwipeRefreshLayout>
 
 	<com.google.android.material.appbar.AppBarLayout
 		android:id="@+id/appbar"
@@ -38,6 +45,7 @@
 		style="@style/Widget.Material3.BottomSheet"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
+		android:background="@drawable/bg_details_sheet"
 		android:elevation="6dp"
 		android:nestedScrollingEnabled="false"
 		android:outlineProvider="background"

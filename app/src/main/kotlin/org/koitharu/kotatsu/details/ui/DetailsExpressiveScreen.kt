@@ -37,7 +37,6 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
@@ -120,7 +119,6 @@ private val COVER_HEIGHT = 236.dp
 private val COMPACT_COVER_WIDTH = 120.dp
 private val COMPACT_COVER_HEIGHT = 178.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailsExpressiveScreen(
 	details: MangaDetails?,
@@ -141,7 +139,6 @@ fun DetailsExpressiveScreen(
 	topInset: Dp,
 	bottomContentPadding: Dp,
 	onScroll: (Int) -> Unit,
-	onRefresh: () -> Unit,
 	actions: DetailsExpressiveActions,
 ) {
 	val manga = details?.toManga()
@@ -179,19 +176,14 @@ fun DetailsExpressiveScreen(
 				)
 			}
 
-			PullToRefreshBox(
-				isRefreshing = isLoading,
-				onRefresh = onRefresh,
-				modifier = Modifier.fillMaxSize(),
+			Column(
+				modifier = Modifier
+					.fillMaxSize()
+					.verticalScroll(scrollState)
+					.padding(bottom = bottomContentPadding),
+				horizontalAlignment = Alignment.CenterHorizontally,
 			) {
-				Column(
-					modifier = Modifier
-						.fillMaxSize()
-						.verticalScroll(scrollState)
-						.padding(bottom = bottomContentPadding),
-					horizontalAlignment = Alignment.CenterHorizontally,
-				) {
-			// Push the hero clear of the translucent top bar / back button.
+				// Push the hero clear of the translucent top bar / back button.
 			Spacer(Modifier.height(topInset + if (centered) 84.dp else 72.dp))
 
 			if (manga == null) {
@@ -250,7 +242,6 @@ fun DetailsExpressiveScreen(
 				}
 			}
 		}
-	}
 	}
 }
 
@@ -861,6 +852,7 @@ private fun RelatedSection(
 				color = MaterialTheme.colorScheme.onSurface,
 				maxLines = 1,
 				overflow = TextOverflow.Ellipsis,
+				modifier = Modifier.padding(start = 8.dp, end = 4.dp),
 			)
 		}
 	}

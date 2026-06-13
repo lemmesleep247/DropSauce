@@ -621,6 +621,18 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val dnsOverHttps: DoHProvider
 		get() = prefs.getEnumValue(KEY_DOH, DoHProvider.NONE)
 
+	/**
+	 * Default User-Agent header sent by Mihon/Tachiyomi extensions when a source does not set
+	 * its own. Mirrors Mihon's configurable "Default user agent string" preference. A stale UA
+	 * (the kotatsu-parsers default is years old) gets flagged by anti-bot/Cloudflare on some
+	 * sources, so this defaults to a current Chrome build and can be overridden by the user.
+	 */
+	val mihonUserAgent: String
+		get() = prefs.getString(KEY_MIHON_USER_AGENT, null)
+			?.trim()
+			?.takeIf { it.isNotEmpty() }
+			?: DEFAULT_MIHON_USER_AGENT
+
 	var isSSLBypassEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SSL_BYPASS, false)
 		set(value) = prefs.edit { putBoolean(KEY_SSL_BYPASS, value) }
@@ -845,6 +857,13 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	companion object {
 
+		/**
+		 * Default User-Agent for Mihon extensions. Kept in sync with Mihon's own default so that
+		 * sources gated behind UA-based anti-bot checks (e.g. Kagane) behave identically.
+		 */
+		const val DEFAULT_MIHON_USER_AGENT =
+			"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
+
 		const val TRACK_HISTORY = "history"
 		const val TRACK_FAVOURITES = "favourites"
 
@@ -928,6 +947,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_DOWNLOADS_FORMAT = "downloads_format"
 		const val KEY_ALL_FAVOURITES_VISIBLE = "all_favourites_visible"
 		const val KEY_DOH = "doh"
+		const val KEY_MIHON_USER_AGENT = "mihon_user_agent"
 		const val KEY_EXIT_CONFIRM = "exit_confirm"
 		const val KEY_INCOGNITO_MODE = "incognito"
 		const val KEY_READER_MULTITASK = "reader_multitask"

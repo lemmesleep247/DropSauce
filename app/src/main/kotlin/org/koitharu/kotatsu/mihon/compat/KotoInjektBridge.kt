@@ -5,6 +5,7 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import eu.kanade.tachiyomi.network.JavaScriptEngine
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialFormat
 import kotlinx.serialization.StringFormat
@@ -25,6 +26,7 @@ import org.koitharu.kotatsu.core.exceptions.CloudFlareBlockedException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
 import org.koitharu.kotatsu.core.network.MangaHttpClient
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.parsers.model.MangaSource
@@ -74,6 +76,7 @@ class KotoNetworkHelper(
 	private val mutableCookieJar: MutableCookieJar,
 	private val webViewExecutor: WebViewExecutor? = null,
 	private val androidCookieJar: AndroidCookieJar? = null,
+	private val userAgentProvider: () -> String = { UserAgents.CHROME_MOBILE },
 ) : NetworkHelper() {
 
 	/** Expose the cookie jar so extensions can read/write session cookies. */
@@ -105,6 +108,12 @@ class KotoNetworkHelper(
 		proxyAuthenticator(baseClient.proxyAuthenticator)
 		socketFactory(baseClient.socketFactory)
 		hostnameVerifier(baseClient.hostnameVerifier)
+
+		// Ensure every extension request carries a User-Agent when the source didn't set one,
+		// using the same configurable default as Mihon. Added first so it runs outermost,
+		// before Cloudflare detection and API-header enrichment see the request.
+		addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
+
 		baseClient.interceptors.forEach { interceptor ->
 			if (interceptor.javaClass.simpleName != "GZipInterceptor") {
 				addInterceptor(interceptor)
@@ -205,7 +214,7 @@ class KotoNetworkHelper(
 	override val cloudflareClient: OkHttpClient
 		get() = client
 
-	override fun defaultUserAgentProvider(): String = UserAgents.CHROME_MOBILE
+	override fun defaultUserAgentProvider(): String = userAgentProvider()
 
 	private fun Response.closeThrowing(error: Throwable): Nothing {
 		try {
@@ -324,6 +333,7 @@ class KotoInjektBridge @Inject constructor(
 	@MangaHttpClient private val httpClient: OkHttpClient,
 	private val cookieJar: MutableCookieJar,
 	private val webViewExecutor: WebViewExecutor,
+	private val settings: AppSettings,
 ) {
 	@Volatile
 	private var initialized = false
@@ -336,7 +346,13 @@ class KotoInjektBridge @Inject constructor(
 	fun initialize() {
 		if (initialized) return
 		val application = context.applicationContext as Application
-		val networkHelper = KotoNetworkHelper(httpClient, cookieJar, webViewExecutor, androidCookieJar)
+		val networkHelper = KotoNetworkHelper(
+			baseClient = httpClient,
+			mutableCookieJar = cookieJar,
+			webViewExecutor = webViewExecutor,
+			androidCookieJar = androidCookieJar,
+			userAgentProvider = { settings.mihonUserAgent },
+		)
 		val json = Json {
 			ignoreUnknownKeys = true
 			explicitNulls = false

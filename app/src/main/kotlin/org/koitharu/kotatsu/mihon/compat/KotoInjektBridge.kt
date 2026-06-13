@@ -146,13 +146,15 @@ class KotoNetworkHelper(
 
 				CloudFlareHelper.PROTECTION_CAPTCHA -> {
 					val host = request.url.host.lowercase()
-					val clearance = mutableCookieJar.loadForRequest(request.url)
-						.firstOrNull { it.name == "cf_clearance" }
-						?.value
-
 					val source = request.tag(MangaSource::class.java)
 
-					if (webViewExecutor != null && source != null) {
+					// Attempt a headless WebView solve like Mihon — regardless of whether the
+					// request carries a Kotatsu MangaSource tag. Extension-issued requests (e.g.
+					// Kagane's integrity GET to its Cloudflare-fronted root) are untagged, yet the
+					// challenge is still solvable and the resulting cf_clearance lands in the shared
+					// cookie jar. Previously we skipped solving when the tag was missing and threw a
+					// hard "blocked" error, which aborted those extensions even though Mihon coped.
+					if (webViewExecutor != null) {
 						val cfEx = CloudFlareProtectedException(
 							url = challengeUrl,
 							source = source,
@@ -163,41 +165,50 @@ class KotoNetworkHelper(
 						}.getOrDefault(false)
 
 						if (resolved) {
-							android.util.Log.i("MihonNetwork", "WebView headless fallback succeeded for host=$host")
+							android.util.Log.i("MihonNetwork", "WebView Cloudflare solve succeeded for host=$host")
 							response.close()
-							// Proceed again with original request since the cookie jar now has the cf_clearance!
+							// Retry the original request now that the cookie jar has cf_clearance.
 							return@addInterceptor chain.proceed(request)
-						} else {
-							android.util.Log.w("MihonNetwork", "WebView headless fallback failed for host=$host")
 						}
+						android.util.Log.w("MihonNetwork", "WebView Cloudflare solve failed for host=$host")
 					}
 
-					if (shouldSkipInteractiveAction(host, clearance)) {
-						android.util.Log.w(
-							"MihonNetwork",
-							"Skip interactive action for host=$host: repeated challenge with same cf_clearance",
-						)
-						response.closeThrowing(
-							CloudFlareBlockedException(
-								url = challengeUrl,
-								source = source,
-							),
-						)
-					} else {
-						if (source == null) {
-							android.util.Log.e("MihonNetwork", "Missing MangaSource tag for interactive action fallback")
-							response.closeThrowing(CloudFlareBlockedException(url = challengeUrl, source = null))
-						} else {
+					val clearance = mutableCookieJar.loadForRequest(request.url)
+						.firstOrNull { it.name == "cf_clearance" }
+						?.value
+
+					when {
+						// Untagged extension request (no MangaSource): match Mihon and let the
+						// extension handle the unsolved challenge response itself instead of
+						// aborting with a hard block error. Extensions like Kagane fetch a
+						// Cloudflare-fronted page and ignore the result.
+						source == null -> {
+							android.util.Log.d(
+								"MihonNetwork",
+								"Unsolved Cloudflare challenge passed through for ${request.url}",
+							)
+							response
+						}
+
+						shouldSkipInteractiveAction(host, clearance) -> {
+							android.util.Log.w(
+								"MihonNetwork",
+								"Skip interactive action for host=$host: repeated challenge with same cf_clearance",
+							)
 							response.closeThrowing(
-								InteractiveActionRequiredException(
-									source = source,
-									url = challengeUrl,
-									userAgent = request.header("User-Agent"),
-									successCookieUrl = challengeUrl,
-									successCookieName = "cf_clearance",
-								),
+								CloudFlareBlockedException(url = challengeUrl, source = source),
 							)
 						}
+
+						else -> response.closeThrowing(
+							InteractiveActionRequiredException(
+								source = source,
+								url = challengeUrl,
+								userAgent = request.header("User-Agent"),
+								successCookieUrl = challengeUrl,
+								successCookieName = "cf_clearance",
+							),
+						)
 					}
 				}
 

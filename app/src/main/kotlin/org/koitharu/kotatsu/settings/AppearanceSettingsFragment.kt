@@ -246,6 +246,7 @@ private fun AppearanceScreen(
 	var colorScheme by rememberStringPref(AppSettings.KEY_COLOR_THEME, ColorScheme.default.name)
 	var theme by rememberStringPref(AppSettings.KEY_THEME, "-1")
 	var amoled by rememberBooleanPref(AppSettings.KEY_THEME_AMOLED, false)
+	var hapticFeedback by rememberBooleanPref(AppSettings.KEY_HAPTIC_FEEDBACK, true)
 	var locale by rememberStringPref(AppSettings.KEY_APP_LOCALE, "")
 	var listMode by rememberStringPref(AppSettings.KEY_LIST_MODE, ListMode.GRID.name)
 	var gridSize by rememberIntPref(AppSettings.KEY_GRID_SIZE, 100)
@@ -332,7 +333,18 @@ private fun AppearanceScreen(
 						selectedValue = locale,
 						onValueChange = { locale = it },
 						icon = R.drawable.ic_language,
-						
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.haptic_feedback),
+						subtitle = stringResource(R.string.haptic_feedback_summary),
+						checked = hapticFeedback,
+						onCheckedChange = { hapticFeedback = it },
+						icon = R.drawable.ic_tap,
+
 						shape = pos.shape,
 					)
 				}

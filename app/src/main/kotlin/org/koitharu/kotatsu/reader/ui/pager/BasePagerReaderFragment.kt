@@ -20,8 +20,10 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.prefs.ReaderAnimation
 import org.koitharu.kotatsu.core.ui.list.lifecycle.PagerLifecycleDispatcher
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.doOnPageChanged
 import org.koitharu.kotatsu.core.util.ext.findCurrentViewHolder
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.recyclerView
 import org.koitharu.kotatsu.core.util.ext.resetTransformations
@@ -149,7 +151,14 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 
 	override fun switchPageBy(delta: Int) {
 		with(requireViewBinding().pager) {
-			setCurrentItem(currentItem + delta, isAnimationEnabled())
+			val target = currentItem + delta
+			val lastIndex = (adapter?.itemCount ?: 0) - 1
+			if (lastIndex >= 0 && target !in 0..lastIndex) {
+				// Trying to page past the very first / last loaded page — give a "blocked" cue
+				// instead of silently doing nothing.
+				hapticFeedback(HapticEffect.REJECT)
+			}
+			setCurrentItem(target, isAnimationEnabled())
 		}
 	}
 

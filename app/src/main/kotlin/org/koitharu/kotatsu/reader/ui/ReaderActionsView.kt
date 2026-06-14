@@ -21,6 +21,8 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderControl
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.hasVisibleChildren
 import org.koitharu.kotatsu.core.util.ext.isRtl
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -57,6 +59,7 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 	private var isSliderChanged = false
 	private var isSliderTracking = false
+	private var lastSliderStep = Float.NaN
 
 	var isSliderEnabled: Boolean
 		get() = binding.slider.isEnabled
@@ -122,30 +125,73 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	override fun onClick(v: View) {
 		when (v.id) {
-			R.id.button_prev -> listener?.switchChapterBy(-1)
-			R.id.button_next -> listener?.switchChapterBy(1)
-			R.id.button_save -> listener?.onSavePageClick()
-			R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = false)
-			R.id.button_pages_thumbs -> AppRouter.from(this)?.showChapterPagesSheet()
-			R.id.button_screen_rotation -> listener?.toggleScreenOrientation()
-			R.id.button_options -> listener?.openMenu()
-			R.id.button_bookmark -> listener?.onBookmarkClick()
+			R.id.button_prev -> {
+				v.hapticFeedback(HapticEffect.CONFIRM)
+				listener?.switchChapterBy(-1)
+			}
+
+			R.id.button_next -> {
+				v.hapticFeedback(HapticEffect.CONFIRM)
+				listener?.switchChapterBy(1)
+			}
+
+			R.id.button_save -> {
+				v.hapticFeedback(HapticEffect.CLICK)
+				listener?.onSavePageClick()
+			}
+
+			R.id.button_timer -> {
+				v.hapticFeedback(HapticEffect.CLICK)
+				listener?.onScrollTimerClick(isLongClick = false)
+			}
+
+			R.id.button_pages_thumbs -> {
+				v.hapticFeedback(HapticEffect.CLICK)
+				AppRouter.from(this)?.showChapterPagesSheet()
+			}
+
+			R.id.button_screen_rotation -> {
+				v.hapticFeedback(HapticEffect.CLICK)
+				listener?.toggleScreenOrientation()
+			}
+
+			R.id.button_options -> {
+				v.hapticFeedback(HapticEffect.CLICK)
+				listener?.openMenu()
+			}
+
+			R.id.button_bookmark -> {
+				v.hapticFeedback(HapticEffect.CONFIRM)
+				listener?.onBookmarkClick()
+			}
 		}
 	}
 
-	override fun onLongClick(v: View): Boolean = when (v.id) {
-		R.id.button_bookmark -> AppRouter.from(this)
-			?.showChapterPagesSheet(ChaptersPagesSheet.TAB_BOOKMARKS)
+	override fun onLongClick(v: View): Boolean {
+		val handled = when (v.id) {
+			R.id.button_bookmark -> AppRouter.from(this)
+				?.showChapterPagesSheet(ChaptersPagesSheet.TAB_BOOKMARKS)
 
-		R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = true)
-		R.id.button_options -> AppRouter.from(this)?.openReaderSettings()
-		else -> null
-	} != null
+			R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = true)
+			R.id.button_options -> AppRouter.from(this)?.openReaderSettings()
+			else -> null
+		} != null
+		if (handled) {
+			v.hapticFeedback(HapticEffect.LONG_PRESS)
+		}
+		return handled
+	}
 
 	override fun onValueChange(slider: Slider, value: Float, fromUser: Boolean) {
 		if (fromUser) {
 			if (isSliderTracking) {
 				isSliderChanged = true
+				// One tick per page the thumb crosses, so scrubbing feels like stepping
+				// through pages rather than a silent slide.
+				if (value != lastSliderStep) {
+					lastSliderStep = value
+					slider.hapticFeedback(HapticEffect.TICK)
+				}
 			} else {
 				listener?.switchPageTo(value.toInt())
 			}
@@ -156,11 +202,14 @@ class ReaderActionsView @JvmOverloads constructor(
 		if (!isSliderTracking) {
 			isSliderChanged = false
 			isSliderTracking = true
+			lastSliderStep = slider.value
+			slider.hapticFeedback(HapticEffect.GESTURE_START)
 		}
 	}
 
 	override fun onStopTrackingTouch(slider: Slider) {
 		isSliderTracking = false
+		slider.hapticFeedback(HapticEffect.GESTURE_END)
 		if (isSliderChanged) {
 			listener?.switchPageTo(slider.value.toInt())
 		}

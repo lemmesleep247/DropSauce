@@ -18,7 +18,9 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryOwner
 import kotlinx.coroutines.Dispatchers
 import org.koitharu.kotatsu.core.ui.list.decor.AbstractSelectionItemDecoration
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.adjustPopupMenuIcons
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.core.util.ext.toLongArray
 import org.koitharu.kotatsu.core.util.ext.toSet
@@ -91,11 +93,15 @@ class ListSelectionController(
 	}
 
 	fun onItemLongClick(view: View, id: Long): Boolean {
-		return if (useActionMode) {
+		val handled = if (useActionMode) {
 			startSelection(id)
 		} else {
 			onItemContextClick(view, id)
 		}
+		if (handled) {
+			view.hapticFeedback(HapticEffect.LONG_PRESS)
+		}
+		return handled
 	}
 
 	fun onItemContextClick(view: View, id: Long): Boolean {

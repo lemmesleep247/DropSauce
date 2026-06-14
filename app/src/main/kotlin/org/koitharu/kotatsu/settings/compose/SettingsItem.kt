@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import org.koitharu.kotatsu.main.ui.nav.rememberAnyDrawablePainter
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,8 +62,10 @@ fun SettingsItem(
 	shape: Shape = MaterialTheme.shapes.medium,
 	enabled: Boolean = true,
 	onClick: (() -> Unit)? = null,
+	hapticEffect: HapticEffect? = HapticEffect.CLICK,
 	trailing: @Composable (() -> Unit)? = null,
 ) {
+	val haptic = rememberHapticEffect()
 	// One-shot search highlight: scroll this row comfortably into view and flash its background
 	// once when it is the navigation target (matched by title).
 	val pendingHighlight by SettingsSearchHighlight.pendingTitle.collectAsState()
@@ -102,7 +106,16 @@ fun SettingsItem(
 		Row(
 			modifier = Modifier
 				.heightIn(min = 72.dp)
-				.let { if (onClick != null && enabled) it.clickable(onClick = onClick) else it }
+				.let {
+					if (onClick != null && enabled) {
+						it.clickable {
+							if (hapticEffect != null) haptic(hapticEffect)
+							onClick()
+						}
+					} else {
+						it
+					}
+				}
 				.padding(horizontal = 12.dp, vertical = 10.dp),
 			verticalAlignment = Alignment.CenterVertically,
 		) {
@@ -158,6 +171,11 @@ fun SwitchSettingsItem(
 	shape: Shape = MaterialTheme.shapes.medium,
 	enabled: Boolean = true,
 ) {
+	val haptic = rememberHapticEffect()
+	val onCheckedChangeHaptic: (Boolean) -> Unit = { value ->
+		haptic(if (value) HapticEffect.TOGGLE_ON else HapticEffect.TOGGLE_OFF)
+		onCheckedChange(value)
+	}
 	SettingsItem(
 		title = title,
 		modifier = modifier,
@@ -166,11 +184,14 @@ fun SwitchSettingsItem(
 		iconColors = iconColors,
 		shape = shape,
 		enabled = enabled,
+		// The toggle haptic is fired by [onCheckedChangeHaptic] so a row tap and a thumb tap
+		// feel identical — suppress the generic click effect to avoid a double buzz.
+		hapticEffect = null,
 		onClick = if (enabled) {
-			{ onCheckedChange(!checked) }
+			{ onCheckedChangeHaptic(!checked) }
 		} else null,
 		trailing = {
-			Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+			Switch(checked = checked, onCheckedChange = onCheckedChangeHaptic, enabled = enabled)
 		},
 	)
 }

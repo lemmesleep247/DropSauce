@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/root"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:fitsSystemWindows="false">
+
+	<org.koitharu.kotatsu.core.ui.widgets.LoadingIndicatorSwipeRefreshLayout
+		android:id="@+id/swipeRefreshLayout"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent">
+
+		<androidx.compose.ui.platform.ComposeView
+			android:id="@+id/composeView"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent" />
+
+	</org.koitharu.kotatsu.core.ui.widgets.LoadingIndicatorSwipeRefreshLayout>
+
+	<com.google.android.material.appbar.AppBarLayout
+		android:id="@+id/appbar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@android:color/transparent"
+		android:clickable="false"
+		android:fitsSystemWindows="false"
+		android:stateListAnimator="@null"
+		app:elevation="0dp"
+		app:liftOnScroll="false">
+
+		<com.google.android.material.appbar.MaterialToolbar
+			android:id="@id/toolbar"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:background="@android:color/transparent" />
+
+	</com.google.android.material.appbar.AppBarLayout>
+
+	<androidx.fragment.app.FragmentContainerView
+		android:id="@+id/container_bottom_sheet"
+		android:name="org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet"
+		style="@style/Widget.Kotatsu.BottomSheet.Details"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:elevation="6dp"
+		android:nestedScrollingEnabled="false"
+		android:outlineProvider="background"
+		app:behavior_fitToContents="false"
+		app:behavior_hideable="false"
+		app:behavior_peekHeight="@dimen/details_bs_peek_height"
+		app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+		app:paddingBottomSystemWindowInsets="false"
+		tools:layout="@layout/sheet_chapters_pages" />
+
+	<View
+		android:id="@+id/navbarDim"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="bottom"
+		android:background="?colorSurfaceContainerHigh"
+		android:elevation="9dp"
+		tools:layout_height="10dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -71,7 +71,7 @@
 			android:name="org.koitharu.kotatsu.main.ui.welcome.OnboardingActivity"
 			android:exported="false" />
 		<activity
-			android:name="org.koitharu.kotatsu.details.ui.DetailsActivity"
+			android:name="org.koitharu.kotatsu.details.ui.DetailsExpressiveActivity"
 			android:exported="true">
 			<intent-filter>
 				<action android:name="${applicationId}.action.VIEW_MANGA" />
@@ -98,9 +98,6 @@
 				<data android:host="kotatsu.app" />
 			</intent-filter>
 		</activity>
-		<activity
-			android:name="org.koitharu.kotatsu.details.ui.DetailsClassicActivity"
-			android:exported="false" />
 		<activity
 			android:name="org.koitharu.kotatsu.reader.ui.ReaderActivity"
 			android:exported="true">
@@ -419,7 +416,7 @@
 		<activity-alias
 			android:name="org.koitharu.kotatsu.details.ui.DetailsByLinkActivity"
 			android:exported="true"
-			android:targetActivity="org.koitharu.kotatsu.details.ui.DetailsActivity">
+			android:targetActivity="org.koitharu.kotatsu.details.ui.DetailsExpressiveActivity">
 
 			<intent-filter android:autoVerify="false">
 				<action android:name="android.intent.action.VIEW" />

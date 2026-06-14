@@ -40,7 +40,6 @@ import org.koitharu.kotatsu.core.model.parcelable.ParcelableMangaPage
 import org.koitharu.kotatsu.core.network.CommonHeaders
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.prefs.DetailsUiMode
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.prefs.TriStateOption
 import org.koitharu.kotatsu.core.ui.dialog.BigButtonsAlertDialog
@@ -54,8 +53,7 @@ import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toFileOrNull
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.core.util.ext.withArgs
-import org.koitharu.kotatsu.details.ui.DetailsActivity
-import org.koitharu.kotatsu.details.ui.DetailsClassicActivity
+import org.koitharu.kotatsu.details.ui.DetailsExpressiveActivity
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
 import org.koitharu.kotatsu.details.ui.related.RelatedMangaActivity
 import org.koitharu.kotatsu.details.ui.scrobbling.ScrobblingInfoSheet
@@ -697,10 +695,9 @@ class AppRouter private constructor(
         }
     }
 
-	private fun detailsActivityClassInstance() = when (settings.detailsUiMode) {
-		DetailsUiMode.CLASSIC -> DetailsClassicActivity::class.java
-		DetailsUiMode.MODERN -> DetailsActivity::class.java
-	}
+	// Both details UI modes are rendered by the same Compose activity; the chosen style is read
+	// from settings at render time.
+	private fun detailsActivityClassInstance() = DetailsExpressiveActivity::class.java
 
     companion object {
 
@@ -713,10 +710,7 @@ class AppRouter private constructor(
 		private fun resolveSettings(context: Context) =
 			EntryPointAccessors.fromApplication<AppRouterEntryPoint>(context.applicationContext).settings
 
-		private fun detailsActivityClass(context: Context) = when (resolveSettings(context).detailsUiMode) {
-			DetailsUiMode.CLASSIC -> DetailsClassicActivity::class.java
-			DetailsUiMode.MODERN -> DetailsActivity::class.java
-		}
+		private fun detailsActivityClass(context: Context) = DetailsExpressiveActivity::class.java
 
         fun detailsIntent(context: Context, manga: Manga) = Intent(context, detailsActivityClass(context))
             .putExtra(KEY_MANGA, ParcelableManga(manga))

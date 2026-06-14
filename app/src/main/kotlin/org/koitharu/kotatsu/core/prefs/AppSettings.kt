@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.onStart
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.ZoomMode
 import org.koitharu.kotatsu.core.network.DoHProvider
-import org.koitharu.kotatsu.core.prefs.DetailsUiMode.MODERN
+import org.koitharu.kotatsu.core.prefs.DetailsUiMode.EXPRESSIVE
 import org.koitharu.kotatsu.core.util.ext.connectivityManager
 import org.koitharu.kotatsu.core.util.ext.getEnumValue
 import org.koitharu.kotatsu.core.util.ext.observeChanges
@@ -317,7 +317,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		}
 
 	var detailsUiMode: DetailsUiMode
-		get() = prefs.getEnumValue(KEY_DETAILS_UI, MODERN)
+		get() = prefs.getEnumValue(KEY_DETAILS_UI, EXPRESSIVE)
 		set(value) = prefs.edit { putEnumValue(KEY_DETAILS_UI, value) }
 
 	var incognitoModeForNsfw: TriStateOption

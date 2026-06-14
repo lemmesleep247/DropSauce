@@ -23,7 +23,6 @@ import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.google.android.material.motion.MotionUtils
-import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
 import org.koitharu.kotatsu.image.ui.CoverImageView
 import java.lang.ref.WeakReference
@@ -39,9 +38,8 @@ import com.google.android.material.R as materialR
  * activity open/close animation - so the cover does its own thing while the page behaves as it did
  * before this transition existed.
  *
- * Works for both [org.koitharu.kotatsu.details.ui.DetailsActivity] and
- * [org.koitharu.kotatsu.details.ui.DetailsClassicActivity], and is bidirectional - pressing back
- * animates the cover back to the list item it came from.
+ * Used by [org.koitharu.kotatsu.details.ui.DetailsExpressiveActivity], and is bidirectional -
+ * pressing back animates the cover back to the list item it came from.
  */
 object CoverSharedTransition {
 
@@ -168,17 +166,9 @@ object CoverSharedTransition {
 	}
 
 	private fun Transition.excludeContentStragglers() {
+		// The Compose details screen has no async-visibility View stragglers to exclude, so this is
+		// just the system-bar exclusion now.
 		excludeSystemBars()
-		// On enter, the "more" button and the reading-progress views have their visibility flipped by
-		// layout/draw listeners on the details screen, so keep the fade's hands off them to avoid an
-		// awkward pop-in - they just appear with the window instead.
-		excludeTarget(R.id.button_description_more, true)
-		excludeTarget(R.id.progress, true)
-		excludeTarget(R.id.textView_progress, true)
-		excludeTarget(R.id.textView_progress_label, true)
-		// The frosted detail-box blur has its alpha set asynchronously (once the backdrop bitmap loads),
-		// so the fade would capture/restore it at alpha 0 and leave the box with no background or blur.
-		excludeTarget(R.id.image_box_blur, true)
 	}
 
 	private fun Context.motionDuration(attrResId: Int, default: Int): Long =

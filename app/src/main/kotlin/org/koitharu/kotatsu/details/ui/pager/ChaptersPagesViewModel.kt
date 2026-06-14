@@ -33,8 +33,7 @@ import org.koitharu.kotatsu.core.util.ext.requireValue
 import org.koitharu.kotatsu.core.util.ext.sortedWithSafe
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.domain.DetailsInteractor
-import org.koitharu.kotatsu.details.ui.DetailsActivity
-import org.koitharu.kotatsu.details.ui.DetailsClassicActivity
+import org.koitharu.kotatsu.details.ui.DetailsExpressiveActivity
 import org.koitharu.kotatsu.details.ui.DetailsViewModel
 import org.koitharu.kotatsu.details.ui.mapChapters
 import org.koitharu.kotatsu.details.ui.model.ChapterListItem
@@ -63,7 +62,7 @@ abstract class ChaptersPagesViewModel(
 	val mangaDetails = MutableStateFlow<MangaDetails?>(null)
 	val readingState = MutableStateFlow<ReaderState?>(null)
 
-	// Accent color extracted from the cover by DetailsActivity, shared with the chapters sheet so its
+	// Accent color extracted from the cover by DetailsExpressiveActivity, shared with the chapters sheet so its
 	// UI (split button, scrollbar, current chapter pill) matches the rest of the page. Null = use theme.
 	val accentColor = MutableStateFlow<Int?>(null)
 
@@ -287,8 +286,7 @@ abstract class ChaptersPagesViewModel(
 
 		private fun getViewModelClass(activity: Activity) = when (activity) {
 			is ReaderActivity -> ReaderViewModel::class.java
-			is DetailsActivity -> DetailsViewModel::class.java
-			is DetailsClassicActivity -> DetailsViewModel::class.java
+			is DetailsExpressiveActivity -> DetailsViewModel::class.java
 			else -> error("Wrong activity ${activity.javaClass.simpleName} for ${ChaptersPagesViewModel::class.java.simpleName}")
 		}
 	}

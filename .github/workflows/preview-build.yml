@@ -1,0 +1,133 @@
+name: Preview Build
+
+# Builds a standalone "preview" APK for every branch on push, and on manual dispatch.
+# The preview variant is a non-debuggable build with none of the debug-only tooling
+# (no LeakCanary/StrictMode/debug settings/ACRA-debug) and its own applicationId suffix, so it
+# installs alongside the store build. R8/resource shrinking is intentionally OFF so the APK
+# installs cleanly when sideloaded. It's signed with the debug keystore (no secrets needed).
+#
+# The APK is published two ways:
+#   1. As a direct-download asset on a rolling per-branch pre-release (just the .apk, no zip).
+#   2. As a workflow artifact (zipped by GitHub) for anyone who prefers the Actions tab.
+# The SHA-256/SHA-1/MD5 hashes are printed to the run summary and the release notes.
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Only keep the latest preview build per branch/ref running.
+concurrency:
+  group: preview-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build preview APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Pre-warm JitPack dependencies
+        run: |
+          PARSERS_VERSION=$(grep 'parsers = ' gradle/libs.versions.toml | sed 's/.*= "\(.*\)"/\1/')
+          echo "Pre-warming JitPack for kotatsu-parsers:${PARSERS_VERSION}"
+          POM_URL="https://jitpack.io/com/github/YakaTeam/kotatsu-parsers/${PARSERS_VERSION}/kotatsu-parsers-${PARSERS_VERSION}.pom"
+          for i in $(seq 1 10); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$POM_URL")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "JitPack artifact is ready (HTTP 200)"
+              exit 0
+            fi
+            echo "Attempt $i: JitPack returned HTTP ${HTTP_STATUS}, waiting 30s..."
+            sleep 30
+          done
+          echo "::error::JitPack artifact for kotatsu-parsers:${PARSERS_VERSION} not available after 10 attempts"
+          exit 1
+
+      - name: Build preview APK
+        run: ./gradlew :app:assemblePreview --no-daemon --stacktrace
+
+      - name: Collect APK and compute checksums
+        id: apk
+        run: |
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/preview -name '*.apk' | head -n1)
+          if [ -z "$APK" ]; then
+            echo "::error::No preview APK found under app/build/outputs/apk/preview"
+            exit 1
+          fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          SAFE_REF=$(echo "${GITHUB_REF_NAME}" | tr '/ ' '__')
+          DEST="DropSauce-preview-${SAFE_REF}-${SHORT_SHA}.apk"
+          cp "$APK" "$DEST"
+
+          SHA256=$(sha256sum "$DEST" | awk '{print $1}')
+          SHA1=$(sha1sum "$DEST" | awk '{print $1}')
+          MD5=$(md5sum "$DEST" | awk '{print $1}')
+          SIZE=$(du -h "$DEST" | cut -f1)
+
+          # Checksums file shipped alongside the APK (verify with `sha256sum -c`).
+          sha256sum "$DEST" > "${DEST}.sha256sum"
+
+          echo "apk_name=${DEST}" >> "$GITHUB_OUTPUT"
+          echo "tag=preview-${SAFE_REF}" >> "$GITHUB_OUTPUT"
+
+          # Release notes (also reused for the run summary).
+          {
+            echo "**Preview build of \`${GITHUB_REF_NAME}\`** — non-debuggable, no dev tooling, installs"
+            echo "as a separate app (\`org.haziffe.dropsauce.preview\`, \"DropSauce Preview\")."
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| File | \`${DEST}\` |"
+            echo "| Branch | \`${GITHUB_REF_NAME}\` |"
+            echo "| Commit | \`${SHORT_SHA}\` |"
+            echo "| Size | ${SIZE} |"
+            echo "| SHA-256 | \`${SHA256}\` |"
+            echo "| SHA-1 | \`${SHA1}\` |"
+            echo "| MD5 | \`${MD5}\` |"
+          } > release-notes.md
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish APK as a downloadable pre-release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.apk.outputs.tag }}"
+          # Roll the per-branch pre-release: drop the previous one so only the latest APK is attached.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          # Small delay so the tag deletion is visible before recreating it.
+          sleep 5
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Preview build — ${GITHUB_REF_NAME}" \
+            --prerelease \
+            --notes-file release-notes.md \
+            "${{ steps.apk.outputs.apk_name }}" \
+            "${{ steps.apk.outputs.apk_name }}.sha256sum"
+          echo "Release published: $(gh release view "$TAG" --json url --jq .url)"
+
+      - name: Upload preview APK as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.apk_name }}
+          path: ${{ steps.apk.outputs.apk_name }}
+          if-no-files-found: error
+          retention-days: 30

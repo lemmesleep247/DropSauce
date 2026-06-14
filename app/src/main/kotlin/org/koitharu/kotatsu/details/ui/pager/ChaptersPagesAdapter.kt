@@ -12,7 +12,6 @@ import org.koitharu.kotatsu.details.ui.pager.pages.PagesFragment
 class ChaptersPagesAdapter(
 	fragment: Fragment,
 	val isPagesTabEnabled: Boolean,
-	private val isClassicUi: Boolean,
 ) : FragmentStateAdapter(fragment),
 	TabLayoutMediator.TabConfigurationStrategy {
 
@@ -26,24 +25,13 @@ class ChaptersPagesAdapter(
 	}
 
 	override fun onConfigureTab(tab: TabLayout.Tab, position: Int) {
-		if (isClassicUi) {
-			tab.setText(
-				when (position) {
-					0 -> R.string.chapters
-					1 -> if (isPagesTabEnabled) R.string.pages else R.string.bookmarks
-					2 -> R.string.bookmarks
-					else -> 0
-				},
-			)
-		} else {
-			tab.setIcon(
-				when (position) {
-					0 -> R.drawable.ic_list
-					1 -> if (isPagesTabEnabled) R.drawable.ic_grid else R.drawable.ic_bookmark
-					2 -> R.drawable.ic_bookmark
-					else -> 0
-				},
-			)
-		}
+		tab.setIcon(
+			when (position) {
+				0 -> R.drawable.ic_list
+				1 -> if (isPagesTabEnabled) R.drawable.ic_grid else R.drawable.ic_bookmark
+				2 -> R.drawable.ic_bookmark
+				else -> 0
+			},
+		)
 	}
 }

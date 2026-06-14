@@ -40,7 +40,11 @@
                 app:tabIndicatorFullWidth="true"
                 app:tabIndicatorGravity="stretch"
                 app:tabInlineLabel="true"
-                app:tabMinWidth="0dp"
+                app:tabMinWidth="64dp"
+                app:tabPaddingTop="11dp"
+                app:tabPaddingBottom="11dp"
+                app:tabPaddingStart="6dp"
+                app:tabPaddingEnd="6dp"
                 app:tabMode="scrollable"
                 app:tabUnboundedRipple="true" />
 
@@ -67,15 +71,19 @@
                     android:id="@+id/button_read"
                     style="?materialSplitButtonLeadingFilledStyle"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="@dimen/read_button_min_width"
-                    android:text="@string/read" />
+                    android:layout_height="52dp"
+                    android:minWidth="124dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/read"
+                    android:textSize="16sp"
+                    app:iconSize="24dp" />
 
                         <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_read_menu"
                     style="?materialSplitButtonIconFilledStyle"
-                    android:layout_width="@dimen/top_bar_navigation_button_size"
-                    android:layout_height="@dimen/top_bar_navigation_button_size"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:contentDescription="@string/show_menu"
                     android:insetLeft="0dp"
                     android:insetRight="0dp"

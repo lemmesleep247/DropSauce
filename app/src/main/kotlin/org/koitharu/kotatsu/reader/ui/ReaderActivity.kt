@@ -125,7 +125,7 @@ class ReaderActivity :
         setContentView(ActivityReaderBinding.inflate(layoutInflater))
         readerManager = ReaderManager(supportFragmentManager, viewBinding.container, settings)
         setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
-        applyTranslucentTopBar()
+        applyTranslucentReaderBars()
         touchHelper = TapGridDispatcher(viewBinding.root, this)
         scrollTimer = scrollTimerFactory.create(resources, this, this)
         pageSaveHelper = pageSaveHelperFactory.create(this)
@@ -383,12 +383,19 @@ class ReaderActivity :
         }
     }
 
-    // Give the reader's top bar a translucent fill so a sliver of the page reads through it,
-    // keeping the reading surface feeling immersive while the bar is shown. The navigation /
+    // Give the reader's bars a translucent fill so a sliver of the page reads through them,
+    // keeping the reading surface feeling immersive while they're shown. The navigation /
     // action buttons keep their own opaque tonal pills, so titles and icons stay legible.
-    private fun applyTranslucentTopBar() {
-        viewBinding.appbarTop.setBackgroundColor(getThemeColor(materialR.attr.colorSurface, 0.85f))
+    private fun applyTranslucentReaderBars() {
+        viewBinding.appbarTop.setBackgroundColor(getThemeColor(materialR.attr.colorSurface, READER_BAR_ALPHA))
         viewBinding.toolbar.background = null
+        // The bottom control bar is a floating pill — keep its shape/colour and just lower the
+        // background opacity to the same level as the top bar.
+        viewBinding.toolbarDocked?.let { dock ->
+            dock.background = dock.background?.mutate()?.apply {
+                alpha = (0xFF * READER_BAR_ALPHA).toInt()
+            }
+        }
     }
 
     private fun setUiIsVisible(isUiVisible: Boolean) {
@@ -609,5 +616,8 @@ class ReaderActivity :
     companion object {
 
         private const val TOAST_DURATION = 2000L
+
+        // Shared opacity for the reader's top app bar and bottom control bar.
+        private const val READER_BAR_ALPHA = 0.85f
     }
 }

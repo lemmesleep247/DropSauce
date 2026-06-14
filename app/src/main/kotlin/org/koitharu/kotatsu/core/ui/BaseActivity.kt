@@ -29,6 +29,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.ui.util.ActionModeDelegate
+import org.koitharu.kotatsu.core.ui.util.ActivityRecreationHandle
 import org.koitharu.kotatsu.core.ui.util.applyTonalTopBarStyle
 import org.koitharu.kotatsu.core.util.ext.adjustPopupMenuIcons
 import org.koitharu.kotatsu.core.util.ext.isWebViewUnavailable
@@ -73,6 +74,26 @@ abstract class BaseActivity<B : ViewBinding> :
 		exceptionResolver = entryPoint.exceptionResolverFactory.create(this)
 		enableEdgeToEdge()
 		super.onCreate(savedInstanceState)
+		maybePlayRecreateFadeIn()
+	}
+
+	/**
+	 * When this activity is being recreated in place by a theme/colour-scheme change there is no
+	 * enter transition, so the freshly-inflated toolbar visibly settles (the back button and title
+	 * reflow into place). Fade the whole window in briefly to mask that one-off jank. Normal
+	 * navigation and configuration changes (rotation) don't set the flag, so they're unaffected.
+	 */
+	private fun maybePlayRecreateFadeIn() {
+		if (!ActivityRecreationHandle.isAnimatedRecreateInProgress) {
+			return
+		}
+		val decor = window.decorView
+		decor.alpha = 0f
+		decor.animate()
+			.alpha(1f)
+			.setDuration(RECREATE_FADE_DURATION_MS)
+			.withEndAction { decor.alpha = 1f }
+			.start()
 	}
 
 	override fun onPostCreate(savedInstanceState: Bundle?) {
@@ -215,4 +236,9 @@ abstract class BaseActivity<B : ViewBinding> :
 	}
 
 	protected fun hasViewBinding() = ::viewBinding.isInitialized
+
+	private companion object {
+
+		private const val RECREATE_FADE_DURATION_MS = 220L
+	}
 }

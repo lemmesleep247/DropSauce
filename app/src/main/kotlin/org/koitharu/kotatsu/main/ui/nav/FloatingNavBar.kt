@@ -136,10 +136,13 @@ fun FloatingNavBar(
 						showLabel = showLabels,
 						colors = colors,
 						onClick = {
+							// Selection is routed through the host NavigationBarView, whose
+							// listener (MainNavigationDelegate) already performs the CONFIRM
+							// haptic — firing one here too would double-buzz. Reselecting the
+							// current tab stays silent.
 							if (item.id == selectedId) {
 								onItemReselected(item.id)
 							} else {
-								haptic(HapticEffect.CONFIRM)
 								onItemSelected(item.id)
 							}
 						},

@@ -137,10 +137,9 @@ fun FloatingNavBar(
 						colors = colors,
 						onClick = {
 							if (item.id == selectedId) {
-								haptic(HapticEffect.CLICK)
 								onItemReselected(item.id)
 							} else {
-								haptic(HapticEffect.CONFIRM)
+								haptic(HapticEffect.CLICK)
 								onItemSelected(item.id)
 							}
 						},

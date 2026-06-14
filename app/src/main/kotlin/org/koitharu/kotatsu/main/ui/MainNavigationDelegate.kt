@@ -89,7 +89,7 @@ class MainNavigationDelegate(
 	override fun onNavigationItemSelected(item: MenuItem): Boolean {
 		return if (onNavigationItemSelected(item.itemId)) {
 			item.isChecked = true
-			navBar.hapticFeedback(HapticEffect.CONFIRM)
+			navBar.hapticFeedback(HapticEffect.CLICK)
 			true
 		} else {
 			false
@@ -97,7 +97,6 @@ class MainNavigationDelegate(
 	}
 
 	override fun onNavigationItemReselected(item: MenuItem) {
-		navBar.hapticFeedback(HapticEffect.CLICK)
 		if (item.itemId == R.id.nav_explore) {
 			onExploreReselected?.invoke()
 		}

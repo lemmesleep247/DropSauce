@@ -20,4 +20,5 @@
 	<item name="tag_tonal_action_menu" type="id" />
 	<item name="tag_tonal_action_pill" type="id" />
 	<item name="tag_tonal_action_item" type="id" />
+	<item name="tag_tonal_action_icon" type="id" />
 </resources>

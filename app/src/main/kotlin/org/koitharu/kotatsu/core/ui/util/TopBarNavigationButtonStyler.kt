@@ -97,17 +97,21 @@ private fun ActionMenuView.applyTonalPillStyle() {
 	val size = resources.getDimensionPixelSize(R.dimen.top_bar_navigation_button_size)
 	val endMargin = resources.getDimensionPixelSize(R.dimen.top_bar_navigation_button_margin_end)
 	val iconSize = resources.getDimensionPixelSize(R.dimen.top_bar_action_icon_size)
-	val padding = ((size - iconSize) / 2).coerceAtLeast(0)
+	val iconPadding = ((size - iconSize) / 2).coerceAtLeast(0)
 	val iconTint = ColorStateList.valueOf(context.getThemeColor(materialR.attr.colorOnSurfaceVariant))
 
+	// One-time container setup: the pill fill, no internal padding, and center children vertically
+	// so they always sit centered no matter how tall the container ends up being measured.
 	if (getTag(R.id.tag_tonal_action_pill) == null) {
 		setTag(R.id.tag_tonal_action_pill, true)
 		setPadding(0, 0, 0, 0)
 		background = context.createTonalPillBackground(size)
 		clipToOutline = true
+		gravity = Gravity.CENTER_VERTICAL
 	}
-	// Constrain the menu container to the pill height and center it vertically (it otherwise fills
-	// the whole bar), then mirror the navigation button's start margin on the end side.
+	// Pin the container to exactly the navigation-button height, center it in the bar, and mirror
+	// the navigation button's start margin on the end side. The default container fills the whole
+	// bar height (MATCH_PARENT), which is what made the pill too tall and the icons top-aligned.
 	val lp = layoutParams ?: return
 	var lpChanged = false
 	if (lp.height != size) {
@@ -127,21 +131,46 @@ private fun ActionMenuView.applyTonalPillStyle() {
 		layoutParams = lp
 	}
 	for (child in children) {
-		if (!child.isTonalActionItem() || child.getTag(R.id.tag_tonal_action_item) != null) {
+		if (!child.isTonalActionItem()) {
 			continue
 		}
-		child.setTag(R.id.tag_tonal_action_item, true)
-		child.minimumWidth = 0
-		child.minimumHeight = 0
-		child.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-			width = size
-			height = size
-			marginStart = 0
-			marginEnd = 0
+		child.applyTonalActionItemLayout(size, iconPadding, iconTint)
+		// ActionMenuItemView icons are re-forced whenever the underlying drawable changes (menu
+		// re-binds can swap it back to its intrinsic size), but skipped otherwise to avoid relayout.
+		if (child is TextView) {
+			child.forceTonalCompoundIcon(iconSize, iconTint)
 		}
-		child.setPadding(padding, padding, padding, padding)
-		child.background = context.createTonalActionItemBackground()
-		child.applyTonalActionIconTint(iconTint)
+	}
+}
+
+/** Structural sizing for one item: a fixed square cell with a bounded circular ripple. */
+private fun View.applyTonalActionItemLayout(cell: Int, iconPadding: Int, tint: ColorStateList) {
+	if (getTag(R.id.tag_tonal_action_item) != null) {
+		return
+	}
+	setTag(R.id.tag_tonal_action_item, true)
+	minimumWidth = 0
+	minimumHeight = 0
+	updateLayoutParams<ViewGroup.MarginLayoutParams> {
+		width = cell
+		height = cell
+		marginStart = 0
+		marginEnd = 0
+	}
+	background = context.createTonalActionItemBackground()
+	when (this) {
+		is ImageView -> {
+			// Overflow button & image action views: scale the drawable into a uniform icon box.
+			scaleType = ImageView.ScaleType.FIT_CENTER
+			setPadding(iconPadding, iconPadding, iconPadding, iconPadding)
+			imageTintList = tint
+		}
+		is TextView -> {
+			// Icon-only ActionMenuItemView: the icon is a centered compound drawable, sized below.
+			gravity = Gravity.CENTER
+			compoundDrawablePadding = 0
+			setPadding(0, 0, 0, 0)
+		}
 	}
 }
 
@@ -152,26 +181,23 @@ private fun View.isTonalActionItem(): Boolean = when (this) {
 	else -> false
 }
 
-private fun View.applyTonalActionIconTint(tint: ColorStateList) {
-	when (this) {
-		is ImageView -> imageTintList = tint
-		is TextView -> {
-			// ActionMenuItemView holds its icon as an absolute compound drawable (set via
-			// setCompoundDrawables), so tint those rather than the relative ones.
-			val drawables = compoundDrawables
-			var changed = false
-			for (i in drawables.indices) {
-				val drawable = drawables[i] ?: continue
-				drawables[i] = drawable.mutate().apply { setTintList(tint) }
-				changed = true
-			}
-			if (changed) {
-				setCompoundDrawablesWithIntrinsicBounds(
-					drawables[0], drawables[1], drawables[2], drawables[3],
-				)
-			}
-		}
+/**
+ * Forces an [ActionMenuItemView]'s icon to a uniform size and tint so every icon matches the back
+ * button regardless of its drawable's intrinsic size. Re-applied only when the drawable instance
+ * changes (tracked via a tag) so steady-state layout passes don't loop.
+ */
+private fun TextView.forceTonalCompoundIcon(iconSize: Int, tint: ColorStateList) {
+	val current = compoundDrawables.firstOrNull { it != null }
+	if (current == null || getTag(R.id.tag_tonal_action_icon) === current) {
+		return
 	}
+	val sized = current.mutate().apply {
+		setBounds(0, 0, iconSize, iconSize)
+		setTintList(tint)
+	}
+	// setCompoundDrawables (not …WithIntrinsicBounds) keeps the explicit icon bounds.
+	setCompoundDrawables(sized, null, null, null)
+	setTag(R.id.tag_tonal_action_icon, sized)
 }
 
 private fun ViewGroup.findActionMenuView(): ActionMenuView? =

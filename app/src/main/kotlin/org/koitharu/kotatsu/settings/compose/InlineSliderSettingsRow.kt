@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import org.koitharu.kotatsu.main.ui.nav.rememberAnyDrawablePainter
 
 /**
@@ -55,6 +57,10 @@ internal fun InlineSliderSettingsRow(
 ) {
 	var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
 	val steps = if (stepSize > 0) ((valueTo - valueFrom) / stepSize - 1).coerceAtLeast(0) else 0
+	val haptic = rememberHapticEffect()
+	// Track the last stepped value so a tick fires only when the slider snaps to a new step,
+	// not on every sub-pixel drag frame.
+	var lastStep by remember(value) { mutableFloatStateOf(value.toFloat()) }
 
 	Surface(
 		modifier = modifier,
@@ -90,8 +96,18 @@ internal fun InlineSliderSettingsRow(
 			}
 			Slider(
 				value = current,
-				onValueChange = { current = it },
-				onValueChangeFinished = { onValueChange(current.roundToInt()) },
+				onValueChange = {
+					current = it
+					val snapped = it.roundToInt().toFloat()
+					if (snapped != lastStep) {
+						lastStep = snapped
+						haptic(HapticEffect.TICK)
+					}
+				},
+				onValueChangeFinished = {
+					haptic(HapticEffect.GESTURE_END)
+					onValueChange(current.roundToInt())
+				},
 				valueRange = valueFrom.toFloat()..valueTo.toFloat(),
 				steps = steps,
 				enabled = enabled,

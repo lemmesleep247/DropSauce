@@ -19,7 +19,9 @@ import kotlinx.coroutines.yield
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.ui.list.lifecycle.RecyclerViewLifecycleDispatcher
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.firstVisibleItemPosition
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.removeItemDecoration
 import org.koitharu.kotatsu.databinding.FragmentReaderWebtoonBinding
@@ -181,6 +183,11 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 
 	override fun switchPageBy(delta: Int) {
 		with(requireViewBinding().recyclerView) {
+			if (!canScrollVertically(delta)) {
+				// Already at the very top/bottom of the loaded content — mirror the paged
+				// reader and give a "blocked" cue instead of a silent no-op scroll.
+				hapticFeedback(HapticEffect.REJECT)
+			}
 			if (isAnimationEnabled()) {
 				smoothScrollBy(0, (height * 0.9).toInt() * delta, scrollInterpolator)
 			} else {
@@ -223,16 +230,24 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	}
 
 	override fun onPullTriggeredTop() {
-		(viewBinding ?: return).feedbackTop.fadeOut()
+		val binding = viewBinding ?: return
+		binding.feedbackTop.fadeOut()
 		if (canGoPrev) {
+			binding.recyclerView.hapticFeedback(HapticEffect.CONFIRM)
 			viewModel.switchChapterBy(-1)
+		} else {
+			binding.recyclerView.hapticFeedback(HapticEffect.REJECT)
 		}
 	}
 
 	override fun onPullTriggeredBottom() {
-		(viewBinding ?: return).feedbackBottom.fadeOut()
+		val binding = viewBinding ?: return
+		binding.feedbackBottom.fadeOut()
 		if (canGoNext) {
+			binding.recyclerView.hapticFeedback(HapticEffect.CONFIRM)
 			viewModel.switchChapterBy(1)
+		} else {
+			binding.recyclerView.hapticFeedback(HapticEffect.REJECT)
 		}
 	}
 

@@ -14,6 +14,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.ActionMenuView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.children
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.updateLayoutParams
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
@@ -31,11 +32,18 @@ fun Toolbar.applyTonalTopBarStyle() {
 }
 
 fun Toolbar.applyTonalNavigationButtonStyle() {
-	post {
-		val navigationButton = findNavigationButton() ?: return@post
+	// Set the title inset synchronously — it doesn't need the navigation button view to exist
+	// yet — so the title never visibly slides when the toolbar is first laid out. This is what
+	// caused the back-arrow + title to stutter on an in-place activity recreate (e.g. after a
+	// colour-scheme change), where there is no enter transition to mask a post-layout reflow.
+	contentInsetStartWithNavigation = resources.getDimensionPixelSize(R.dimen.top_bar_title_inset_with_navigation)
+	// The navigation button is created lazily once a navigation icon is set, so style it just
+	// before the next draw rather than via post() (which runs after the first frame and makes
+	// the styling visibly pop in).
+	doOnPreDraw {
+		val navigationButton = findNavigationButton() ?: return@doOnPreDraw
 		val size = resources.getDimensionPixelSize(R.dimen.top_bar_navigation_button_size)
 		val startMargin = resources.getDimensionPixelSize(R.dimen.top_bar_navigation_button_margin_start)
-		val titleInset = resources.getDimensionPixelSize(R.dimen.top_bar_title_inset_with_navigation)
 
 		navigationButton.updateLayoutParams<Toolbar.LayoutParams> {
 			width = size
@@ -47,7 +55,6 @@ fun Toolbar.applyTonalNavigationButtonStyle() {
 		navigationButton.imageTintList = ColorStateList.valueOf(
 			context.getThemeColor(materialR.attr.colorOnSurfaceVariant),
 		)
-		contentInsetStartWithNavigation = titleInset
 	}
 }
 

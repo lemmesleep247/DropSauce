@@ -36,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 
 /**
  * Material 3 single-choice picker dialog (replaces ListPreference's built-in dialog).
@@ -48,6 +50,12 @@ fun ChoiceDialog(
 	onSelect: (Int) -> Unit,
 	onDismiss: () -> Unit,
 ) {
+	val haptic = rememberHapticEffect()
+	val select: (Int) -> Unit = { index ->
+		haptic(HapticEffect.CONFIRM)
+		onSelect(index)
+		onDismiss()
+	}
 	AlertDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(title) },
@@ -59,19 +67,13 @@ fun ChoiceDialog(
 							.fillMaxWidth()
 							.heightIn(min = 48.dp)
 							.clip(RoundedCornerShape(12.dp))
-							.clickable {
-								onSelect(index)
-								onDismiss()
-							}
+							.clickable { select(index) }
 							.padding(horizontal = 8.dp),
 						verticalAlignment = Alignment.CenterVertically,
 					) {
 						RadioButton(
 							selected = index == selectedIndex,
-							onClick = {
-								onSelect(index)
-								onDismiss()
-							},
+							onClick = { select(index) },
 						)
 						Spacer(Modifier.size(8.dp))
 						Text(
@@ -101,6 +103,11 @@ fun MultiChoiceDialog(
 	onDismiss: () -> Unit,
 ) {
 	var current by remember { mutableStateOf(selectedIndices) }
+	val haptic = rememberHapticEffect()
+	val toggle: (Int, Boolean) -> Unit = { index, checked ->
+		haptic(if (checked) HapticEffect.TOGGLE_OFF else HapticEffect.TOGGLE_ON)
+		current = if (checked) current - index else current + index
+	}
 	AlertDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(title) },
@@ -113,17 +120,13 @@ fun MultiChoiceDialog(
 							.fillMaxWidth()
 							.heightIn(min = 48.dp)
 							.clip(RoundedCornerShape(12.dp))
-							.clickable {
-								current = if (checked) current - index else current + index
-							}
+							.clickable { toggle(index, checked) }
 							.padding(horizontal = 8.dp),
 						verticalAlignment = Alignment.CenterVertically,
 					) {
 						Checkbox(
 							checked = checked,
-							onCheckedChange = {
-								current = if (checked) current - index else current + index
-							},
+							onCheckedChange = { toggle(index, checked) },
 						)
 						Spacer(Modifier.size(8.dp))
 						Text(
@@ -137,6 +140,7 @@ fun MultiChoiceDialog(
 		},
 		confirmButton = {
 			TextButton(onClick = {
+				haptic(HapticEffect.CONFIRM)
 				onConfirm(current)
 				onDismiss()
 			}) { Text("OK") }
@@ -202,6 +206,8 @@ fun SliderDialog(
 ) {
 	var value by remember { mutableFloatStateOf(initialValue.toFloat()) }
 	val steps = if (stepSize > 0) ((valueTo - valueFrom) / stepSize - 1).coerceAtLeast(0) else 0
+	val haptic = rememberHapticEffect()
+	var lastStep by remember { mutableFloatStateOf(initialValue.toFloat()) }
 	AlertDialog(
 		onDismissRequest = onDismiss,
 		title = { Text(title) },
@@ -216,7 +222,15 @@ fun SliderDialog(
 				)
 				Slider(
 					value = value,
-					onValueChange = { value = it },
+					onValueChange = {
+						value = it
+						val snapped = it.roundToInt().toFloat()
+						if (snapped != lastStep) {
+							lastStep = snapped
+							haptic(HapticEffect.TICK)
+						}
+					},
+					onValueChangeFinished = { haptic(HapticEffect.GESTURE_END) },
 					valueRange = valueFrom.toFloat()..valueTo.toFloat(),
 					steps = steps,
 				)
@@ -224,6 +238,7 @@ fun SliderDialog(
 		},
 		confirmButton = {
 			TextButton(onClick = {
+				haptic(HapticEffect.CONFIRM)
 				onConfirm(value.roundToInt())
 				onDismiss()
 			}) { Text("OK") }

@@ -21,6 +21,8 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderControl
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.hasVisibleChildren
 import org.koitharu.kotatsu.core.util.ext.isRtl
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -57,6 +59,7 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 	private var isSliderChanged = false
 	private var isSliderTracking = false
+	private var lastSliderStep = Float.NaN
 
 	var isSliderEnabled: Boolean
 		get() = binding.slider.isEnabled
@@ -146,6 +149,12 @@ class ReaderActionsView @JvmOverloads constructor(
 		if (fromUser) {
 			if (isSliderTracking) {
 				isSliderChanged = true
+				// A single light tick per page the thumb crosses, so scrubbing feels like
+				// stepping through pages. No heavier grab/release cues — keep it subtle.
+				if (value != lastSliderStep) {
+					lastSliderStep = value
+					slider.hapticFeedback(HapticEffect.TICK)
+				}
 			} else {
 				listener?.switchPageTo(value.toInt())
 			}
@@ -156,6 +165,7 @@ class ReaderActionsView @JvmOverloads constructor(
 		if (!isSliderTracking) {
 			isSliderChanged = false
 			isSliderTracking = true
+			lastSliderStep = slider.value
 		}
 	}
 

@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 
 data class FloatingNavBarItem(
 	@IdRes val id: Int,
@@ -103,6 +105,7 @@ fun FloatingNavBar(
 	if (items.isEmpty()) return
 	val cs = MaterialTheme.colorScheme
 	val barColor = Color(colors.container)
+	val haptic = rememberHapticEffect()
 
 	Row(
 		modifier = modifier.wrapContentWidth(),
@@ -133,8 +136,15 @@ fun FloatingNavBar(
 						showLabel = showLabels,
 						colors = colors,
 						onClick = {
-							if (item.id == selectedId) onItemReselected(item.id)
-							else onItemSelected(item.id)
+							// Selection is routed through the host NavigationBarView, whose
+							// listener (MainNavigationDelegate) already performs the CONFIRM
+							// haptic — firing one here too would double-buzz. Reselecting the
+							// current tab stays silent.
+							if (item.id == selectedId) {
+								onItemReselected(item.id)
+							} else {
+								onItemSelected(item.id)
+							}
 						},
 					)
 				}
@@ -152,7 +162,10 @@ fun FloatingNavBar(
 		) {
 			FloatingContinueButton(
 				colors = colors,
-				onClick = onContinueClick,
+				onClick = {
+					haptic(HapticEffect.CONFIRM)
+					onContinueClick()
+				},
 			)
 		}
 	}

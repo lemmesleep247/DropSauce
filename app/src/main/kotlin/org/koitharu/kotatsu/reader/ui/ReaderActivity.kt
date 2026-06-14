@@ -28,6 +28,7 @@ import androidx.transition.TransitionSet
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.R as materialR
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,7 @@ import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.widgets.ZoomControl
 import org.koitharu.kotatsu.core.util.IdlingDetector
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
 import org.koitharu.kotatsu.core.util.ext.hasGlobalPoint
 import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
@@ -123,6 +125,7 @@ class ReaderActivity :
         setContentView(ActivityReaderBinding.inflate(layoutInflater))
         readerManager = ReaderManager(supportFragmentManager, viewBinding.container, settings)
         setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+        applyTranslucentReaderBars()
         touchHelper = TapGridDispatcher(viewBinding.root, this)
         scrollTimer = scrollTimerFactory.create(resources, this, this)
         pageSaveHelper = pageSaveHelperFactory.create(this)
@@ -380,6 +383,21 @@ class ReaderActivity :
         }
     }
 
+    // Give the reader's bars a translucent fill so a sliver of the page reads through them,
+    // keeping the reading surface feeling immersive while they're shown. The navigation /
+    // action buttons keep their own opaque tonal pills, so titles and icons stay legible.
+    private fun applyTranslucentReaderBars() {
+        viewBinding.appbarTop.setBackgroundColor(getThemeColor(materialR.attr.colorSurface, READER_BAR_ALPHA))
+        viewBinding.toolbar.background = null
+        // The bottom control bar is a floating pill — keep its shape/colour and just lower the
+        // background opacity to the same level as the top bar.
+        viewBinding.toolbarDocked?.let { dock ->
+            dock.background = dock.background?.mutate()?.apply {
+                alpha = (0xFF * READER_BAR_ALPHA).toInt()
+            }
+        }
+    }
+
     private fun setUiIsVisible(isUiVisible: Boolean) {
         if (viewBinding.appbarTop.isVisible != isUiVisible) {
             if (isAnimationsEnabled) {
@@ -598,5 +616,8 @@ class ReaderActivity :
     companion object {
 
         private const val TOAST_DURATION = 2000L
+
+        // Shared opacity for the reader's top app bar and bottom control bar.
+        private const val READER_BAR_ALPHA = 0.85f
     }
 }

@@ -34,7 +34,9 @@ import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
 import org.koitharu.kotatsu.core.ui.widgets.FloatingBottomNavigationView
 import org.koitharu.kotatsu.core.ui.widgets.SlidingBottomNavigationView
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.buildBundle
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
 import org.koitharu.kotatsu.core.util.ext.smoothScrollToTop
 import org.koitharu.kotatsu.databinding.NavigationRailFabBinding
@@ -87,6 +89,7 @@ class MainNavigationDelegate(
 	override fun onNavigationItemSelected(item: MenuItem): Boolean {
 		return if (onNavigationItemSelected(item.itemId)) {
 			item.isChecked = true
+			navBar.hapticFeedback(HapticEffect.CONFIRM)
 			true
 		} else {
 			false

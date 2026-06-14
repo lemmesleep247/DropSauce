@@ -3,6 +3,8 @@ package org.koitharu.kotatsu.reader.ui.tapgrid
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.reader.domain.TapGridArea
 import kotlin.math.roundToInt
 
@@ -42,6 +44,7 @@ class TapGridDispatcher(
 	override fun onLongPress(event: MotionEvent) {
 		if (isDispatching) {
 			val area = getArea(event.rawX, event.rawY) ?: return
+			rootView.hapticFeedback(HapticEffect.LONG_PRESS)
 			listener.onGridLongTouch(area)
 		}
 	}

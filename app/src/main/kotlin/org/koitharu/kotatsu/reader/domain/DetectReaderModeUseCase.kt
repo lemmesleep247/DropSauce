@@ -42,7 +42,7 @@ class DetectReaderModeUseCase @Inject constructor(
 		val chapter = state?.let { manga.findChapterById(it.chapterId) }
 			?: manga.chapters?.firstOrNull()
 			?: error("There are no chapters in this manga")
-		val repo = mangaRepositoryFactory.create(manga.source)
+		val repo = mangaRepositoryFactory.create(chapter.source)
 		val pages = repo.getPages(chapter)
 		return runCatchingCancellable {
 			val isWebtoon = guessMangaIsWebtoon(repo, pages)

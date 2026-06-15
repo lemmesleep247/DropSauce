@@ -41,8 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.ColorScheme
-import org.koitharu.kotatsu.core.util.ext.HapticEffect
-import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import com.google.android.material.R as materialR
 
 /**
@@ -62,7 +60,6 @@ fun ColorSchemePickerRow(
 	enabled: Boolean = true,
 ) {
 	val context = LocalContext.current
-	val haptic = rememberHapticEffect()
 	val schemes = remember { ColorScheme.getAvailableList() }
 	val previews = remember(schemes) {
 		schemes.map { it to resolveSchemeColors(context, it.styleResId) }
@@ -93,7 +90,6 @@ fun ColorSchemePickerRow(
 						selected = scheme.name == selectedValue,
 						enabled = enabled,
 						onClick = {
-							haptic(HapticEffect.CONFIRM)
 							onValueChange(scheme.name)
 						},
 					)

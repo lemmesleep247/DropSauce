@@ -248,7 +248,7 @@ private fun StorageNetworkScreen(
 						// Blank uses the device default; AppSettings.mihonUserAgentOverride returns null.
 						hint = "Default (device WebView)",
 						onValueChange = { userAgent = it.trim() },
-						icon = R.drawable.ic_web,
+						icon = R.drawable.ic_script,
 						shape = pos.shape,
 					)
 				}

@@ -45,7 +45,6 @@ import org.koitharu.kotatsu.core.prefs.TriStateOption
 import org.koitharu.kotatsu.core.ui.dialog.BigButtonsAlertDialog
 import org.koitharu.kotatsu.core.ui.dialog.ErrorDetailsDialog
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
-import org.koitharu.kotatsu.core.ui.util.CoverSharedTransition
 import org.koitharu.kotatsu.core.util.ext.connectivityManager
 import org.koitharu.kotatsu.core.util.ext.findActivity
 import org.koitharu.kotatsu.core.util.ext.getThemeDrawable
@@ -139,19 +138,11 @@ class AppRouter private constructor(
 
     fun openSearch(source: MangaSource, query: String) = openList(source, MangaListFilter(query = query), null)
 
+    @Suppress("UNUSED_PARAMETER")
     fun openDetails(manga: Manga, coverView: View? = null) {
         val context = contextOrNull() ?: return
         val intent = detailsIntent(context, manga)
-        val hostActivity = activity ?: fragment?.activity
-        val options = if (coverView != null && hostActivity != null && settings.isDetailsCoverAnimationEnabled) {
-            CoverSharedTransition.makeSceneOptions(hostActivity, coverView)
-        } else {
-            null
-        }
-        if (options != null) {
-            intent.putExtra(CoverSharedTransition.EXTRA_ENABLED, true)
-        }
-        startActivity(intent, options)
+        startActivity(intent)
     }
 
     fun openDetails(mangaId: Long) {

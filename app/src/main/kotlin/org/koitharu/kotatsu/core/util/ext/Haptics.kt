@@ -23,8 +23,14 @@ enum class HapticEffect {
 	/** A light confirmation for an ordinary tap (button, nav item, list-row open). */
 	CLICK,
 
+	/** A very light confirmation for dense tool buttons. */
+	LIGHT_CLICK,
+
 	/** A discrete tick for stepping through values — slider stops, segmented progress. */
 	TICK,
+
+	/** A softer frequent tick for dense sliders and scrubbers. */
+	LIGHT_TICK,
 
 	/** Turning a binary control on. */
 	TOGGLE_ON,
@@ -51,10 +57,18 @@ enum class HapticEffect {
 private fun HapticEffect.toConstant(): Int = when (this) {
 	HapticEffect.CLICK -> HapticFeedbackConstants.VIRTUAL_KEY
 
+	HapticEffect.LIGHT_CLICK -> HapticFeedbackConstants.KEYBOARD_TAP
+
 	HapticEffect.TICK -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
 		HapticFeedbackConstants.SEGMENT_TICK
 	} else {
 		HapticFeedbackConstants.CLOCK_TICK
+	}
+
+	HapticEffect.LIGHT_TICK -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+		HapticFeedbackConstants.SEGMENT_FREQUENT_TICK
+	} else {
+		HapticFeedbackConstants.KEYBOARD_TAP
 	}
 
 	HapticEffect.TOGGLE_ON -> when {

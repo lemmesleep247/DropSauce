@@ -124,6 +124,7 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 
 	override fun onClick(v: View) {
+		v.hapticFeedback(HapticEffect.LIGHT_CLICK)
 		when (v.id) {
 			R.id.button_prev -> listener?.switchChapterBy(-1)
 			R.id.button_next -> listener?.switchChapterBy(1)
@@ -153,7 +154,7 @@ class ReaderActionsView @JvmOverloads constructor(
 				// stepping through pages. No heavier grab/release cues — keep it subtle.
 				if (value != lastSliderStep) {
 					lastSliderStep = value
-					slider.hapticFeedback(HapticEffect.TICK)
+					slider.hapticFeedback(HapticEffect.LIGHT_TICK)
 				}
 			} else {
 				listener?.switchPageTo(value.toInt())

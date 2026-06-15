@@ -50,9 +50,7 @@ fun ChoiceDialog(
 	onSelect: (Int) -> Unit,
 	onDismiss: () -> Unit,
 ) {
-	val haptic = rememberHapticEffect()
 	val select: (Int) -> Unit = { index ->
-		haptic(HapticEffect.CONFIRM)
 		onSelect(index)
 		onDismiss()
 	}
@@ -103,9 +101,7 @@ fun MultiChoiceDialog(
 	onDismiss: () -> Unit,
 ) {
 	var current by remember { mutableStateOf(selectedIndices) }
-	val haptic = rememberHapticEffect()
 	val toggle: (Int, Boolean) -> Unit = { index, checked ->
-		haptic(if (checked) HapticEffect.TOGGLE_OFF else HapticEffect.TOGGLE_ON)
 		current = if (checked) current - index else current + index
 	}
 	AlertDialog(
@@ -140,7 +136,6 @@ fun MultiChoiceDialog(
 		},
 		confirmButton = {
 			TextButton(onClick = {
-				haptic(HapticEffect.CONFIRM)
 				onConfirm(current)
 				onDismiss()
 			}) { Text("OK") }
@@ -238,7 +233,6 @@ fun SliderDialog(
 		},
 		confirmButton = {
 			TextButton(onClick = {
-				haptic(HapticEffect.CONFIRM)
 				onConfirm(value.roundToInt())
 				onDismiss()
 			}) { Text("OK") }

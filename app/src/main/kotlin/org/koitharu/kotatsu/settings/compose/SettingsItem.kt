@@ -62,10 +62,8 @@ fun SettingsItem(
 	shape: Shape = MaterialTheme.shapes.medium,
 	enabled: Boolean = true,
 	onClick: (() -> Unit)? = null,
-	hapticEffect: HapticEffect? = HapticEffect.CLICK,
 	trailing: @Composable (() -> Unit)? = null,
 ) {
-	val haptic = rememberHapticEffect()
 	// One-shot search highlight: scroll this row comfortably into view and flash its background
 	// once when it is the navigation target (matched by title).
 	val pendingHighlight by SettingsSearchHighlight.pendingTitle.collectAsState()
@@ -109,7 +107,6 @@ fun SettingsItem(
 				.let {
 					if (onClick != null && enabled) {
 						it.clickable {
-							if (hapticEffect != null) haptic(hapticEffect)
 							onClick()
 						}
 					} else {
@@ -184,9 +181,6 @@ fun SwitchSettingsItem(
 		iconColors = iconColors,
 		shape = shape,
 		enabled = enabled,
-		// The toggle haptic is fired by [onCheckedChangeHaptic] so a row tap and a thumb tap
-		// feel identical — suppress the generic click effect to avoid a double buzz.
-		hapticEffect = null,
 		onClick = if (enabled) {
 			{ onCheckedChangeHaptic(!checked) }
 		} else null,

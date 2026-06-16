@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -65,31 +64,9 @@ class BigButtonsAlertDialog private constructor(
 		}
 
 		fun create(): BigButtonsAlertDialog {
-			with(binding) {
-				button1.adjustCorners(isFirst = true, isLast = button2.isGone && button3.isGone)
-				button2.adjustCorners(isFirst = button1.isGone, isLast = button3.isGone)
-				button3.adjustCorners(isFirst = button1.isGone && button2.isGone, isLast = true)
-			}
-
 			val dialog = delegate.create()
 			binding.root.tag = dialog
 			return BigButtonsAlertDialog(dialog)
-		}
-
-		private fun MaterialButton.adjustCorners(isFirst: Boolean, isLast: Boolean) {
-			if (!isVisible) {
-				return
-			}
-			shapeAppearanceModel = shapeAppearanceModel.toBuilder().apply {
-				if (!isFirst) {
-					setTopLeftCornerSize(0f)
-					setTopRightCornerSize(0f)
-				}
-				if (!isLast) {
-					setBottomLeftCornerSize(0f)
-					setBottomRightCornerSize(0f)
-				}
-			}.build()
 		}
 
 		private fun initButton(

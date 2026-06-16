@@ -8,7 +8,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.transition.AutoTransition
+import androidx.transition.ChangeBounds
 import androidx.transition.TransitionManager
 import androidx.work.WorkInfo
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
@@ -112,7 +112,7 @@ fun downloadItemAD(
 			(itemView.parent as? ViewGroup)?.let { parent ->
 				TransitionManager.beginDelayedTransition(
 					parent,
-					AutoTransition().apply {
+					ChangeBounds().apply {
 						duration = 250L
 						interpolator = AccelerateDecelerateInterpolator()
 					},

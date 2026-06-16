@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.FlowRowOverflow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -912,8 +914,10 @@ private fun ScrobblingSection(
 				modifier = Modifier.fillMaxWidth(),
 			) {
 				Row(
-					modifier = Modifier.padding(12.dp),
-					verticalAlignment = Alignment.CenterVertically,
+					modifier = Modifier
+						.padding(16.dp)
+						.height(IntrinsicSize.Min),
+					verticalAlignment = Alignment.Top,
 				) {
 					AsyncImage(
 						model = info.coverUrl,
@@ -921,63 +925,71 @@ private fun ScrobblingSection(
 						contentDescription = null,
 						contentScale = ContentScale.Crop,
 						modifier = Modifier
-							.size(52.dp, 74.dp)
-							.clip(RoundedCornerShape(12.dp)),
+							.size(80.dp, 116.dp)
+							.clip(RoundedCornerShape(14.dp)),
 					)
-					Spacer(Modifier.width(14.dp))
-					Column(modifier = Modifier.weight(1f)) {
-						Row(
-							modifier = Modifier.fillMaxWidth(),
-							horizontalArrangement = Arrangement.SpaceBetween,
-							verticalAlignment = Alignment.CenterVertically,
-						) {
+					Spacer(Modifier.width(16.dp))
+					Column(
+						modifier = Modifier
+							.weight(1f)
+							.fillMaxHeight(),
+						verticalArrangement = Arrangement.SpaceBetween,
+					) {
+						Column {
 							Row(
+								modifier = Modifier.fillMaxWidth(),
+								horizontalArrangement = Arrangement.SpaceBetween,
 								verticalAlignment = Alignment.CenterVertically,
-								horizontalArrangement = Arrangement.spacedBy(5.dp),
 							) {
-								Icon(
-									painter = painterResource(info.scrobbler.iconResId),
-									contentDescription = null,
-									tint = Color.Unspecified,
-									modifier = Modifier.size(14.dp),
-								)
-								Text(
-									text = stringResource(info.scrobbler.titleResId),
-									style = MaterialTheme.typography.labelSmall,
-									color = MaterialTheme.colorScheme.onSurfaceVariant,
-								)
+								Row(
+									verticalAlignment = Alignment.CenterVertically,
+									horizontalArrangement = Arrangement.spacedBy(6.dp),
+								) {
+									Icon(
+										painter = painterResource(info.scrobbler.iconResId),
+										contentDescription = null,
+										tint = Color.Unspecified,
+										modifier = Modifier.size(16.dp),
+									)
+									Text(
+										text = stringResource(info.scrobbler.titleResId),
+										style = MaterialTheme.typography.labelMedium,
+										color = MaterialTheme.colorScheme.onSurfaceVariant,
+									)
+								}
+								info.status?.let { status ->
+									Text(
+										text = stringResource(status.labelResId),
+										style = MaterialTheme.typography.labelMedium,
+										color = accent,
+									)
+								}
 							}
-							info.status?.let { status ->
-								Text(
-									text = stringResource(status.labelResId),
-									style = MaterialTheme.typography.labelSmall,
-									color = accent,
-								)
-							}
-						}
-						Spacer(Modifier.height(8.dp))
-						Text(
-							text = info.title,
-							style = MaterialTheme.typography.labelLarge,
-							color = MaterialTheme.colorScheme.onSurface,
-							maxLines = 2,
-							overflow = TextOverflow.Ellipsis,
-						)
-						if (info.rating > 0f) {
 							Spacer(Modifier.height(10.dp))
+							Text(
+								text = info.title,
+								style = MaterialTheme.typography.bodyLarge,
+								color = MaterialTheme.colorScheme.onSurface,
+								maxLines = 2,
+								overflow = TextOverflow.Ellipsis,
+							)
+						}
+						if (info.rating > 0f) {
 							Row(
+								modifier = Modifier.fillMaxWidth(),
+								horizontalArrangement = Arrangement.End,
 								verticalAlignment = Alignment.CenterVertically,
-								horizontalArrangement = Arrangement.spacedBy(4.dp),
 							) {
 								Icon(
 									painter = painterResource(R.drawable.ic_star_small),
 									contentDescription = null,
 									tint = accent,
-									modifier = Modifier.size(16.dp),
+									modifier = Modifier.size(20.dp),
 								)
+								Spacer(Modifier.width(4.dp))
 								Text(
 									text = "${"%.1f".format(info.rating * 5)} / 5",
-									style = MaterialTheme.typography.bodyMedium,
+									style = MaterialTheme.typography.titleSmall,
 									color = MaterialTheme.colorScheme.onSurface,
 								)
 							}

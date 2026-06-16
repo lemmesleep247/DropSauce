@@ -210,9 +210,6 @@ private fun RootSettingsContent(
 							iconColors = CategoryPalette.forKey(section.paletteKey),
 							tintIcon = section.tintIcon,
 							shape = pos.shape,
-							// The landing categories navigate to their own screens; keep the
-							// top-level menu silent so it doesn't feel chatty on every tap.
-							hapticEffect = null,
 							onClick = { onSectionClick(section) },
 						)
 					}

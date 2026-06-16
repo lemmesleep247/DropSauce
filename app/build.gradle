@@ -56,6 +56,7 @@ android {
 		preview {
 			applicationIdSuffix = '.preview'
 			minifyEnabled = false
+			isDebuggable = true
 			signingConfig = signingConfigs.findByName('release') ?: signingConfigs.debug
 		}
 		release {

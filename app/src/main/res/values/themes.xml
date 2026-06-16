@@ -54,6 +54,7 @@
 		<item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Kotatsu.CornerSmall</item>
 		<item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Kotatsu.CornerMedium</item>
 		<item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Kotatsu.CornerLarge</item>
+		<item name="shapeAppearanceCornerFull">@style/ShapeAppearance.Kotatsu.CornerFull</item>
 
 		<!-- Typography -->
 		<item name="android:fontFamily">@font/gflex_body</item>

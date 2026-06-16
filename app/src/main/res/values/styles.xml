@@ -654,6 +654,10 @@
 	<!-- Shapes -->
 
 	<!-- PixelPlayer M3 shape scale: small=8dp, medium=16dp, large=24dp -->
+	<style name="ShapeAppearance.Kotatsu.CornerFull" parent="ShapeAppearance.Material3.Corner.Full">
+		<item name="cornerSize">50%</item>
+	</style>
+
 	<style name="ShapeAppearance.Kotatsu.CornerSmall" parent="ShapeAppearance.Material3.Corner.Small">
 		<item name="cornerSize">8dp</item>
 	</style>

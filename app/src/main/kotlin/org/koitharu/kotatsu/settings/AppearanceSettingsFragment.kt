@@ -255,7 +255,6 @@ private fun AppearanceScreen(
 	var mangaListBadges by rememberStringSetPref(AppSettings.KEY_MANGA_LIST_BADGES, emptySet())
 
 	var descriptionCollapse by rememberBooleanPref(AppSettings.KEY_COLLAPSE_DESCRIPTION, true)
-	var coverAnimation by rememberBooleanPref(AppSettings.KEY_DETAILS_COVER_ANIMATION, false)
 	var pagesTab by rememberBooleanPref(AppSettings.KEY_PAGES_TAB, true)
 	var detailsTab by rememberStringPref(AppSettings.KEY_DETAILS_TAB, "-1")
 
@@ -417,17 +416,6 @@ private fun AppearanceScreen(
 		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 		item {
 			SettingsGroup(title = stringResource(R.string.details)) {
-				item { pos ->
-					SwitchSettingsItem(
-						title = stringResource(R.string.cover_transition_animation),
-						subtitle = stringResource(R.string.cover_transition_animation_summary),
-						checked = coverAnimation,
-						onCheckedChange = { coverAnimation = it },
-						icon = R.drawable.ic_auto_fix,
-
-						shape = pos.shape,
-					)
-				}
 				item { pos ->
 					SwitchSettingsItem(
 						title = stringResource(R.string.collapse_long_description),

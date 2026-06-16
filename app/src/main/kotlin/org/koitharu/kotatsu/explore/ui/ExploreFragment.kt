@@ -79,8 +79,8 @@ class ExploreFragment :
 		exploreAdapter = ExploreAdapter(
 			this,
 			this,
-			mangaClickListener = { manga, view ->
-				router.openDetails(manga, view.findViewById(R.id.imageView_cover))
+			mangaClickListener = { manga, _ ->
+				router.openDetails(manga)
 			},
 			onTipClose = { viewModel.dismissLanguageTip() },
 		)

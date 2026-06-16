@@ -1036,8 +1036,6 @@
     <string name="details_dynamic_color_summary">Tint the details page with an accent color taken from the cover instead of the app theme</string>
     <string name="details_appearance">Details screen appearance</string>
     <string name="details_appearance_summary">Screen style, backdrop image and blur effect</string>
-    <string name="cover_transition_animation">Animate cover loading (beta)</string>
-    <string name="cover_transition_animation_summary">Float the cover from the list into the details page when opening it</string>
     <string name="preview">Preview</string>
     <string name="creating_backup">Creating backup</string>
     <string name="share_backup">Share backup</string>

@@ -62,7 +62,7 @@ fun SettingsItem(
 	shape: Shape = MaterialTheme.shapes.medium,
 	enabled: Boolean = true,
 	onClick: (() -> Unit)? = null,
-	hapticEffect: HapticEffect? = HapticEffect.CLICK,
+	hapticEffect: HapticEffect? = null,
 	trailing: @Composable (() -> Unit)? = null,
 ) {
 	val haptic = rememberHapticEffect()

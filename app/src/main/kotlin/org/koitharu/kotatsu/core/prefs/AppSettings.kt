@@ -158,9 +158,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val isDescriptionExpanded: Boolean
 		get() = !prefs.getBoolean(KEY_COLLAPSE_DESCRIPTION, true)
 
-	val isDetailsCoverAnimationEnabled: Boolean
-		get() = prefs.getBoolean(KEY_DETAILS_COVER_ANIMATION, false)
-
 	val isBackdropEnabled: Boolean
 		get() = prefs.getBoolean(KEY_DETAILS_BACKDROP, true)
 
@@ -1021,7 +1018,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_SOURCES_VERSION = "sources_version"
 		const val KEY_QUICK_FILTER = "quick_filter"
 		const val KEY_COLLAPSE_DESCRIPTION = "description_collapse"
-		const val KEY_DETAILS_COVER_ANIMATION = "details_cover_animation"
 		const val KEY_MANGA_LIST_BADGES = "manga_list_badges"
 		const val KEY_PENDING_EXTENSION_DOWNLOADS = "pending_extension_downloads"
 		const val KEY_TAGS_WARNINGS = "tags_warnings"

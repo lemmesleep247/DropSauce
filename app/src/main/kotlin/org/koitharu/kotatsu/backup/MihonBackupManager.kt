@@ -479,18 +479,6 @@ class MihonBackupManager @Inject constructor(
             ?: key.removePrefix("source_").substringBefore(':').toLongOrNull()
     }
 
-  private fun encodeTrackingStatus(status: String?): Int {
-    return when (status?.lowercase(Locale.ROOT)) {
-      "planned", "plan_to_read" -> 1
-      "reading", "current" -> 2
-      "completed" -> 3
-      "on_hold", "onhold", "paused" -> 4
-      "dropped" -> 5
-      "re_reading", "rereading", "re-reading" -> 6
-      else -> 0
-    }
-  }
-
   private fun decodeTrackingStatus(status: Int): String? {
     return when (status) {
       1 -> "planned"

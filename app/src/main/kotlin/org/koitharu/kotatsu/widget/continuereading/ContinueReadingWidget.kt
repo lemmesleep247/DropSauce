@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
@@ -18,6 +17,7 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.widget.common.WidgetCoverLoader
 import org.koitharu.kotatsu.widget.common.WidgetIntents
+import org.koitharu.kotatsu.widget.common.WidgetSizes
 import org.koitharu.kotatsu.widget.common.runAsync
 import org.koitharu.kotatsu.widget.common.widgetEntryPoint
 import kotlin.math.roundToInt
@@ -33,7 +33,6 @@ class ContinueReadingWidget : AppWidgetProvider() {
 			val entryPoint = appContext.widgetEntryPoint()
 			val manga = entryPoint.historyRepository.getLastOrNull()
 			val history = manga?.let { entryPoint.historyRepository.getOne(it) }
-			Log.d(TAG, "manga=${manga?.title} hasHistory=${history != null} coverUrl=${manga?.coverUrl}")
 
 			// Pass 1: render text-only state immediately so the widget never sits blank.
 			for (widgetId in appWidgetIds) {
@@ -90,14 +89,13 @@ class ContinueReadingWidget : AppWidgetProvider() {
 		mgr: AppWidgetManager,
 		widgetId: Int,
 	): Pair<Int, Int> {
-		val options = mgr.getAppWidgetOptions(widgetId)
-		val isLandscape =
-			context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-		val heightDp = (if (isLandscape) {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-		} else {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
-		}).takeIf { it > 0 } ?: 110
+		val (_, heightDp) = WidgetSizes.currentSizeDp(
+			context = context,
+			manager = mgr,
+			widgetId = widgetId,
+			defaultWidth = 0,
+			defaultHeight = 110,
+		)
 		// Outer padding 10dp ×2, header row ~28dp.
 		val slotHeightDp = (heightDp - 20 - 28).coerceAtLeast(56)
 		return WidgetCoverLoader.dpToPx(context, 92) to

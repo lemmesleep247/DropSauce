@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import org.koitharu.kotatsu.R
@@ -18,6 +17,7 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.widget.common.WidgetCoverLoader
 import org.koitharu.kotatsu.widget.common.WidgetIntents
+import org.koitharu.kotatsu.widget.common.WidgetSizes
 import org.koitharu.kotatsu.widget.common.runAsync
 import org.koitharu.kotatsu.widget.common.widgetEntryPoint
 
@@ -65,7 +65,6 @@ class FavoritesWidget : AppWidgetProvider() {
 		widgetId: Int,
 	) {
 		val pinnedIds = FavoritesWidgetPrefs.load(context, widgetId)
-		Log.d(TAG, "renderWidget id=$widgetId pins=$pinnedIds")
 
 		// First pass: render text-only / placeholders so the widget never sits blank.
 		appWidgetManager.updateAppWidget(widgetId, buildViews(context, widgetId, pinnedIds, emptyMap()))
@@ -117,21 +116,13 @@ class FavoritesWidget : AppWidgetProvider() {
 		widgetId: Int,
 		pinCount: Int,
 	): Pair<Int, Int> {
-		val options = mgr.getAppWidgetOptions(widgetId)
-		val isLandscape =
-			context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-		// Per the AppWidgetManager docs: MIN_* describes the smaller (portrait) layout and
-		// MAX_* the larger (landscape). We pick the one matching the device orientation.
-		val widthDp = (if (isLandscape) {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)
-		} else {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-		}).takeIf { it > 0 } ?: 250
-		val heightDp = (if (isLandscape) {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-		} else {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
-		}).takeIf { it > 0 } ?: 110
+		val (widthDp, heightDp) = WidgetSizes.currentSizeDp(
+			context = context,
+			manager = mgr,
+			widgetId = widgetId,
+			defaultWidth = 250,
+			defaultHeight = 110,
+		)
 		// Subtract widget padding (12dp top + 12dp bottom) and the actual header chrome:
 		// header row ~26dp tall (settings icon dominates at 22dp + 2dp padding × 2) plus its
 		// 8dp paddingBottom. The fallbacks keep us safe if options aren't populated yet.

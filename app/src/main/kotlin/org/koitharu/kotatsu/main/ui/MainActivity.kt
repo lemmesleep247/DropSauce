@@ -53,7 +53,6 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.browser.AdListUpdateService
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.router
-import org.koitharu.kotatsu.core.os.VoiceInputContract
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.BaseActivity
@@ -104,11 +103,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 	private val viewModel by viewModels<MainViewModel>()
 	private val searchSuggestionViewModel by viewModels<SearchSuggestionViewModel>()
-	private val voiceInputLauncher = registerForActivityResult(VoiceInputContract()) { result ->
-		if (result != null) {
-			viewBinding.searchView.setText(result)
-		}
-	}
 	private lateinit var navigationDelegate: MainNavigationDelegate
 	private lateinit var fadingAppbarMediator: FadingAppbarMediator
 	private val overflowMenuProviders = mutableListOf<OverflowMenuProviderEntry>()

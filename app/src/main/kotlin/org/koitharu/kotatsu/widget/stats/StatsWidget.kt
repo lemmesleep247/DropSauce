@@ -6,10 +6,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
-import android.util.Log
 import android.util.SizeF
 import android.view.View
 import android.widget.RemoteViews
@@ -18,6 +16,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.stats.ui.StatsActivity
 import org.koitharu.kotatsu.widget.common.WidgetCoverLoader
 import org.koitharu.kotatsu.widget.common.WidgetIntents
+import org.koitharu.kotatsu.widget.common.WidgetSizes
 import org.koitharu.kotatsu.widget.common.runAsync
 import org.koitharu.kotatsu.widget.common.widgetEntryPoint
 import java.util.concurrent.TimeUnit
@@ -32,7 +31,6 @@ class StatsWidget : AppWidgetProvider() {
 		runAsync(context, TAG) { appContext ->
 			val entry = appContext.widgetEntryPoint()
 			val snapshot = entry.database.loadStatsSnapshot()
-			Log.d(TAG, "snapshot today=${snapshot.todayMillis} week=${snapshot.weekMillis} streak=${snapshot.streakDays}")
 			val click = WidgetIntents.openActivity(
 				appContext,
 				Intent(appContext, StatsActivity::class.java),
@@ -68,19 +66,13 @@ class StatsWidget : AppWidgetProvider() {
 		mgr: AppWidgetManager,
 		widgetId: Int,
 	): Pair<Int, Int> {
-		val options = mgr.getAppWidgetOptions(widgetId)
-		val isLandscape =
-			context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-		val widthDp = (if (isLandscape) {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)
-		} else {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-		}).takeIf { it > 0 } ?: 220
-		val heightDp = (if (isLandscape) {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-		} else {
-			options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
-		}).takeIf { it > 0 } ?: 110
+		val (widthDp, heightDp) = WidgetSizes.currentSizeDp(
+			context = context,
+			manager = mgr,
+			widgetId = widgetId,
+			defaultWidth = 220,
+			defaultHeight = 110,
+		)
 		// 12dp padding × 2 + header (~28dp) + value row (~32dp) + subtitle (~16dp) + 8dp gap.
 		val chartWidthDp = (widthDp - 24).coerceAtLeast(120)
 		val chartHeightDp = (heightDp - 24 - 28 - 32 - 16 - 8 - 26).coerceAtLeast(48)

@@ -697,9 +697,6 @@ class AppRouter private constructor(
             (view.context.findActivity() as? FragmentActivity)?.let(::AppRouter)
         }
 
-		private fun resolveSettings(context: Context) =
-			EntryPointAccessors.fromApplication<AppRouterEntryPoint>(context.applicationContext).settings
-
 		private fun detailsActivityClass(context: Context) = DetailsExpressiveActivity::class.java
 
         fun detailsIntent(context: Context, manga: Manga) = Intent(context, detailsActivityClass(context))

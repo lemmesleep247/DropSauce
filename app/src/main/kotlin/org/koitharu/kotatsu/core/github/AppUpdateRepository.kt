@@ -25,7 +25,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val CONTENT_TYPE_APK = "application/vnd.android.package-archive"
-private const val BUILD_TYPE_RELEASE = "release"
 
 @Singleton
 class AppUpdateRepository @Inject constructor(

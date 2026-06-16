@@ -15,14 +15,12 @@ import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
-import coil3.request.ImageResult
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.request.bitmapConfig
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.core.util.ext.toBitmapOrNull
 import org.koitharu.kotatsu.parsers.model.Manga
-import kotlin.math.min
 
 object WidgetCoverLoader {
 
@@ -42,7 +40,6 @@ object WidgetCoverLoader {
 			manga.coverUrl?.takeIf { it.isNotBlank() }?.let { add(it) }
 			manga.largeCoverUrl?.takeIf { it.isNotBlank() }?.let { add(it) }
 		}
-		Log.d(TAG, "Loading cover id=${manga.id} title='${manga.title}' candidates=$urlCandidates source=${manga.source.name}")
 		if (urlCandidates.isEmpty()) {
 			Log.w(TAG, "No cover url for manga id=${manga.id}")
 			return null
@@ -50,7 +47,6 @@ object WidgetCoverLoader {
 
 		for (url in urlCandidates) {
 			val raw = tryLoad(context, loader, manga, url) ?: continue
-			Log.d(TAG, "Got bitmap ${raw.width}x${raw.height} for $url")
 			val rounded = runCatching { raw.roundedCenterCrop(w, h, cornerRadiusPx) }
 				.onFailure { Log.w(TAG, "Rounded crop failed; using scaled raw bitmap", it) }
 				.getOrNull()
@@ -112,13 +108,6 @@ object WidgetCoverLoader {
 		bmp
 	}.onFailure { Log.w(TAG, "rasterizeDrawable failed", it) }.getOrNull()
 
-	@Suppress("UNUSED_PARAMETER")
-	private fun ImageResult?.extractBitmap(stage: String): Bitmap? = when (val r = this) {
-		null -> null
-		is SuccessResult -> r.toBitmapOrNull()
-		is ErrorResult -> null
-	}
-
 	private fun Bitmap.roundedCenterCrop(
 		@Px outW: Int,
 		@Px outH: Int,
@@ -150,6 +139,4 @@ object WidgetCoverLoader {
 	}
 
 	fun dpToPx(context: Context, dp: Int): Int = (dp * context.resources.displayMetrics.density).toInt()
-
-	fun clampSizePx(@Px requested: Int, fallback: Int): Int = if (requested <= 0) fallback else min(requested, 1024)
 }

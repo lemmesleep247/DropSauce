@@ -1,6 +1,5 @@
 package org.koitharu.kotatsu.settings.sources.catalog
 
-import androidx.annotation.WorkerThread
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -426,16 +425,6 @@ class SourcesCatalogViewModel @Inject constructor(
 
 	private suspend fun getAvailableEntries(repoUrl: String, forceRefresh: Boolean): List<ExternalExtensionRepoEntry> {
 		return externalRepoRepository.getExtensions(repoUrl, forceRefresh)
-	}
-
-	@WorkerThread
-	private fun getContentTypes(isNsfwDisabled: Boolean): List<ContentType> {
-		// Content types come from extensions
-		return if (isNsfwDisabled) {
-			ContentType.entries.filterNot { it == ContentType.HENTAI }
-		} else {
-			ContentType.entries.toList()
-		}
 	}
 
 	companion object {

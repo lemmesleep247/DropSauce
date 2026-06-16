@@ -9,21 +9,17 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.backup.local.ui.restore.RestoreDialogFragment
@@ -42,8 +38,6 @@ class OnboardingActivity : BaseActivity<ActivityOnboardingBinding>() {
     private val viewModel by viewModels<WelcomeViewModel>()
 
     private var permissionStates by mutableStateOf(OnboardingPermissions(false, false, false))
-    private val topInset = mutableIntStateOf(0)
-    private val bottomInset = mutableIntStateOf(0)
 
     private val restoreTachiyomiLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -108,12 +102,10 @@ class OnboardingActivity : BaseActivity<ActivityOnboardingBinding>() {
         clearAmoledIfLightMode()
     }
 
-    override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
-        val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-        topInset.intValue = bars.top
-        bottomInset.intValue = bars.bottom
-        return insets
-    }
+    override fun onApplyWindowInsets(
+        v: android.view.View,
+        insets: androidx.core.view.WindowInsetsCompat,
+    ): androidx.core.view.WindowInsetsCompat = insets
 
     private fun setupComposeContent() {
         viewBinding.composeView.setViewCompositionStrategy(
@@ -126,7 +118,6 @@ class OnboardingActivity : BaseActivity<ActivityOnboardingBinding>() {
                 val amoled by viewModel.isAmoledEnabled.collectAsState()
                 val storage by viewModel.storageSummary.collectAsState()
                 val loading by viewModel.isLoading.collectAsState()
-                val density = LocalDensity.current
                 OnboardingScreen(
                     selectedTheme = theme,
                     selectedColorScheme = colorScheme,
@@ -134,8 +125,6 @@ class OnboardingActivity : BaseActivity<ActivityOnboardingBinding>() {
                     storageSummary = storage,
                     isLoading = loading,
                     permissions = permissionStates,
-                    topPadding = with(density) { topInset.intValue.toDp() },
-                    bottomPadding = with(density) { bottomInset.intValue.toDp() },
                     actions = OnboardingActions(
                         onThemeChange = { mode ->
                             viewModel.setTheme(mode)

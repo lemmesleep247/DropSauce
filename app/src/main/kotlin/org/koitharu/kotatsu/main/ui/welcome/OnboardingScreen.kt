@@ -8,7 +8,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -17,12 +16,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -31,29 +34,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
@@ -88,7 +89,6 @@ data class OnboardingActions(
     val onFinish: () -> Unit,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     selectedTheme: Int,
@@ -97,8 +97,6 @@ fun OnboardingScreen(
     storageSummary: String?,
     isLoading: Boolean,
     permissions: OnboardingPermissions,
-    topPadding: Dp = 0.dp,
-    bottomPadding: Dp = 0.dp,
     actions: OnboardingActions,
 ) {
     val pagerState = rememberPagerState(pageCount = { PAGE_COUNT })
@@ -113,9 +111,10 @@ fun OnboardingScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         HorizontalPager(
             state = pagerState,
+            // Leave room at the bottom for the navigation row (dots + FAB)
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 88.dp + bottomPadding),
+                .padding(bottom = 80.dp),
         ) { pageIndex ->
             val iconRes = when (pageIndex) {
                 0 -> R.drawable.ic_welcome
@@ -133,14 +132,17 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
+                    // Push content below the status bar (notch-safe)
+                    .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(
-                        top = topPadding + 32.dp,
+                        top = 32.dp,
                         start = SCREEN_PADDING,
                         end = SCREEN_PADDING,
                         bottom = 24.dp,
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // Hero icon bubble
                 Surface(
                     shape = RoundedCornerShape(28.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -181,16 +183,13 @@ fun OnboardingScreen(
             }
         }
 
-        // Bottom row: animated dot indicator + FAB
+        // Bottom navigation: animated pill dots + FAB
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(
-                    start = SCREEN_PADDING,
-                    end = SCREEN_PADDING,
-                    bottom = 20.dp + bottomPadding,
-                ),
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(start = SCREEN_PADDING, end = SCREEN_PADDING, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -242,7 +241,8 @@ fun OnboardingScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ── Slide 0: Welcome ─────────────────────────────────────────────────────────
+
 @Composable
 private fun WelcomeSlide(
     selectedTheme: Int,
@@ -257,7 +257,6 @@ private fun WelcomeSlide(
         else -> isSystemDark
     }
 
-    // Mirror original: clear AMOLED pref when we land in light mode
     LaunchedEffect(isDarkEnabled) {
         if (!isDarkEnabled && isAmoledEnabled) {
             actions.onAmoledReset()
@@ -281,7 +280,7 @@ private fun WelcomeSlide(
             onValueChange = { actions.onColorSchemeChange(it) },
         )
 
-        // Appearance card: theme toggle + AMOLED switch
+        // Appearance card: M3-Expressive pill toggle + AMOLED switch
         Surface(
             shape = CARD_SHAPE,
             color = MaterialTheme.colorScheme.surfaceContainer,
@@ -296,26 +295,10 @@ private fun WelcomeSlide(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = selectedTheme == AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM,
-                        onClick = { actions.onThemeChange(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                        label = { Text(stringResource(R.string.follow_system)) },
-                    )
-                    SegmentedButton(
-                        selected = selectedTheme == AppCompatDelegate.MODE_NIGHT_NO,
-                        onClick = { actions.onThemeChange(AppCompatDelegate.MODE_NIGHT_NO) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                        label = { Text(stringResource(R.string.light)) },
-                    )
-                    SegmentedButton(
-                        selected = selectedTheme == AppCompatDelegate.MODE_NIGHT_YES,
-                        onClick = { actions.onThemeChange(AppCompatDelegate.MODE_NIGHT_YES) },
-                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                        label = { Text(stringResource(R.string.dark)) },
-                    )
-                }
+                ThemeButtonGroup(
+                    selectedTheme = selectedTheme,
+                    onThemeChange = actions.onThemeChange,
+                )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 // AMOLED row
                 val contentAlpha = if (isDarkEnabled) 1f else 0.38f
@@ -357,6 +340,64 @@ private fun WelcomeSlide(
     }
 }
 
+// M3 Expressive connected button group — replaces segmented button per the M3E spec.
+// 2dp spacing, 8dp inner corners, fully rounded outer corners, fixed height to prevent wrapping.
+@Composable
+private fun ThemeButtonGroup(selectedTheme: Int, onThemeChange: (Int) -> Unit) {
+    val items = listOf(
+        AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM to R.string.follow_system,
+        AppCompatDelegate.MODE_NIGHT_NO to R.string.light,
+        AppCompatDelegate.MODE_NIGHT_YES to R.string.dark,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        items.forEachIndexed { index, (mode, labelRes) ->
+            val isSelected = selectedTheme == mode
+            val isFirst = index == 0
+            val isLast = index == items.lastIndex
+            val shape = RoundedCornerShape(
+                topStart = if (isFirst) 50.dp else 8.dp,
+                bottomStart = if (isFirst) 50.dp else 8.dp,
+                topEnd = if (isLast) 50.dp else 8.dp,
+                bottomEnd = if (isLast) 50.dp else 8.dp,
+            )
+            val bgColor by animateColorAsState(
+                targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                              else MaterialTheme.colorScheme.surfaceVariant,
+                label = "theme_btn_bg_$index",
+            )
+            val contentColor by animateColorAsState(
+                targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                              else MaterialTheme.colorScheme.onSurfaceVariant,
+                label = "theme_btn_fg_$index",
+            )
+            Surface(
+                onClick = { onThemeChange(mode) },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = shape,
+                color = bgColor,
+                contentColor = contentColor,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(labelRes),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 6.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Slide 1: Storage & Permissions ───────────────────────────────────────────
+
 @Composable
 private fun StorageSlide(
     storageSummary: String?,
@@ -392,18 +433,11 @@ private fun StorageSlide(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FilledTonalButton(
+                ThemedActionButton(
+                    iconRes = R.drawable.ic_storage,
+                    labelRes = R.string.onboarding_select_destination,
                     onClick = actions.onSelectDestination,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_storage),
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                    )
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(stringResource(R.string.onboarding_select_destination))
-                }
+                )
             }
         }
         // Permissions card
@@ -491,6 +525,8 @@ private fun PermissionRow(
     }
 }
 
+// ── Slide 2: Cloud Sync ───────────────────────────────────────────────────────
+
 @Composable
 private fun SyncSlide(isLoading: Boolean, actions: OnboardingActions) {
     Column(
@@ -516,6 +552,8 @@ private fun SyncSlide(isLoading: Boolean, actions: OnboardingActions) {
     }
 }
 
+// ── Slide 3: Finish ───────────────────────────────────────────────────────────
+
 @Composable
 private fun FinishSlide(actions: OnboardingActions) {
     Column(
@@ -537,6 +575,8 @@ private fun FinishSlide(actions: OnboardingActions) {
     }
 }
 
+// ── Shared components ─────────────────────────────────────────────────────────
+
 private data class ActionItem(
     @DrawableRes val icon: Int,
     @StringRes val label: Int,
@@ -556,20 +596,44 @@ private fun ActionCard(items: List<ActionItem>) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items.forEach { item ->
-                FilledTonalButton(
-                    onClick = item.onClick,
+                ThemedActionButton(
+                    iconRes = item.icon,
+                    labelRes = item.label,
                     enabled = item.enabled,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        painter = painterResource(item.icon),
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                    )
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(stringResource(item.label))
-                }
+                    onClick = item.onClick,
+                )
             }
         }
+    }
+}
+
+// Full-width button styled with primaryContainer so it visibly reacts to theme changes.
+@Composable
+private fun ThemedActionButton(
+    @DrawableRes iconRes: Int,
+    @StringRes labelRes: Int,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
+            disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f),
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(stringResource(labelRes))
     }
 }

@@ -216,6 +216,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		)
 		checkPendingInstallerDownloads()
 		ensureInstallPermissionAccess()
+		handleAddRepoDeepLink(intent)
 		viewBinding.buttonScrollToTop.setOnClickListener {
 			viewBinding.recyclerView.smoothScrollToTop()
 		}
@@ -398,6 +399,25 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 
 	fun onRemoveRepoRequested() {
 		viewModel.setExternalRepoUrl(null)
+	}
+
+	private fun handleAddRepoDeepLink(intent: Intent?) {
+		if (intent?.data?.host != "add-repo") return
+		if (intent.scheme != "kotatsu" && intent.scheme != "tachiyomi") return
+		val url = intent.data?.getQueryParameter("url")?.trim() ?: return
+		if (url.isBlank()) return
+		if (!url.startsWith("https://")) {
+			Toast.makeText(this, R.string.invalid_url, Toast.LENGTH_SHORT).show()
+			return
+		}
+		MaterialAlertDialogBuilder(this)
+			.setTitle(R.string.add_repo)
+			.setMessage(getString(R.string.add_repo_confirmation, url))
+			.setPositiveButton(android.R.string.ok) { _, _ ->
+				viewModel.setExternalRepoUrl(url)
+			}
+			.setNegativeButton(android.R.string.cancel, null)
+			.show()
 	}
 
 	private data class CatalogUiState(

@@ -219,7 +219,16 @@
 		</activity>
 		<activity
 			android:name="org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity"
-			android:label="@string/sources_catalog" />
+			android:exported="true"
+			android:label="@string/sources_catalog">
+			<intent-filter tools:ignore="IntentFilterUniqueDataAttributes">
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<category android:name="android.intent.category.BROWSABLE" />
+				<data android:scheme="kotatsu" android:host="add-repo" />
+				<data android:scheme="tachiyomi" android:host="add-repo" />
+			</intent-filter>
+		</activity>
 		<activity
 			android:name="org.koitharu.kotatsu.scrobbling.kitsu.ui.KitsuAuthActivity"
 			android:exported="false"

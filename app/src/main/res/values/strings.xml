@@ -392,6 +392,7 @@
     <string name="manage">Manage</string>
     <string name="manage_repo">Manage repo</string>
     <string name="add_repo">Add repo</string>
+    <string name="add_repo_confirmation">Add this extension repository?\n\n%s</string>
     <string name="change_repo">Change repo</string>
     <string name="remove_repo">Remove repo</string>
     <string name="no_bookmarks_yet">No bookmarks yet</string>

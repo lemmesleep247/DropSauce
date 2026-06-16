@@ -1018,7 +1018,7 @@ private fun LocalSizeRow(size: Long, manga: Manga, onClick: (Manga) -> Unit) {
 
 @Composable
 private fun SectionHeader(title: String, action: String, accent: Color, onAction: () -> Unit) {
-	Spacer(Modifier.height(20.dp))
+	Spacer(Modifier.height(8.dp))
 	Row(
 		modifier = Modifier
 			.fillMaxWidth()

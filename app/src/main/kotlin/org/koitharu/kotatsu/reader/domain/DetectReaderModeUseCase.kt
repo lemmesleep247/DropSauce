@@ -55,31 +55,40 @@ class DetectReaderModeUseCase @Inject constructor(
 	}
 
 	/**
-	 * Automatic determine type of manga by page size
-	 * @return ReaderMode.WEBTOON if page is wide
+	 * Samples multiple pages spread across the chapter and uses a majority vote to determine
+	 * if the manga is a webtoon. Sampling a single page is unreliable because chapter title
+	 * pages and double-page spreads don't represent the typical page dimensions.
 	 */
 	private suspend fun guessMangaIsWebtoon(repository: MangaRepository, pages: List<MangaPage>): Boolean {
-		val pageIndex = (pages.size * 0.3).roundToInt()
-		val page = requireNotNull(pages.getOrNull(pageIndex)) { "No pages" }
-		val url = repository.getPageUrl(page)
-		val uri = url.toUri()
+		val sampleIndices = getSampleIndices(pages.size)
+		var webtoonVotes = 0
+		var totalVotes = 0
+		for (index in sampleIndices) {
+			val page = pages.getOrNull(index) ?: continue
+			val isWebtoon = runCatchingCancellable {
+				val url = repository.getPageUrl(page)
+				val size = getImageSize(url, page)
+				size.width * MIN_WEBTOON_RATIO < size.height
+			}.getOrNull() ?: continue
+			totalVotes++
+			if (isWebtoon) webtoonVotes++
+		}
+		check(totalVotes > 0) { "No pages could be sampled for webtoon detection" }
+		return webtoonVotes * 2 > totalVotes
+	}
 
-		val size = when {
+	private suspend fun getImageSize(url: String, page: MangaPage): Size {
+		val uri = url.toUri()
+		return when {
 			uri.isZipUri() -> runInterruptible(Dispatchers.IO) {
 				ZipFile(uri.schemeSpecificPart).use { zip ->
 					val entry = zip.getEntry(uri.fragment)
-					zip.getInputStream(entry).use {
-						getBitmapSize(it)
-					}
+					zip.getInputStream(entry).use { getBitmapSize(it) }
 				}
 			}
-
 			uri.isFileUri() -> runInterruptible(Dispatchers.IO) {
-				uri.toFile().inputStream().use {
-					getBitmapSize(it)
-				}
+				uri.toFile().inputStream().use { getBitmapSize(it) }
 			}
-
 			else -> {
 				val request = PageLoader.createPageRequest(url, page.source)
 				imageProxyInterceptor.interceptPageRequest(request, okHttpClient).use {
@@ -89,7 +98,15 @@ class DetectReaderModeUseCase @Inject constructor(
 				}
 			}
 		}
-		return size.width * MIN_WEBTOON_RATIO < size.height
+	}
+
+	private fun getSampleIndices(pageCount: Int): List<Int> = when {
+		pageCount < 4 -> if (pageCount > 0) listOf(pageCount / 2) else emptyList()
+		else -> listOf(
+			(pageCount * 0.25).roundToInt(),
+			(pageCount * 0.5).roundToInt(),
+			(pageCount * 0.75).roundToInt(),
+		).distinct()
 	}
 
 	companion object {

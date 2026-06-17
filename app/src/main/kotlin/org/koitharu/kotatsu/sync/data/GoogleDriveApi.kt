@@ -9,6 +9,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.koitharu.kotatsu.core.network.BaseHttpClient
@@ -33,6 +34,10 @@ class GoogleDriveApi @Inject constructor(
 		interceptors().clear()
 		networkInterceptors().clear()
 		cache(null)
+		connectTimeout(15, TimeUnit.SECONDS)
+		readTimeout(30, TimeUnit.SECONDS)
+		writeTimeout(30, TimeUnit.SECONDS)
+		callTimeout(60, TimeUnit.SECONDS)
 	}.build()
 
 	private val json = Json { ignoreUnknownKeys = true }

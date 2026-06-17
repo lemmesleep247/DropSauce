@@ -5,7 +5,7 @@ import org.koitharu.kotatsu.core.db.MangaDatabase
 
 class TagsAutoCompleteProvider @Inject constructor(
 	private val db: MangaDatabase,
-) : MultiAutoCompleteTextViewPreference.AutoCompleteProvider {
+) : AutoCompleteProvider {
 
 	override suspend fun getSuggestions(query: String): List<String> {
 		if (query.isEmpty()) {

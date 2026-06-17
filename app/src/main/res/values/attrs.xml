@@ -3,9 +3,6 @@
 
 	<attr name="expandCollapseIndicator" format="reference" />
 
-	<attr name="sliderPreferenceStyle" />
-	<attr name="multiAutoCompleteTextViewPreferenceStyle" />
-	<attr name="autoCompleteTextViewPreferenceStyle" />
 	<attr name="listItemTextViewStyle" />
 	<attr name="fastScrollerStyle" />
 	<attr name="tipViewStyle" />
@@ -37,14 +34,6 @@
 
 	<declare-styleable name="FaviconView">
 		<attr name="iconStyle" format="reference" />
-	</declare-styleable>
-
-	<declare-styleable name="SliderPreference">
-		<attr name="android:valueFrom" />
-		<attr name="android:valueTo" />
-		<attr name="android:stepSize" />
-		<attr name="tickVisible" />
-		<attr name="useSimpleSummaryProvider" format="boolean" />
 	</declare-styleable>
 
 	<declare-styleable name="ListItemTextView">
@@ -130,10 +119,6 @@
 		<attr name="cornerSizeTopRight" />
 		<attr name="cornerSizeBottomLeft" />
 		<attr name="cornerSizeBottomRight" />
-	</declare-styleable>
-
-	<declare-styleable name="AutoCompleteTextViewPreference">
-		<attr name="android:entries" />
 	</declare-styleable>
 
 	<declare-styleable name="TipView">

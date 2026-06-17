@@ -190,8 +190,7 @@ fun TextInputDialog(
 }
 
 /**
- * Slider dialog (replaces SliderPreference's dialog) — integer-valued because every existing
- * SliderPreference in the codebase uses integer steps.
+ * Integer-valued slider dialog used by settings screens.
  */
 @Composable
 fun SliderDialog(

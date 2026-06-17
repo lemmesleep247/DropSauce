@@ -6,8 +6,10 @@ import androidx.core.content.edit
 import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.serialization.json.Json
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.Json
 import org.koitharu.kotatsu.backup.local.data.model.BackupPrimitive
 import org.koitharu.kotatsu.backup.local.data.model.BookmarkBackup
 import org.koitharu.kotatsu.backup.local.data.model.MangaBackup
@@ -69,6 +71,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 
 	/** Whether a sync is currently running (so the UI can show progress and avoid overlap). */
 	val isSyncing = MutableStateFlow(false)
+	private val syncMutex = Mutex()
 
 	/** Records the signed-in account. Email/name/photo come straight from GoogleSignIn — no network call. */
 	fun onSignedIn(email: String?, displayName: String?, photoUrl: String?) {
@@ -80,7 +83,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 
 	suspend fun sync(): SyncResult {
 		if (!syncSettings.isSignedIn) return SyncResult.SignInRequired
-		if (isSyncing.value) return SyncResult.Success
+		if (!syncMutex.tryLock()) return SyncResult.Success
 		isSyncing.value = true
 		try {
 			var token = auth.requireAccessToken()
@@ -107,6 +110,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 			return SyncResult.Error(e.message ?: e.javaClass.simpleName)
 		} finally {
 			isSyncing.value = false
+			syncMutex.unlock()
 		}
 	}
 
@@ -116,11 +120,16 @@ class GoogleDriveSyncRepository @Inject constructor(
 		Log.i(TAG, "sync start: enabled=$enabled")
 
 		val remoteFile = api.findSyncFile(token)
-		// If a remote file exists it MUST decode — otherwise abort rather than overwrite it with
-		// (possibly empty) local data, which would destroy the backup.
 		val remote = if (remoteFile != null) {
 			val bytes = api.download(token, remoteFile.id)
-			json.decodeFromString(SyncSnapshot.serializer(), bytes.decodeToString())
+			try {
+				json.decodeFromString(SyncSnapshot.serializer(), bytes.decodeToString())
+			} catch (e: Exception) {
+				// Remote file is corrupt (bad JSON, schema mismatch after an update, etc.).
+				// Overwrite it with local data rather than leaving the sync permanently stuck.
+				Log.w(TAG, "remote file unreadable (${e.message}), overwriting with local data")
+				null
+			}
 		} else {
 			null
 		}
@@ -364,8 +373,13 @@ class GoogleDriveSyncRepository @Inject constructor(
 		database.getMangaDao().upsert(manga.toEntity(), tags)
 	}
 
-	private fun applySourceSettings(list: List<SourceSettingsBackup>) {
+	private suspend fun applySourceSettings(list: List<SourceSettingsBackup>) {
+		val knownSources = database.getSourcesDao().findAll().mapTo(HashSet()) { it.source }
 		for (entry in list) {
+			if (entry.source !in knownSources) {
+				Log.d(TAG, "sync: skipping source settings for '${entry.source}' — source not installed")
+				continue
+			}
 			val prefsName = SourceSettings.getStorageName(entry.source)
 			val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 			prefs.edit {
@@ -394,7 +408,10 @@ class GoogleDriveSyncRepository @Inject constructor(
 		val mangaCache = HashMap<Long, MangaBackup>()
 		return database.getFavouritesDao().findAllForSync().mapNotNull { entity ->
 			val manga = mangaCache.getOrPut(entity.mangaId) {
-				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: return@mapNotNull null
+				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: run {
+					Log.w(TAG, "sync: skipping favourite(mangaId=${entity.mangaId}) — manga row missing")
+					return@mapNotNull null
+				}
 			}
 			SyncFavourite(entity, manga)
 		}
@@ -404,7 +421,10 @@ class GoogleDriveSyncRepository @Inject constructor(
 		val mangaCache = HashMap<Long, MangaBackup>()
 		return database.getHistoryDao().findAllForSync().mapNotNull { entity ->
 			val manga = mangaCache.getOrPut(entity.mangaId) {
-				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: return@mapNotNull null
+				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: run {
+					Log.w(TAG, "sync: skipping history(mangaId=${entity.mangaId}) — manga row missing")
+					return@mapNotNull null
+				}
 			}
 			SyncHistory(entity, manga)
 		}
@@ -423,7 +443,10 @@ class GoogleDriveSyncRepository @Inject constructor(
 		val mangaCache = HashMap<Long, MangaBackup>()
 		return database.getTracksDao().findAllForSync().mapNotNull { entity ->
 			val manga = mangaCache.getOrPut(entity.mangaId) {
-				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: return@mapNotNull null
+				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: run {
+					Log.w(TAG, "sync: skipping track(mangaId=${entity.mangaId}) — manga row missing")
+					return@mapNotNull null
+				}
 			}
 			SyncTrack(entity, manga)
 		}

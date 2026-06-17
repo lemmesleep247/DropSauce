@@ -45,7 +45,7 @@ import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
 import org.koitharu.kotatsu.settings.compose.rememberStringPref
-import org.koitharu.kotatsu.settings.utils.MultiAutoCompleteTextViewPreference
+import org.koitharu.kotatsu.settings.utils.AutoCompleteProvider
 import org.koitharu.kotatsu.settings.utils.TagsAutoCompleteProvider
 import org.koitharu.kotatsu.suggestions.domain.SuggestionRepository
 import org.koitharu.kotatsu.suggestions.ui.SuggestionsWorker
@@ -204,7 +204,7 @@ private fun SuggestionsScreen(
 @Composable
 private fun TagsInputDialog(
 	initialValue: String,
-	provider: MultiAutoCompleteTextViewPreference.AutoCompleteProvider,
+	provider: AutoCompleteProvider,
 	onConfirm: (String) -> Unit,
 	onDismiss: () -> Unit,
 ) {
@@ -240,7 +240,7 @@ private fun TagsInputDialog(
 
 private class TagsCompletionAdapter(
 	context: Context,
-	private val provider: MultiAutoCompleteTextViewPreference.AutoCompleteProvider,
+	private val provider: AutoCompleteProvider,
 	private val dataset: MutableList<String> = ArrayList(),
 ) : ArrayAdapter<String>(context, android.R.layout.simple_dropdown_item_1line, dataset) {
 

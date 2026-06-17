@@ -10,10 +10,6 @@ plugins {
 	id 'org.jetbrains.kotlin.plugin.compose'
 }
 
-configurations.configureEach {
-	exclude group: 'org.jetbrains.kotlin', module: 'kotlin-android-extensions-runtime'
-}
-
 android {
 	compileSdk {
 		version = release(37) {
@@ -170,12 +166,6 @@ kotlin {
 	}
 }
 
-afterEvaluate {
-	tasks.register('installpreview') {
-		dependsOn tasks.named('installPreview')
-	}
-}
-
 dependencies {
 	//noinspection UseTomlInstead
 	implementation("com.github.YakaTeam:kotatsu-parsers:${libs.versions.parsers.get()}") {
@@ -249,7 +239,9 @@ dependencies {
 	implementation libs.xmlutil.serialization
 
 	implementation libs.adapterdelegates
-	implementation libs.adapterdelegates.viewbinding
+	implementation(libs.adapterdelegates.viewbinding) {
+		exclude group: 'org.jetbrains.kotlin', module: 'kotlin-android-extensions-runtime'
+	}
 
 	implementation libs.hilt.android
 	ksp libs.hilt.compiler

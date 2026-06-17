@@ -151,8 +151,7 @@ fun EditTextSettingsItem(
 }
 
 /**
- * Integer slider — rendered INLINE in the row (no dialog), matching the legacy
- * SliderPreference behavior.
+ * Integer slider rendered inline in the row.
  */
 @Composable
 fun SliderSettingsItem(

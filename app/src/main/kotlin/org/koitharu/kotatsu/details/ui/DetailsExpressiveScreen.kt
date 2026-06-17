@@ -273,7 +273,9 @@ private fun ExpressiveBackdrop(
 			.build()
 	}
 	Box(
-		modifier = Modifier.fillMaxSize(),
+		modifier = Modifier
+			.fillMaxWidth()
+			.height(480.dp),
 	) {
 		val blurMod = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 			Modifier.blur(40.dp)
@@ -294,10 +296,10 @@ private fun ExpressiveBackdrop(
 				.fillMaxSize()
 				.background(
 					Brush.verticalGradient(
-						0f to surface.copy(alpha = 0.15f),
-						0.25f to surface.copy(alpha = 0.42f),
-						0.55f to surface.copy(alpha = 0.68f),
-						1f to surface.copy(alpha = 0.84f),
+						0f to surface.copy(alpha = 0.30f),
+						0.4f to surface.copy(alpha = 0.55f),
+						0.78f to surface.copy(alpha = 0.94f),
+						1f to surface,
 					),
 				),
 		)

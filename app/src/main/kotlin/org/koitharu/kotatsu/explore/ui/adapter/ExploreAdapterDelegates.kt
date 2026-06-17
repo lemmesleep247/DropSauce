@@ -6,8 +6,6 @@ import androidx.core.text.bold
 import androidx.core.text.buildSpannedString
 import androidx.core.view.isVisible
 import com.google.android.material.carousel.CarouselLayoutManager
-import com.google.android.material.carousel.CarouselSnapHelper
-import com.google.android.material.carousel.MaskableFrameLayout
 import com.google.android.material.carousel.MultiBrowseCarouselStrategy
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
@@ -57,9 +55,6 @@ fun exploreRecommendationItemAD(
 		isNestedScrollingEnabled = false
 		clipChildren = false
 		clipToPadding = false
-		if (onFlingListener == null) {
-			CarouselSnapHelper().attachToRecyclerView(this)
-		}
 	}
 
 	bind {
@@ -75,11 +70,6 @@ fun recommendationCarouselItemAD(
 
 	binding.root.setOnClickListener { v ->
 		itemClickListener.onItemClick(item.manga, v)
-	}
-	(itemView as? MaskableFrameLayout)?.setOnMaskChangedListener { maskRect ->
-		val w = itemView.width.toFloat()
-		val ratio = if (w > 0f) maskRect.width() / w else 1f
-		binding.textViewTitle.alpha = ((ratio - 0.35f) / 0.4f).coerceIn(0f, 1f)
 	}
 	binding.progressView.isVisible = false
 	binding.iconsView.isVisible = false

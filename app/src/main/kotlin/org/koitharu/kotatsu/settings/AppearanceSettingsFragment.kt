@@ -17,6 +17,7 @@ import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -314,13 +315,19 @@ private fun AppearanceScreen(
 					)
 				}
 				item { pos ->
+					val isSystemDark = isSystemInDarkTheme()
+					val isDarkActive = when (theme.toIntOrNull()) {
+						AppCompatDelegate.MODE_NIGHT_YES -> true
+						AppCompatDelegate.MODE_NIGHT_NO -> false
+						else -> isSystemDark
+					}
 					SwitchSettingsItem(
 						title = stringResource(R.string.black_dark_theme),
 						subtitle = stringResource(R.string.black_dark_theme_summary),
 						checked = amoled,
 						onCheckedChange = { amoled = it },
 						icon = R.drawable.ic_eye_off,
-						
+						enabled = isDarkActive,
 						shape = pos.shape,
 					)
 				}

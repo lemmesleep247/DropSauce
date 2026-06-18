@@ -98,7 +98,11 @@ abstract class BaseAdaptiveSheet<B : ViewBinding> : AppCompatDialogFragment(),
 		} else {
 			BottomSheetDialogImpl(context, theme)
 		}
-		actionModeDelegate = ActionModeDelegate().also {
+		// The sheet floats on colorSurfaceContainerHigh, so its contextual action bar must paint the same
+		// colour to match its toolbar (the default window background would look like a mismatched slab).
+		actionModeDelegate = ActionModeDelegate(
+			backgroundColorAttr = materialR.attr.colorSurfaceContainerHigh,
+		).also {
 			dialog.onBackPressedDispatcher.addCallback(it)
 		}
 		return dialog

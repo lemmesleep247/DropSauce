@@ -11,6 +11,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
@@ -296,8 +298,10 @@ private fun ActionDock(
 		horizontalAlignment = Alignment.End,
 		verticalArrangement = Arrangement.spacedBy(12.dp),
 	) {
+		// Show the chapters pill whenever a count is known — including chapters served from cache while
+		// a fresh copy is still loading from the source — so it doesn't vanish during a refresh.
 		val chapterCount = historyInfo.totalChapters
-		if (!isLoading && chapterCount > 0) {
+		if (chapterCount > 0) {
 			ChaptersPill(count = chapterCount, onClick = actions.onChaptersClick)
 		}
 		ReadFab(historyInfo = historyInfo, isLoading = isLoading, accent = accent, actions = actions)
@@ -365,7 +369,7 @@ private fun ReadFab(
 	}
 	val chevronRotation by animateFloatAsState(
 		targetValue = if (expanded) 180f else 0f,
-		animationSpec = tween(durationMillis = 220),
+		animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
 		label = "fabChevron",
 	)
 
@@ -378,34 +382,13 @@ private fun ReadFab(
 		color = container,
 		shadowElevation = 6.dp,
 	) {
-		// The FAB is one continuous surface: tapping the chevron grows it upward to reveal the quick
-		// actions above the read button, animated by animateContentSize, and the chevron flips over.
+		// The FAB is one continuous surface: tapping the chevron grows it downward to reveal the quick
+		// actions below the read button, animated by animateContentSize, and the chevron flips over.
 		// animateContentSize lives on the wrapper so the IntrinsicSize width resolves cleanly inside.
-		Box(modifier = Modifier.animateContentSize(animationSpec = tween(durationMillis = 220))) {
+		Box(modifier = Modifier.animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))) {
 		Column(
 			modifier = Modifier.width(IntrinsicSize.Max),
 		) {
-			if (expanded) {
-				if (canIncognito) {
-					FabMenuRow(iconRes = R.drawable.ic_incognito, label = stringResource(R.string.incognito_mode), color = onColor) {
-						expanded = false
-						actions.onIncognitoClick()
-					}
-				}
-				if (canForget) {
-					FabMenuRow(iconRes = R.drawable.ic_delete, label = stringResource(R.string.remove_from_history), color = onColor) {
-						expanded = false
-						actions.onForgetHistoryClick()
-					}
-				}
-				Box(
-					modifier = Modifier
-						.padding(horizontal = 16.dp)
-						.fillMaxWidth()
-						.height(1.dp)
-						.background(onColor.copy(alpha = 0.22f)),
-				)
-			}
 			Row(
 				modifier = Modifier
 					.fillMaxWidth()
@@ -461,6 +444,27 @@ private fun ReadFab(
 								.size(22.dp)
 								.rotate(chevronRotation),
 						)
+					}
+				}
+			}
+			if (expanded) {
+				Box(
+					modifier = Modifier
+						.padding(horizontal = 16.dp)
+						.fillMaxWidth()
+						.height(1.dp)
+						.background(onColor.copy(alpha = 0.22f)),
+				)
+				if (canIncognito) {
+					FabMenuRow(iconRes = R.drawable.ic_incognito, label = stringResource(R.string.incognito_mode), color = onColor) {
+						expanded = false
+						actions.onIncognitoClick()
+					}
+				}
+				if (canForget) {
+					FabMenuRow(iconRes = R.drawable.ic_delete, label = stringResource(R.string.remove_from_history), color = onColor) {
+						expanded = false
+						actions.onForgetHistoryClick()
 					}
 				}
 			}

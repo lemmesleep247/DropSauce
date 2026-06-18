@@ -4,19 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.view.ActionMode
-import androidx.appcompat.widget.SearchView
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
-import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -28,6 +25,7 @@ import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetCallback
 import org.koitharu.kotatsu.core.ui.sheet.BaseAdaptiveSheet
 import org.koitharu.kotatsu.core.ui.util.ActionModeListener
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
+import org.koitharu.kotatsu.core.ui.util.applyTonalActionMenuStyle
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.doOnPageChanged
@@ -53,11 +51,8 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 	private val viewModel by ChaptersPagesViewModel.ActivityVMLazy(this)
 
-	private val searchBackCallback = object : OnBackPressedCallback(false) {
-		override fun handleOnBackPressed() {
-			collapseSearch()
-		}
-	}
+	// Tracks the current drag-handle visibility so the show/hide is only animated when it actually flips.
+	private var dragHandleShown = true
 
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): SheetChaptersPagesBinding {
 		return SheetChaptersPagesBinding.inflate(inflater, container, false)
@@ -85,12 +80,11 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		binding.pager.setCurrentItem(defaultTab, false)
 		binding.tabs.isVisible = adapter.itemCount > 1
 
-		val menuProvider = ChapterPagesMenuProvider(this, binding.pager, settings, viewModel)
+		val menuProvider = ChapterPagesMenuProvider(this, binding.pager, settings, viewModel, binding.layoutToolbarContent)
 		onBackPressedDispatcher.addCallback(viewLifecycleOwner, menuProvider)
 		binding.toolbar.addMenuProvider(menuProvider)
-		onBackPressedDispatcher.addCallback(viewLifecycleOwner, searchBackCallback)
-		setupSearch(binding)
-		updateSearchVisibility()
+		// Group the search + overflow actions into the same tonal pill the rest of the app's top bars use.
+		binding.toolbar.applyTonalActionMenuStyle()
 
 		val menuInvalidator = MenuInvalidator(binding.toolbar)
 		viewModel.isChaptersReversed.observe(viewLifecycleOwner, menuInvalidator)
@@ -136,20 +130,24 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 			return
 		}
 		val isActionModeStarted = actionModeDelegate?.isActionModeStarted == true
-		// The list options overflow is available whenever the sheet is on screen as a modal (it opens
+		// The search + list-options pill is available whenever the sheet is on screen as a modal (it opens
 		// at the centre position) or fully expanded — it only hides during selection action mode.
 		val isModalOrExpanded = dialog != null || newState == STATE_EXPANDED
 		binding.toolbar.menuView?.isVisible = isModalOrExpanded && !isActionModeStarted
 		// The drag handle is the grab affordance for the floating/centre state; at full screen the sheet
 		// behaves like a normal top-level screen, so the handle is dropped and the toolbar sits directly
-		// under the status bar like the rest of the app.
-		binding.headerBar.setDragHandleVisible(newState != STATE_EXPANDED)
-		updateSearchVisibility()
+		// under the status bar like the rest of the app. Animate the swap so docking to full screen
+		// doesn't snap the toolbar upward.
+		val showHandle = newState != STATE_EXPANDED
+		if (dragHandleShown != showHandle) {
+			dragHandleShown = showHandle
+			TransitionManager.beginDelayedTransition(binding.root as ViewGroup, AutoTransition().setDuration(200))
+			binding.headerBar.setDragHandleVisible(showHandle)
+		}
 	}
 
 	override fun onActionModeStarted(mode: ActionMode) {
 		viewBinding?.toolbar?.menuView?.isVisible = false
-		updateSearchVisibility()
 		view?.post(::expandAndLock)
 	}
 
@@ -157,7 +155,6 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		unlock()
 		val state = behavior?.state ?: STATE_EXPANDED
 		viewBinding?.toolbar?.menuView?.isVisible = state != STATE_COLLAPSED
-		updateSearchVisibility()
 	}
 
 	override fun onTabSelected(tab: TabLayout.Tab?) = Unit
@@ -195,67 +192,6 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 	private fun onPageChanged(position: Int) {
 		viewBinding?.toolbar?.invalidateMenu()
 		settings.lastDetailsTab = position
-		updateSearchVisibility()
-	}
-
-	private fun setupSearch(binding: SheetChaptersPagesBinding) {
-		with(binding.searchView) {
-			queryHint = getString(R.string.search_chapters)
-			setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-				override fun onQueryTextSubmit(query: String?): Boolean = false
-
-				override fun onQueryTextChange(newText: String?): Boolean {
-					viewModel.performChapterSearch(newText)
-					return true
-				}
-			})
-			setOnSearchClickListener {
-				setSearchFieldExpanded(true)
-				searchBackCallback.isEnabled = true
-			}
-			setOnCloseListener {
-				setSearchFieldExpanded(false)
-				viewModel.performChapterSearch(null)
-				searchBackCallback.isEnabled = false
-				false
-			}
-		}
-	}
-
-	// The search lives only on the Chapters tab and only while the bar is fully pulled up.
-	private fun updateSearchVisibility() {
-		val binding = viewBinding ?: return
-		val isActionModeStarted = actionModeDelegate?.isActionModeStarted == true
-		val isExpanded = dialog != null || behavior?.state == STATE_EXPANDED
-		val show = isExpanded && !isActionModeStarted && binding.pager.currentItem == TAB_CHAPTERS
-		if (binding.searchView.isVisible != show) {
-			binding.searchView.isVisible = show
-		}
-		if (!show && !binding.searchView.isIconified) {
-			collapseSearch()
-		}
-	}
-
-	// Collapsed: the search is a single icon at the end of the bar (tabs keep the weight). Expanded:
-	// the field takes the empty space to the right of the tabs (the weights are swapped).
-	private fun setSearchFieldExpanded(expanded: Boolean) {
-		val binding = viewBinding ?: return
-		binding.tabs.updateLayoutParams<LinearLayout.LayoutParams> {
-			width = if (expanded) LinearLayout.LayoutParams.WRAP_CONTENT else 0
-			weight = if (expanded) 0f else 1f
-		}
-		binding.searchView.updateLayoutParams<LinearLayout.LayoutParams> {
-			width = if (expanded) 0 else LinearLayout.LayoutParams.WRAP_CONTENT
-			weight = if (expanded) 1f else 0f
-		}
-	}
-
-	private fun collapseSearch() {
-		val searchView = viewBinding?.searchView ?: return
-		searchView.setQuery("", false)
-		if (!searchView.isIconified) {
-			searchView.isIconified = true
-		}
 	}
 
 	private fun onNewChaptersChanged(counter: Int) {

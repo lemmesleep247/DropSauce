@@ -48,17 +48,6 @@
                 app:tabMode="scrollable"
                 app:tabUnboundedRipple="true" />
 
-            <!-- Chapter-name search. Collapsed it is just an icon at the end of the bar; when opened
-                 it takes the empty space to the right of the tabs (the weights are swapped in code). -->
-            <androidx.appcompat.widget.SearchView
-                android:id="@+id/searchView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:visibility="gone"
-                app:iconifiedByDefault="true"
-                app:queryHint="@string/search_chapters" />
-
             <com.google.android.material.button.MaterialSplitButton
                 android:id="@+id/split_button_read"
                 android:layout_width="wrap_content"

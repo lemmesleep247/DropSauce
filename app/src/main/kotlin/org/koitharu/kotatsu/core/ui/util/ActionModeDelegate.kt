@@ -8,6 +8,7 @@ import android.view.ViewTreeObserver
 import android.view.Window
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.AttrRes
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.ActionBarContextView
 import androidx.core.view.ViewCompat
@@ -20,7 +21,12 @@ import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
 
 @SuppressLint("RestrictedApi") // intentional access to AppCompat's ActionBarContextView for edge-to-edge handling
-class ActionModeDelegate : OnBackPressedCallback(false) {
+class ActionModeDelegate(
+	// The contextual bar paints this theme colour so it blends with the surface it floats over. Defaults
+	// to the window background (regular screens); hosts on a different surface (e.g. a bottom sheet) pass
+	// their own attribute so the bar matches their top bar instead.
+	@AttrRes private val backgroundColorAttr: Int = android.R.attr.colorBackground,
+) : OnBackPressedCallback(false) {
 
 	private var activeActionMode: ActionMode? = null
 	private var exitingActionMode: ActionMode? = null
@@ -49,7 +55,7 @@ class ActionModeDelegate : OnBackPressedCallback(false) {
 			// second surface that snapped in instantly while the bar faded — that mismatch was the
 			// "split top bar" that flickered on selection. We keep the status bar transparent and let
 			// the bar paint the whole area in the window background, matching every other top bar.
-			val actionModeColor = ctx.getThemeColor(android.R.attr.colorBackground)
+			val actionModeColor = ctx.getThemeColor(backgroundColorAttr)
 			val statusBarHeight = ViewCompat.getRootWindowInsets(window.decorView)
 				?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
 			window.decorView.findViewById<ActionBarContextView?>(androidx.appcompat.R.id.action_mode_bar)?.apply {

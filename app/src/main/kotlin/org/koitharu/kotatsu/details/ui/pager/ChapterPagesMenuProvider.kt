@@ -3,8 +3,12 @@ package org.koitharu.kotatsu.details.ui.pager
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuProvider
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
@@ -25,7 +29,9 @@ class ChapterPagesMenuProvider(
 	private val pager: ViewPager2,
 	private val settings: AppSettings,
 	private val viewModel: ChaptersPagesViewModel,
+	private val toolbarContent: View,
 ) : OnBackPressedCallback(false), MenuProvider, MenuItem.OnActionExpandListener,
+	SearchView.OnQueryTextListener,
 	Slider.OnChangeListener {
 
 	private var expandedItemRef: WeakReference<MenuItem>? = null
@@ -33,11 +39,19 @@ class ChapterPagesMenuProvider(
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 		val tab = getCurrentTab()
 		when (tab) {
-			// Chapter search lives inline in the sheet toolbar; the overflow carries the list options.
+			// Chapters tab: the search action + the list-option toggles share the toolbar's action pill.
 			TAB_CHAPTERS -> {
 				menuInflater.inflate(R.menu.opt_chapters, menu)
 				// Match the rest of the app's checkable overflow menus (e.g. the home incognito toggle).
 				menu.setOptionalIconsVisibleCompat(true)
+				menu.findItem(R.id.action_search)?.let { item ->
+					item.setOnActionExpandListener(this)
+					(item.actionView as? SearchView)?.apply {
+						setIconifiedByDefault(false)
+						queryHint = item.title
+						setOnQueryTextListener(this@ChapterPagesMenuProvider)
+					}
+				}
 			}
 
 			TAB_PAGES, TAB_BOOKMARKS -> {
@@ -87,6 +101,11 @@ class ChapterPagesMenuProvider(
 		expandedItemRef = WeakReference(item)
 		sheet.expandAndLock()
 		isEnabled = true
+		// The search field needs the whole bar, so the tabs (the toolbar's custom content) step aside
+		// while it is open and the sheet rises to full screen for room.
+		if (item.itemId == R.id.action_search) {
+			toolbarContent.isGone = true
+		}
 		return true
 	}
 
@@ -94,6 +113,18 @@ class ChapterPagesMenuProvider(
 		expandedItemRef = null
 		isEnabled = false
 		sheet.unlock()
+		if (item.itemId == R.id.action_search) {
+			toolbarContent.isVisible = true
+			(item.actionView as? SearchView)?.setQuery("", false)
+			viewModel.performChapterSearch(null)
+		}
+		return true
+	}
+
+	override fun onQueryTextSubmit(query: String?): Boolean = false
+
+	override fun onQueryTextChange(newText: String?): Boolean {
+		viewModel.performChapterSearch(newText)
 		return true
 	}
 

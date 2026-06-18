@@ -40,7 +40,6 @@ import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.os.NetworkState
-import org.koitharu.kotatsu.core.parser.MangaLoaderContextImpl
 import org.koitharu.kotatsu.core.parser.favicon.FaviconFetcher
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.image.CoilImageGetter
@@ -60,7 +59,6 @@ import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.main.domain.CoverRestoreInterceptor
 import org.koitharu.kotatsu.main.ui.protect.AppProtectHelper
 import org.koitharu.kotatsu.main.ui.protect.ScreenshotPolicyHelper
-import org.koitharu.kotatsu.parsers.MangaLoaderContext
 import org.koitharu.kotatsu.search.ui.MangaSuggestionsProvider
 import javax.inject.Provider
 import javax.inject.Singleton
@@ -68,9 +66,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 interface AppModule {
-
-	@Binds
-	fun bindMangaLoaderContext(mangaLoaderContextImpl: MangaLoaderContextImpl): MangaLoaderContext
 
 	@Binds
 	fun bindImageGetter(coilImageGetter: CoilImageGetter): Html.ImageGetter

@@ -6,9 +6,10 @@ import okhttp3.Interceptor.Chain
 import okhttp3.Response
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.core.model.MangaSource
-import org.koitharu.kotatsu.core.parser.MangaLoaderContextImpl
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.parsers.network.UserAgents
 import org.koitharu.kotatsu.parsers.util.mergeWith
 import org.koitharu.kotatsu.mihon.MihonMangaRepository
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -18,7 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class CommonHeadersInterceptor @Inject constructor(
 	private val mangaRepositoryFactoryLazy: Lazy<MangaRepository.Factory>,
-	private val mangaLoaderContextLazy: Lazy<MangaLoaderContextImpl>,
+	private val webViewExecutorLazy: Lazy<WebViewExecutor>,
 ) : Interceptor {
 
 	override fun intercept(chain: Chain): Response {
@@ -36,17 +37,18 @@ class CommonHeadersInterceptor @Inject constructor(
 		}
 		val headersBuilder = request.headers.newBuilder()
 			.removeAll(CommonHeaders.MANGA_SOURCE)
-			
+
 		val requestHeaders = when (repository) {
             is MihonMangaRepository -> (repository.mihonSource as? HttpSource)?.headers
             else -> null
         }
-        
+
 		requestHeaders?.let {
 			headersBuilder.mergeWith(it, replaceExisting = false)
 		}
 		if (headersBuilder[CommonHeaders.USER_AGENT] == null) {
-			headersBuilder[CommonHeaders.USER_AGENT] = mangaLoaderContextLazy.get().getDefaultUserAgent()
+			headersBuilder[CommonHeaders.USER_AGENT] =
+				webViewExecutorLazy.get().defaultUserAgent ?: UserAgents.FIREFOX_MOBILE
 		}
 		val newRequest = request.newBuilder().headers(headersBuilder.build()).build()
 		return chain.proceed(newRequest)

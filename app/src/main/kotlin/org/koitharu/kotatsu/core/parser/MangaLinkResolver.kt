@@ -7,7 +7,6 @@ import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.util.ext.isHttpUrl
-import org.koitharu.kotatsu.parsers.MangaLoaderContext
 import org.koitharu.kotatsu.parsers.exception.NotFoundException
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
@@ -23,7 +22,6 @@ import javax.inject.Inject
 class MangaLinkResolver @Inject constructor(
 	private val repositoryFactory: MangaRepository.Factory,
 	private val dataRepository: MangaDataRepository,
-	private val context: MangaLoaderContext,
 ) {
 
 	suspend fun resolve(uri: Uri): Manga {
@@ -51,10 +49,7 @@ class MangaLinkResolver @Inject constructor(
 	}
 
 	private suspend fun resolveExternalLink(uri: String): Manga? {
-		dataRepository.findMangaByPublicUrl(uri)?.let {
-			return it
-		}
-		return context.newLinkResolver(uri).getManga()
+		return dataRepository.findMangaByPublicUrl(uri)
 	}
 
 	private suspend fun MangaRepository.findExact(url: String?, title: String?): Manga? {

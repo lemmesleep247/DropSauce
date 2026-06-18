@@ -367,8 +367,8 @@
 
 	<style name="Widget.Kotatsu.ExploreButton.Secondary" parent="Widget.Material3.Button.TonalButton.Icon">
 		<item name="android:minHeight">68dp</item>
-		<item name="android:singleLine">false</item>
-		<item name="android:maxLines">2</item>
+		<item name="android:singleLine">true</item>
+		<item name="android:maxLines">1</item>
 		<item name="android:elegantTextHeight">false</item>
 		<item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
 		<item name="shapeAppearance">?shapeAppearanceCornerLarge</item>
@@ -739,6 +739,19 @@
 		<item name="cornerSizeBottomRight">0dp</item>
 		<item name="cornerSizeTopLeft">0dp</item>
 		<item name="cornerSizeTopRight">0dp</item>
+	</style>
+
+	<style name="ShapeAppearanceOverlay.Kotatsu.CarouselItem" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSizeTopLeft">20dp</item>
+		<item name="cornerSizeTopRight">20dp</item>
+		<item name="cornerSizeBottomLeft">0dp</item>
+		<item name="cornerSizeBottomRight">0dp</item>
+	</style>
+
+	<style name="ShapeAppearanceOverlay.Kotatsu.CarouselImage" parent="">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSize">20dp</item>
 	</style>
 
 	<!--Preferences-->

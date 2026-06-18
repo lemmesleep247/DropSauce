@@ -12,7 +12,7 @@
 	android:layout_marginStart="5dp"
 	android:layout_marginEnd="5dp"
 	android:foreground="?attr/selectableItemBackground"
-	app:shapeAppearance="?attr/shapeAppearanceCornerExtraLarge">
+	app:shapeAppearance="@style/ShapeAppearanceOverlay.Kotatsu.CarouselItem">
 
 	<LinearLayout
 		android:layout_width="match_parent"
@@ -32,6 +32,7 @@
 				app:allowRgb565="true"
 				app:aspectRationHeight="0"
 				app:aspectRationWidth="0"
+				app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.CarouselImage"
 				tools:ignore="ContentDescription"
 				tools:src="@tools:sample/backgrounds/scenic[5]" />
 
@@ -78,7 +79,7 @@
 			android:paddingEnd="4dp"
 			android:paddingTop="8dp"
 			android:textAppearance="?attr/textAppearanceLabelMedium"
-			android:textColor="?android:attr/textColorPrimary"
+			android:textColor="?attr/colorOnSurface"
 			tools:text="@tools:sample/lorem" />
 
 	</LinearLayout>

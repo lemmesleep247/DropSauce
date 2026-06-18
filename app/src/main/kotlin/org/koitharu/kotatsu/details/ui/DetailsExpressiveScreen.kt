@@ -315,7 +315,7 @@ private fun ChaptersPill(count: Int, onClick: () -> Unit) {
 	Surface(
 		onClick = onClick,
 		shape = RoundedCornerShape(50),
-		color = MaterialTheme.colorScheme.surfaceContainerHigh,
+		color = MaterialTheme.colorScheme.surfaceContainerHighest,
 		tonalElevation = 3.dp,
 		shadowElevation = 3.dp,
 	) {

@@ -37,6 +37,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -118,6 +120,10 @@ class DetailsExpressiveActions(
 	val onScrobblingCardClick: (Int) -> Unit,
 	val onRelatedMore: (Manga) -> Unit,
 	val onRelatedClick: (MangaListModel) -> Unit,
+	val onReadClick: () -> Unit,
+	val onIncognitoClick: () -> Unit,
+	val onForgetHistoryClick: () -> Unit,
+	val onChaptersClick: () -> Unit,
 )
 
 private val SCREEN_PADDING = 20.dp
@@ -127,6 +133,9 @@ private val COVER_HEIGHT = 236.dp
 private val COMPACT_COVER_WIDTH = 120.dp
 private val COMPACT_COVER_HEIGHT = 178.dp
 private const val TAGS_COLLAPSED_ROWS = 3
+// Vertical room the floating action dock (chapters pill + read FAB) needs, so the scrolling content
+// can always be pushed clear of it and nothing hides behind the FAB at the end of the page.
+private val DETAIL_DOCK_RESERVE = 128.dp
 
 @Composable
 fun DetailsExpressiveScreen(
@@ -181,7 +190,7 @@ fun DetailsExpressiveScreen(
 				modifier = Modifier
 					.fillMaxSize()
 					.verticalScroll(scrollState)
-					.padding(bottom = bottomContentPadding),
+					.padding(bottom = bottomContentPadding + DETAIL_DOCK_RESERVE),
 				horizontalAlignment = Alignment.CenterHorizontally,
 			) {
 				// Push the hero clear of the translucent top bar / back button.
@@ -250,6 +259,193 @@ fun DetailsExpressiveScreen(
 				}
 
 					Spacer(Modifier.height(28.dp))
+				}
+			}
+
+				// Floating action dock: a "N chapters" pill stacked above the read FAB. Both pin to the
+				// bottom-end and stay clear of the navigation bar; the modal chapters sheet draws its own
+				// scrim over them, so they read as "behind" the sheet without any extra hide/show logic.
+				ActionDock(
+					historyInfo = historyInfo,
+					isLoading = isLoading,
+					accent = accentColor,
+					actions = actions,
+					modifier = Modifier
+						.align(Alignment.BottomEnd)
+						.padding(end = SCREEN_PADDING, bottom = bottomContentPadding + 16.dp),
+				)
+		}
+	}
+}
+
+/**
+ * The bottom-end action dock that replaces the old pull-up peek bar: a compact "N chapters" pill
+ * resting above a tactile Read/Continue FAB. The pill opens the chapters sheet; the FAB starts
+ * reading, with a small overflow for incognito / forget-history. Both sit in the page's [Box] (not
+ * the scrolling column) so they stay pinned while the content scrolls underneath.
+ */
+@Composable
+private fun ActionDock(
+	historyInfo: HistoryInfo,
+	isLoading: Boolean,
+	accent: Color,
+	actions: DetailsExpressiveActions,
+	modifier: Modifier = Modifier,
+) {
+	Column(
+		modifier = modifier,
+		horizontalAlignment = Alignment.End,
+		verticalArrangement = Arrangement.spacedBy(12.dp),
+	) {
+		val chapterCount = historyInfo.totalChapters
+		if (!isLoading && chapterCount > 0) {
+			ChaptersPill(count = chapterCount, onClick = actions.onChaptersClick)
+		}
+		ReadFab(historyInfo = historyInfo, isLoading = isLoading, accent = accent, actions = actions)
+	}
+}
+
+@Composable
+private fun ChaptersPill(count: Int, onClick: () -> Unit) {
+	Surface(
+		onClick = onClick,
+		shape = RoundedCornerShape(50),
+		color = MaterialTheme.colorScheme.surfaceContainerHigh,
+		tonalElevation = 3.dp,
+		shadowElevation = 3.dp,
+	) {
+		Row(
+			modifier = Modifier.padding(horizontal = 18.dp, vertical = 11.dp),
+			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+		) {
+			Icon(
+				painter = painterResource(R.drawable.ic_list),
+				contentDescription = null,
+				tint = MaterialTheme.colorScheme.onSurfaceVariant,
+				modifier = Modifier.size(18.dp),
+			)
+			Text(
+				text = pluralStringResource(R.plurals.chapters, count, count),
+				style = MaterialTheme.typography.labelLarge,
+				fontWeight = FontWeight.Medium,
+				color = MaterialTheme.colorScheme.onSurfaceVariant,
+				maxLines = 1,
+			)
+		}
+	}
+}
+
+@Composable
+private fun ReadFab(
+	historyInfo: HistoryInfo,
+	isLoading: Boolean,
+	accent: Color,
+	actions: DetailsExpressiveActions,
+) {
+	// Label / enabled state mirror the old read split-button exactly.
+	val isChaptersLoading = isLoading && (historyInfo.totalChapters <= 0 || historyInfo.isChapterMissing)
+	val enabled = !isChaptersLoading && historyInfo.isValid
+	val label = when {
+		isChaptersLoading -> stringResource(R.string.loading_)
+		historyInfo.isIncognitoMode -> stringResource(R.string.incognito)
+		historyInfo.canContinue -> stringResource(R.string._continue)
+		else -> stringResource(R.string.read)
+	}
+	// Overflow keeps only the reading-related quick actions; chapter-list display options (reverse,
+	// grid, on-device) stay in the chapters sheet's own toolbar menu where they act on the list.
+	val canIncognito = !historyInfo.isIncognitoMode
+	val canForget = historyInfo.history != null
+	val hasMenu = enabled && (canIncognito || canForget)
+
+	val container = if (enabled) accent else accent.copy(alpha = 0.4f)
+	val baseContent = if (accent.luminanceIsLight()) Color.Black else Color.White
+	val onColor = if (enabled) baseContent else baseContent.copy(alpha = 0.7f)
+
+	Surface(
+		shape = RoundedCornerShape(20.dp),
+		color = container,
+		shadowElevation = 6.dp,
+	) {
+		Row(
+			modifier = Modifier.height(56.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Row(
+				modifier = Modifier
+					.clickable(enabled = enabled) { actions.onReadClick() }
+					.fillMaxHeight()
+					.padding(start = 22.dp, end = if (hasMenu) 14.dp else 24.dp),
+				verticalAlignment = Alignment.CenterVertically,
+				horizontalArrangement = Arrangement.spacedBy(10.dp),
+			) {
+				Icon(
+					painter = painterResource(R.drawable.ic_play),
+					contentDescription = null,
+					tint = onColor,
+					modifier = Modifier.size(22.dp),
+				)
+				Text(
+					text = label,
+					style = MaterialTheme.typography.titleMedium,
+					fontWeight = FontWeight.SemiBold,
+					color = onColor,
+					maxLines = 1,
+				)
+			}
+			if (hasMenu) {
+				var menuExpanded by remember { mutableStateOf(false) }
+				Box {
+					Row(
+						modifier = Modifier
+							.clickable { menuExpanded = true }
+							.fillMaxHeight()
+							.padding(end = 16.dp),
+						verticalAlignment = Alignment.CenterVertically,
+					) {
+						Box(
+							modifier = Modifier
+								.width(1.dp)
+								.height(24.dp)
+								.background(onColor.copy(alpha = 0.3f)),
+						)
+						Spacer(Modifier.width(12.dp))
+						Icon(
+							painter = painterResource(R.drawable.ic_expand_more),
+							contentDescription = stringResource(R.string.show_menu),
+							tint = onColor,
+							modifier = Modifier.size(22.dp),
+						)
+					}
+					DropdownMenu(
+						expanded = menuExpanded,
+						onDismissRequest = { menuExpanded = false },
+					) {
+						if (canIncognito) {
+							DropdownMenuItem(
+								text = { Text(stringResource(R.string.incognito_mode)) },
+								leadingIcon = {
+									Icon(painterResource(R.drawable.ic_incognito), contentDescription = null)
+								},
+								onClick = {
+									menuExpanded = false
+									actions.onIncognitoClick()
+								},
+							)
+						}
+						if (canForget) {
+							DropdownMenuItem(
+								text = { Text(stringResource(R.string.remove_from_history)) },
+								leadingIcon = {
+									Icon(painterResource(R.drawable.ic_delete), contentDescription = null)
+								},
+								onClick = {
+									menuExpanded = false
+									actions.onForgetHistoryClick()
+								},
+							)
+						}
+					}
 				}
 			}
 		}

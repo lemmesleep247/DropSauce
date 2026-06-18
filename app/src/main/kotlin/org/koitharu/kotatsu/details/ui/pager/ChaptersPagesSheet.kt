@@ -11,13 +11,14 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
-import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_COLLAPSED
 import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_DRAGGING
@@ -38,7 +39,6 @@ import org.koitharu.kotatsu.core.util.ext.recyclerView
 import org.koitharu.kotatsu.core.util.ext.smoothScrollToTop
 import org.koitharu.kotatsu.databinding.SheetChaptersPagesBinding
 import org.koitharu.kotatsu.details.ui.DetailsViewModel
-import org.koitharu.kotatsu.details.ui.ReadButtonDelegate
 import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
 import javax.inject.Inject
 
@@ -73,9 +73,9 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		if (!adapter.isPagesTabEnabled) {
 			defaultTab = (defaultTab - 1).coerceAtLeast(TAB_CHAPTERS)
 		}
-		(viewModel as? DetailsViewModel)?.let { dvm ->
-			ReadButtonDelegate(binding.splitButtonRead, dvm, router).attach(viewLifecycleOwner)
-		}
+		// The read/continue action now lives in the details page's floating FAB, so the sheet's own
+		// split button is retired here to avoid a duplicate control.
+		binding.splitButtonRead.isVisible = false
 		binding.pager.offscreenPageLimit = adapter.itemCount
 		binding.pager.recyclerView?.isNestedScrollingEnabled = false
 		binding.pager.adapter = adapter
@@ -112,6 +112,23 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat = insets
 
+	override fun onStart() {
+		super.onStart()
+		// In the details screen the sheet is a modal that rises to a centred, half-expanded position.
+		// From there it can be dragged up to full screen or swiped straight down to dismiss (no peek
+		// stop in between). The reader hosts the same sheet but keeps its own behaviour, so this is
+		// gated to the DetailsViewModel context.
+		if (viewModel is DetailsViewModel) {
+			(dialog as? BottomSheetDialog)?.behavior?.apply {
+				isFitToContents = false
+				isHideable = true
+				skipCollapsed = true
+				halfExpandedRatio = HALF_EXPANDED_RATIO
+				state = BottomSheetBehavior.STATE_HALF_EXPANDED
+			}
+		}
+	}
+
 	override fun onStateChanged(sheet: View, newState: Int) {
 		val binding = viewBinding ?: return
 		binding.layoutTouchBlock.isTouchEventsAllowed = dialog != null || newState != STATE_COLLAPSED
@@ -120,8 +137,6 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		}
 		val isActionModeStarted = actionModeDelegate?.isActionModeStarted == true
 		binding.toolbar.menuView?.isVisible = newState == STATE_EXPANDED && !isActionModeStarted
-		binding.splitButtonRead.isVisible = newState != STATE_EXPANDED && !isActionModeStarted
-			&& viewModel is DetailsViewModel
 		updateSearchVisibility()
 	}
 
@@ -251,5 +266,8 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		const val TAB_CHAPTERS = 0
 		const val TAB_PAGES = 1
 		const val TAB_BOOKMARKS = 2
+
+		// How much of the screen height the sheet covers when it first opens at the centre position.
+		private const val HALF_EXPANDED_RATIO = 0.62f
 	}
 }

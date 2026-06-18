@@ -39,29 +39,4 @@
 
 	</com.google.android.material.appbar.AppBarLayout>
 
-	<androidx.fragment.app.FragmentContainerView
-		android:id="@+id/container_bottom_sheet"
-		android:name="org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet"
-		style="@style/Widget.Kotatsu.BottomSheet.Details"
-		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		android:elevation="6dp"
-		android:nestedScrollingEnabled="false"
-		android:outlineProvider="background"
-		app:behavior_fitToContents="false"
-		app:behavior_hideable="false"
-		app:behavior_peekHeight="@dimen/details_bs_peek_height"
-		app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-		app:paddingBottomSystemWindowInsets="false"
-		tools:layout="@layout/sheet_chapters_pages" />
-
-	<View
-		android:id="@+id/navbarDim"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:layout_gravity="bottom"
-		android:background="?colorSurfaceContainerHigh"
-		android:elevation="9dp"
-		tools:layout_height="10dp" />
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

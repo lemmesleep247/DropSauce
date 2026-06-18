@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.details.ui
 import android.app.assist.AssistContent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.widget.ActionMenuView
 import androidx.compose.runtime.collectAsState
@@ -15,20 +16,19 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
-import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.map
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
-import org.koitharu.kotatsu.core.ui.sheet.BottomSheetCollapseCallback
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.copyToClipboard
@@ -41,7 +41,6 @@ import org.koitharu.kotatsu.databinding.ActivityDetailsExpressiveBinding
 import org.koitharu.kotatsu.details.service.MangaPrefetchService
 import org.koitharu.kotatsu.details.ui.model.ChapterListItem
 import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
-import org.koitharu.kotatsu.main.ui.owners.BottomSheetOwner
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import coil3.ImageLoader
 import javax.inject.Inject
@@ -54,8 +53,7 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class DetailsExpressiveActivity :
-	BaseActivity<ActivityDetailsExpressiveBinding>(),
-	BottomSheetOwner {
+	BaseActivity<ActivityDetailsExpressiveBinding>() {
 
 	@Inject lateinit var coil: ImageLoader
 	@Inject lateinit var settings: AppSettings
@@ -68,13 +66,9 @@ class DetailsExpressiveActivity :
 	private val bottomInset = mutableIntStateOf(0)
 	private var isDarkTheme = false
 
-	// Pull-to-refresh is only allowed when the content is scrolled to the top and the chapters sheet
-	// is collapsed, so the gesture never fires mid-scroll or while dragging the sheet.
+	// Pull-to-refresh is only allowed when the content is scrolled to the top, so the gesture never
+	// fires mid-scroll. The chapters list now lives in a modal sheet, so it can't interfere here.
 	private var contentAtTop = true
-	private var sheetCollapsed = true
-
-	override val bottomSheet: View?
-		get() = viewBinding.containerBottomSheet
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -86,7 +80,6 @@ class DetailsExpressiveActivity :
 		supportActionBar?.setDisplayShowTitleEnabled(false)
 
 		setupContent()
-		setupBottomSheet()
 		setupSwipeRefresh()
 
 		menuProvider = DetailsMenuProvider(
@@ -114,7 +107,7 @@ class DetailsExpressiveActivity :
 				DetailsErrorObserver(
 					activity = this,
 					snackbarHost = viewBinding.composeView,
-					bottomSheet = viewBinding.containerBottomSheet,
+					bottomSheet = null,
 					viewModel = viewModel,
 					resolver = exceptionResolver,
 				),
@@ -157,8 +150,11 @@ class DetailsExpressiveActivity :
 			onScrobblingCardClick = { index -> router.showScrobblingInfoSheet(index) },
 			onRelatedMore = { manga -> router.openRelated(manga) },
 			onRelatedClick = { item -> router.openDetails(item.toMangaWithOverride()) },
+			onReadClick = { openReader(isIncognitoMode = false) },
+			onIncognitoClick = { openReader(isIncognitoMode = true) },
+			onForgetHistoryClick = { viewModel.removeFromHistory() },
+			onChaptersClick = { router.showChapterPagesSheet() },
 		)
-		val peekHeightPx = resources.getDimensionPixelSize(R.dimen.details_bs_peek_height)
 		viewBinding.composeView.setViewCompositionStrategy(
 			ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed,
 		)
@@ -193,30 +189,12 @@ class DetailsExpressiveActivity :
 					isBackdropEnabled = settings.isBackdropEnabled,
 					style = settings.detailsUiMode,
 					topInset = with(density) { topInset.intValue.toDp() },
-					bottomContentPadding = with(density) { peekHeightPx.toDp() } + with(density) { bottomInset.intValue.toDp() },
+					bottomContentPadding = with(density) { bottomInset.intValue.toDp() },
 					onScroll = ::onContentScroll,
 					actions = actions,
 				)
 			}
 		}
-	}
-
-	private fun setupBottomSheet() {
-		val sheet = viewBinding.containerBottomSheet
-		onBackPressedDispatcher.addCallback(BottomSheetCollapseCallback(sheet))
-		val navbarDim = viewBinding.navbarDim
-		BottomSheetBehavior.from(sheet).addBottomSheetCallback(
-			object : BottomSheetBehavior.BottomSheetCallback() {
-				override fun onStateChanged(bottomSheet: View, newState: Int) {
-					sheetCollapsed = newState == BottomSheetBehavior.STATE_COLLAPSED
-					updateSwipeRefreshEnabled()
-				}
-
-				override fun onSlide(bottomSheet: View, slideOffset: Float) {
-					navbarDim.alpha = 1f - slideOffset.coerceAtLeast(0f)
-				}
-			},
-		)
 	}
 
 	private fun setupSwipeRefresh() {
@@ -227,7 +205,28 @@ class DetailsExpressiveActivity :
 	}
 
 	private fun updateSwipeRefreshEnabled() {
-		viewBinding.swipeRefreshLayout.isEnabled = contentAtTop && sheetCollapsed
+		viewBinding.swipeRefreshLayout.isEnabled = contentAtTop
+	}
+
+	// Opens the reader for the current/first chapter, mirroring the read button's behaviour: it bails
+	// out with a hint if the last-read chapter is no longer available, and surfaces a toast when an
+	// incognito session is started so the mode change is obvious.
+	private fun openReader(isIncognitoMode: Boolean) {
+		val manga = viewModel.getMangaOrNull() ?: return
+		if (viewModel.historyInfo.value.isChapterMissing) {
+			Snackbar.make(viewBinding.composeView, R.string.chapter_is_missing, Snackbar.LENGTH_SHORT).show()
+			return
+		}
+		val intentBuilder = ReaderIntent.Builder(this)
+			.manga(manga)
+			.branch(viewModel.selectedBranchValue)
+		if (isIncognitoMode) {
+			intentBuilder.incognito()
+		}
+		router.openReader(intentBuilder.build())
+		if (isIncognitoMode) {
+			Toast.makeText(this, R.string.incognito_mode, Toast.LENGTH_SHORT).show()
+		}
 	}
 
 	// The back button stays pinned/floating at top-left at all times. The action (overflow) pill is
@@ -252,7 +251,6 @@ class DetailsExpressiveActivity :
 		topInset.intValue = bars.top
 		bottomInset.intValue = bars.bottom
 		viewBinding.appbar.updatePadding(top = bars.top)
-		viewBinding.navbarDim.updateLayoutParams { height = bars.bottom }
 		// Match the rest of the app: rest the refresh indicator just under the status bar (the same
 		// offset the old details screen used), not pushed down below the whole top bar.
 		viewBinding.swipeRefreshLayout.setProgressViewOffset(false, bars.top, bars.top + 180)

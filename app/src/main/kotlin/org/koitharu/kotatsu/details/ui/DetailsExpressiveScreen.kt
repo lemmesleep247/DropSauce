@@ -69,6 +69,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -578,7 +580,17 @@ private fun HeroSection(
 				.padding(horizontal = SCREEN_PADDING),
 			horizontalAlignment = Alignment.CenterHorizontally,
 		) {
-			CoverCard(manga, coverUrl, imageLoader, COVER_WIDTH, COVER_HEIGHT, 24.dp, null, actions)
+			CoverCard(
+				manga = manga,
+				coverUrl = coverUrl,
+				imageLoader = imageLoader,
+				modifier = Modifier
+					.width(COVER_WIDTH)
+					.height(COVER_HEIGHT),
+				corner = 24.dp,
+				nsfwLabel = null,
+				actions = actions,
+			)
 			Spacer(Modifier.height(20.dp))
 			HeroTexts(centered = true, manga = manga, accent = accent, actions = actions)
 			Spacer(Modifier.height(16.dp))
@@ -594,35 +606,111 @@ private fun HeroSection(
 			)
 		}
 	} else {
-		Row(
+		BoxWithConstraints(
 			modifier = Modifier
 				.fillMaxWidth()
-				.padding(horizontal = SCREEN_PADDING),
+				.padding(horizontal = SCREEN_PADDING)
 		) {
-			// Compact: the content-rating badge sits on the cover instead of as a pill.
-			CoverCard(manga, coverUrl, imageLoader, COMPACT_COVER_WIDTH, COMPACT_COVER_HEIGHT, 20.dp, nsfwLabel, actions)
-			Spacer(Modifier.width(16.dp))
-			Column(modifier = Modifier.weight(1f)) {
-				HeroTexts(centered = false, manga = manga, accent = accent, actions = actions)
-				Spacer(Modifier.height(12.dp))
-				StatPills(
-					centered = false,
-					showContentRating = false,
-					manga = manga,
-					details = details,
-					sourceTitle = sourceTitle,
-					accent = accent,
-					imageLoader = imageLoader,
-					onSourceClick = { actions.onSourceClick(manga) },
+			val density = LocalDensity.current
+			val compactCoverWidthPx = with(density) { COMPACT_COVER_WIDTH.roundToPx() }
+			val compactCoverHeightPx = with(density) { COMPACT_COVER_HEIGHT.roundToPx() }
+			val spacingPx = with(density) { 16.dp.roundToPx() }
+			val spacerHeightPx = with(density) { 14.dp.roundToPx() }
+
+			val measurer = rememberTextMeasurer()
+			val authors = manga.authors.filter { it.isNotBlank() }
+			val authorText = authors.joinToString(", ")
+
+			val titleStyle = MaterialTheme.typography.headlineSmall
+			val authorStyle = MaterialTheme.typography.labelLarge
+
+			val infoWidth = maxWidth - COMPACT_COVER_WIDTH - 16.dp
+			val infoWidthPx = with(density) { infoWidth.roundToPx() }
+
+			val titleLayoutResult = measurer.measure(
+				text = manga.title,
+				style = titleStyle,
+				constraints = Constraints(maxWidth = infoWidthPx),
+				maxLines = 4,
+			)
+			val authorLayoutResult = if (authorText.isNotEmpty()) {
+				measurer.measure(
+					text = authorText,
+					style = authorStyle,
+					constraints = Constraints(maxWidth = infoWidthPx),
+					maxLines = 2,
 				)
-				Spacer(Modifier.height(14.dp))
-				FavouriteButton(
-					label = favouriteLabel,
-					isFavourite = isFavourite,
-					accent = accent,
-					onClick = onFavouriteClick,
-					horizontalPadding = 0.dp,
+			} else {
+				null
+			}
+
+			val titleFitsInOneLine = titleLayoutResult.lineCount <= 1
+			val authorFitsInOneLine = authorLayoutResult == null || authorLayoutResult.lineCount <= 1
+			val bothFitInOneLine = titleFitsInOneLine && authorFitsInOneLine
+
+			Layout(
+				content = {
+					CoverCard(
+						manga = manga,
+						coverUrl = coverUrl,
+						imageLoader = imageLoader,
+						modifier = Modifier.width(COMPACT_COVER_WIDTH),
+						corner = 20.dp,
+						nsfwLabel = nsfwLabel,
+						actions = actions,
+					)
+					Column {
+						HeroTexts(centered = false, manga = manga, accent = accent, actions = actions)
+						Spacer(Modifier.height(12.dp))
+						StatPills(
+							centered = false,
+							showContentRating = false,
+							manga = manga,
+							details = details,
+							sourceTitle = sourceTitle,
+							accent = accent,
+							imageLoader = imageLoader,
+							onSourceClick = { actions.onSourceClick(manga) },
+						)
+					}
+					FavouriteButton(
+						label = favouriteLabel,
+						isFavourite = isFavourite,
+						accent = accent,
+						onClick = onFavouriteClick,
+						horizontalPadding = 0.dp,
+					)
+				},
+			) { measurables, constraints ->
+				val remainingWidth = constraints.maxWidth - compactCoverWidthPx - spacingPx
+
+				val upperPlaceable = measurables[1].measure(
+					Constraints.fixedWidth(remainingWidth)
 				)
+
+				val buttonPlaceable = measurables[2].measure(
+					Constraints.fixedWidth(remainingWidth)
+				)
+
+				val naturalInfoHeight = upperPlaceable.height + spacerHeightPx + buttonPlaceable.height
+				val coverHeight = if (bothFitInOneLine) {
+					compactCoverHeightPx
+				} else {
+					maxOf(compactCoverHeightPx, naturalInfoHeight)
+				}
+
+				val coverPlaceable = measurables[0].measure(
+					Constraints.fixed(compactCoverWidthPx, coverHeight)
+				)
+
+				layout(constraints.maxWidth, coverHeight) {
+					coverPlaceable.placeRelative(0, 0)
+					upperPlaceable.placeRelative(compactCoverWidthPx + spacingPx, 0)
+					buttonPlaceable.placeRelative(
+						compactCoverWidthPx + spacingPx,
+						coverHeight - buttonPlaceable.height
+					)
+				}
 			}
 		}
 	}
@@ -633,8 +721,7 @@ private fun CoverCard(
 	manga: Manga,
 	coverUrl: String?,
 	imageLoader: ImageLoader,
-	width: Dp,
-	height: Dp,
+	modifier: Modifier,
 	corner: Dp,
 	nsfwLabel: String?,
 	actions: DetailsExpressiveActions,
@@ -645,9 +732,7 @@ private fun CoverCard(
 		color = MaterialTheme.colorScheme.surfaceVariant,
 		tonalElevation = 4.dp,
 		shadowElevation = 16.dp,
-		modifier = Modifier
-			.width(width)
-			.height(height),
+		modifier = modifier,
 	) {
 		val coverRequest = remember(coverUrl, manga.source) {
 			ImageRequest.Builder(ctx)

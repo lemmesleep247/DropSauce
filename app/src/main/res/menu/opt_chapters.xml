@@ -9,7 +9,7 @@
 		android:orderInCategory="0"
 		android:title="@string/search_chapters"
 		app:actionViewClass="androidx.appcompat.widget.SearchView"
-		app:showAsAction="always|collapseActionView" />
+		app:showAsAction="ifRoom|collapseActionView" />
 
 	<item
 		android:id="@+id/action_reversed"

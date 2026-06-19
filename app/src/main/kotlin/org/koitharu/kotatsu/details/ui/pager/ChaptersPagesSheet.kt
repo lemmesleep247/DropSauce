@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.details.ui.pager
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,9 +10,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -32,11 +35,13 @@ import org.koitharu.kotatsu.core.util.ext.menuView
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.recyclerView
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.smoothScrollToTop
 import org.koitharu.kotatsu.databinding.SheetChaptersPagesBinding
 import org.koitharu.kotatsu.details.ui.DetailsViewModel
 import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
 import javax.inject.Inject
+import com.google.android.material.R as materialR
 
 @AndroidEntryPoint
 class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
@@ -48,6 +53,14 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 	lateinit var settings: AppSettings
 
 	private val viewModel by ChaptersPagesViewModel.ActivityVMLazy(this)
+
+	override fun getTheme(): Int {
+		return if (context?.resources?.getBoolean(R.bool.is_tablet) == true) {
+			super.getTheme()
+		} else {
+			R.style.ThemeOverlay_Kotatsu_DetailsBottomSheetDialog
+		}
+	}
 
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): SheetChaptersPagesBinding {
 		return SheetChaptersPagesBinding.inflate(inflater, container, false)
@@ -103,18 +116,42 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 	override fun onStart() {
 		super.onStart()
-		// In the details screen the sheet is a modal that rises to a centred, half-expanded position.
-		// From there it can be dragged up to full screen or swiped straight down to dismiss (no peek
-		// stop in between). The reader hosts the same sheet but keeps its own behaviour, so this is
-		// gated to the DetailsViewModel context.
+		// In the details screen the sheet opens at a centred, half-expanded position. Keep nested list
+		// swipes for the RecyclerViews; only direct drags on the header/toolbar should move the sheet.
+		// The reader hosts the same sheet but keeps its own behaviour, so this is gated to details.
 		if (viewModel is DetailsViewModel) {
-			(dialog as? BottomSheetDialog)?.behavior?.apply {
+			val sheetDialog = dialog as? BottomSheetDialog
+			applyDetailsSheetSurface(sheetDialog)
+			sheetDialog?.behavior?.apply {
 				isFitToContents = false
 				isHideable = true
+				setDraggableOnNestedScroll(false)
 				skipCollapsed = true
 				halfExpandedRatio = HALF_EXPANDED_RATIO
 				state = BottomSheetBehavior.STATE_HALF_EXPANDED
 			}
+		}
+	}
+
+	private fun applyDetailsSheetSurface(sheetDialog: BottomSheetDialog?) {
+		val sheetView = sheetDialog?.findViewById<View>(materialR.id.design_bottom_sheet) ?: return
+		val surfaceColor = requireActivity().getThemeColor(android.R.attr.colorBackground)
+		val surfaceColorState = ColorStateList.valueOf(surfaceColor)
+		sheetView.elevation = 0f
+		sheetView.clipToOutline = true
+		sheetView.backgroundTintList = surfaceColorState
+		viewBinding?.run {
+			root.setBackgroundColor(surfaceColor)
+			headerBar.setBackgroundColor(surfaceColor)
+			toolbar.setBackgroundColor(surfaceColor)
+			layoutTouchBlock.setBackgroundColor(surfaceColor)
+			pager.setBackgroundColor(surfaceColor)
+		}
+		(sheetView.background as? MaterialShapeDrawable)?.apply {
+			fillColor = surfaceColorState
+			tintList = surfaceColorState
+			elevation = 0f
+			parentAbsoluteElevation = 0f
 		}
 	}
 

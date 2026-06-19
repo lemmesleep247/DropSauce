@@ -39,6 +39,7 @@
                 app:tabIndicatorColor="?colorSurfaceDim"
                 app:tabIndicatorFullWidth="true"
                 app:tabIndicatorGravity="stretch"
+                app:tabIconTint="?attr/colorOnSurfaceVariant"
                 app:tabInlineLabel="true"
                 app:tabMinWidth="64dp"
                 app:tabPaddingTop="11dp"

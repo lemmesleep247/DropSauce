@@ -52,9 +52,15 @@
 		<item name="cornerSizeBottomRight">0dp</item>
 	</style>
 
+	<!-- The sheet's content views are painted ?android:colorBackground at runtime
+	     (ChaptersPagesSheet.applyDetailsSheetSurface). The background drawable must use the SAME flat
+	     colour with NO elevation overlay, otherwise at full screen the edge-to-edge top inset padding
+	     exposes this drawable as a mismatched band across the status bar. Elevation 0 disables the
+	     overlay tint so the band stays identical to the content. -->
 	<style name="Widget.Kotatsu.BottomSheet.Details" parent="Widget.Material3.BottomSheet.Modal">
 		<item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Kotatsu.DetailsSheet</item>
-		<item name="backgroundTint">?attr/colorSurface</item>
+		<item name="backgroundTint">?android:attr/colorBackground</item>
+		<item name="android:elevation">0dp</item>
 		<item name="paddingBottomSystemWindowInsets">false</item>
 	</style>
 

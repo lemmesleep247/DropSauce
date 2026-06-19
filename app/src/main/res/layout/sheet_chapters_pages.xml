@@ -36,7 +36,7 @@
                 app:tabGravity="start"
                 app:tabIndicator="@drawable/bg_tab_pill"
                 app:tabIndicatorAnimationMode="fade"
-                app:tabIndicatorColor="?colorSurfaceDim"
+                app:tabIndicatorColor="?attr/colorSurfaceContainer"
                 app:tabIndicatorFullWidth="true"
                 app:tabIndicatorGravity="stretch"
                 app:tabIconTint="?attr/colorOnSurfaceVariant"

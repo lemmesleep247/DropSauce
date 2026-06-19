@@ -18,6 +18,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.navigation.NavigationBarView
 import com.google.android.material.navigationrail.NavigationRailView
 import kotlinx.coroutines.channels.awaitClose
@@ -270,9 +271,24 @@ class MainNavigationDelegate(
 			transaction.add(R.id.container, shownFragment, tag)
 		}
 		transaction.setMaxLifecycle(shownFragment, Lifecycle.State.RESUMED)
-		transaction.runOnCommit { onFragmentChanged(primaryFragment ?: shownFragment, fromUser = true) }
+		transaction.runOnCommit {
+			val shown = primaryFragment ?: shownFragment
+			// Tabs are kept alive, so the list would otherwise retain its previous scroll position.
+			// Reset it to the top so every tab always opens at the top. Done here, before the first
+			// frame is drawn (and while the fade-in is still near-transparent), so there's no visible jump.
+			shown.resetContentToTop()
+			onFragmentChanged(shown, fromUser = true)
+		}
 		transaction.commit()
 		return true
+	}
+
+	private fun Fragment.resetContentToTop() {
+		val recyclerView = (this as? RecyclerViewOwner)?.recyclerView ?: return
+		when (val lm = recyclerView.layoutManager) {
+			is LinearLayoutManager -> lm.scrollToPositionWithOffset(0, 0)
+			else -> recyclerView.scrollToPosition(0)
+		}
 	}
 
 	/**

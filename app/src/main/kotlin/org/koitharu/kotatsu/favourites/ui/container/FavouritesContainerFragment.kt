@@ -11,6 +11,7 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
@@ -72,6 +73,22 @@ class FavouritesContainerFragment : BaseFragment<FragmentFavouritesContainerBind
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat = insets
+
+	override fun onHiddenChanged(hidden: Boolean) {
+		super.onHiddenChanged(hidden)
+		if (!hidden) {
+			// This tab is kept alive across bottom-nav switches, so its category lists would retain
+			// their previous scroll. Reset every instantiated category page (the visible one plus any
+			// cached offscreen pages) to the top whenever Favourites is reopened, matching the other tabs.
+			for (page in childFragmentManager.fragments) {
+				val recyclerView = (page as? RecyclerViewOwner)?.recyclerView ?: continue
+				when (val lm = recyclerView.layoutManager) {
+					is LinearLayoutManager -> lm.scrollToPositionWithOffset(0, 0)
+					else -> recyclerView.scrollToPosition(0)
+				}
+			}
+		}
+	}
 
 	override fun onActionModeStarted(mode: ActionMode) {
 		viewBinding?.run {

@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -147,12 +148,22 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 			layoutTouchBlock.setBackgroundColor(surfaceColor)
 			pager.setBackgroundColor(surfaceColor)
 		}
-		(sheetView.background as? MaterialShapeDrawable)?.apply {
-			fillColor = surfaceColorState
-			tintList = surfaceColorState
-			elevation = 0f
-			parentAbsoluteElevation = 0f
+		// Recolour the sheet's MaterialShapeDrawable *fill* to the activity surface colour. Its style
+		// backgroundTint resolves against the dialog theme, where android:colorBackground maps to a lighter
+		// surface tone, so the raw fill is the wrong colour even though the view tint renders it correctly.
+		// The contextual action bar (BaseAdaptiveSheet.resolveSheetSurfaceColor) reads this raw fillColor to
+		// match the sheet, so it must hold the real surface colour. The drawable is assigned by
+		// BottomSheetBehavior on its first layout pass (after onStart), so apply now and again post-layout.
+		fun applyShapeSurface() {
+			(sheetView.background as? MaterialShapeDrawable)?.apply {
+				fillColor = surfaceColorState
+				tintList = surfaceColorState
+				elevation = 0f
+				parentAbsoluteElevation = 0f
+			}
 		}
+		applyShapeSurface()
+		sheetView.doOnLayout { applyShapeSurface() }
 	}
 
 	override fun onStateChanged(sheet: View, newState: Int) {

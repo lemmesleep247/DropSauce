@@ -142,7 +142,7 @@ private fun ProxyScreen(
 						entryValues = proxyTypeValues,
 						selectedValue = proxyType,
 						onValueChange = { proxyType = it },
-						icon = R.drawable.ic_sync,
+						icon = R.drawable.ic_settings,
 						shape = pos.shape,
 					)
 				}

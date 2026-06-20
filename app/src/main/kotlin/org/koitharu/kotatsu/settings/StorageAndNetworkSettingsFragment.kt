@@ -219,7 +219,7 @@ private fun StorageNetworkScreen(
 					NavigationSettingsItem(
 						title = stringResource(R.string.proxy),
 						subtitle = proxySummary,
-						icon = R.drawable.ic_sync,
+						icon = R.drawable.ic_plug_large,
 						
 						shape = pos.shape,
 						onClick = onOpenProxy,
@@ -255,7 +255,7 @@ private fun StorageNetworkScreen(
 						entryValues = imageProxyValues,
 						selectedValue = imageProxy,
 						onValueChange = { imageProxy = it },
-						icon = R.drawable.ic_filter_menu,
+						icon = R.drawable.ic_images,
 						
 						shape = pos.shape,
 					)

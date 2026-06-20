@@ -263,7 +263,7 @@ private fun SyncScreen(
 							subtitle = stringResource(R.string.sync_on_start_summary),
 							checked = state.isSyncOnStart,
 							onCheckedChange = onSyncOnStartChange,
-							icon = R.drawable.ic_sync,
+							icon = R.drawable.ic_play,
 							shape = pos.shape,
 						)
 					}

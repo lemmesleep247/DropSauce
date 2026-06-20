@@ -505,7 +505,7 @@ private fun AppearanceScreen(
 						title = stringResource(R.string.show_labels_in_navbar),
 						checked = navLabels,
 						onCheckedChange = { navLabels = it },
-						icon = R.drawable.ic_script,
+						icon = R.drawable.ic_title,
 						
 						shape = pos.shape,
 					)

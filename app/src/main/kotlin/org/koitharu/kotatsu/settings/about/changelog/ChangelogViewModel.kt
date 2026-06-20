@@ -23,9 +23,13 @@ class ChangelogViewModel @Inject constructor(
 				stringJoiner.add("# ")
 					.append(version.name)
 					.append("\n\n")
-					.append(version.description)
+					.append(version.description.formatChangelogDescription())
 			}
 			changelog.value = stringJoiner.complete()
 		}
+	}
+
+	private fun String.formatChangelogDescription(): String {
+		return replace(Regex("(?<!\\n)\\nIf this is your first"), "\n\nIf this is your first")
 	}
 }

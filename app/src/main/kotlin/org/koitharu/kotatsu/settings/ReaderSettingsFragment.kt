@@ -299,7 +299,7 @@ private fun ReaderScreen(
 						entryValues = readerAnimationValues,
 						selectedValue = readerAnimation,
 						onValueChange = { readerAnimation = it },
-						icon = R.drawable.ic_timelapse,
+						icon = R.drawable.ic_play,
 						
 						shape = pos.shape,
 					)
@@ -465,7 +465,7 @@ private fun ReaderScreen(
 						subtitle = stringResource(R.string.show_pages_numbers_summary),
 						checked = pagesNumbers,
 						onCheckedChange = { pagesNumbers = it },
-						icon = R.drawable.ic_tag,
+						icon = R.drawable.ic_title,
 						
 						shape = pos.shape,
 					)

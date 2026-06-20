@@ -115,7 +115,7 @@ private fun NotificationsScreen(
 						title = stringResource(R.string.vibration),
 						checked = vibrate,
 						onCheckedChange = { vibrate = it },
-						icon = R.drawable.ic_timelapse,
+						icon = R.drawable.ic_haptic,
 						shape = pos.shape,
 						enabled = enabled,
 					)

@@ -11,6 +11,7 @@ import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
+import java.text.Normalizer
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,7 +28,23 @@ class SettingsSearchViewModel @Inject constructor(
 		if (q == null) {
 			emptyList()
 		} else {
-			allSettings.filter { it.searchText.contains(q, ignoreCase = true) }
+			val normalizedQuery = q.normalizeSearchText()
+			if (normalizedQuery.isBlank()) {
+				allSettings
+			} else {
+				val tokens = normalizedQuery.split(' ').filter { it.isNotBlank() }
+				allSettings.asSequence()
+					.mapNotNull { item ->
+						item.matchScore(normalizedQuery, tokens)?.let { score -> item to score }
+					}
+					.sortedWith(
+						compareBy<Pair<SettingsItem, Int>> { it.second }
+							.thenBy { it.first.breadcrumbs.joinToString(" > ") }
+							.thenBy { it.first.title.toString() },
+					)
+					.map { it.first }
+					.toList()
+			}
 		}
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Lazily, emptyList())
 
@@ -56,5 +73,38 @@ class SettingsSearchViewModel @Inject constructor(
 	fun navigateToPreference(item: SettingsItem) {
 		discardSearch()
 		onNavigateToPreference.call(item)
+	}
+
+	private fun SettingsItem.matchScore(query: String, tokens: List<String>): Int? {
+		val normalizedTitle = title.toString().normalizeSearchText()
+		val normalizedText = searchText.normalizeSearchText()
+		return when {
+			normalizedTitle == query -> 0
+			normalizedTitle.startsWith(query) -> 1
+			normalizedText.startsWith(query) -> 2
+			tokens.all { normalizedTitle.contains(it) } -> 3
+			tokens.all { normalizedText.contains(it) } -> 4
+			else -> null
+		}
+	}
+
+	private fun String.normalizeSearchText(): String {
+		val decomposed = Normalizer.normalize(this, Normalizer.Form.NFD)
+		return buildString(decomposed.length) {
+			var lastWasSpace = true
+			decomposed.forEach { char ->
+				when {
+					Character.getType(char) == Character.NON_SPACING_MARK.toInt() -> Unit
+					char.isLetterOrDigit() -> {
+						append(char.lowercaseChar())
+						lastWasSpace = false
+					}
+					!lastWasSpace -> {
+						append(' ')
+						lastWasSpace = true
+					}
+				}
+			}
+		}.trim()
 	}
 }

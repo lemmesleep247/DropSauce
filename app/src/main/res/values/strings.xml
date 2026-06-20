@@ -395,7 +395,7 @@
     <string name="mark_as_current">Mark as current</string>
     <string name="language">Language</string>
     <string name="theme_name_dynamic">Dynamic</string>
-    <string name="theme_name_expressive">Expressive (Test)</string>
+    <string name="theme_name_expressive">Expressive</string>
     <string name="color_theme">Color scheme</string>
     <string name="show_in_grid_view">Show in grid view</string>
     <string name="theme_name_miku">Miku</string>

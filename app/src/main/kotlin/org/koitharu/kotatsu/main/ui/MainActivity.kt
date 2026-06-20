@@ -9,8 +9,10 @@ import android.widget.LinearLayout
 import androidx.activity.viewModels
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.graphics.Insets
 import androidx.core.view.GravityCompat
 import androidx.core.view.MenuProvider
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
 import androidx.core.view.inputmethod.EditorInfoCompat
@@ -104,6 +106,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	private var isSearchFullyShown = false
 	private var mainFabModeKey: String? = null
 	private val shrinkFabRunnable = Runnable { viewBinding.fab?.shrink() }
+	private var navSystemBarBottom: Int = 0
 
 	override val appBar: AppBarLayout
 		get() = viewBinding.appbar
@@ -184,6 +187,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewModel.isBottomNavPinned.observe(this, ::setNavbarPinned)
 		searchSuggestionViewModel.isIncognitoModeEnabled.observe(this, this::onIncognitoModeChanged)
 		viewBinding.bottomNav?.addOnLayoutChangeListener(this)
+		setupContainerInsetsListener()
 		viewBinding.searchView.addTransitionListener(this)
 		viewBinding.searchView.addTransitionListener(exitCallback)
 		observeFoldHinge()
@@ -278,6 +282,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
+		navSystemBarBottom = barsInsets.bottom
 		val searchBarDefaultMargin = resources.getDimensionPixelOffset(R.dimen.search_bar_margin_horizontal)
 		viewBinding.layoutSearch.updateLayoutParams<MarginLayoutParams> {
 			marginEnd = searchBarDefaultMargin + barsInsets.end(v)
@@ -316,6 +321,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	) {
 		if (top != oldTop || bottom != oldBottom) {
 			updateContainerBottomMargin()
+			if (settings.isNavBarPinned && !settings.isLegacyNavigationBar) {
+				ViewCompat.requestApplyInsets(viewBinding.container)
+			}
 		}
 	}
 
@@ -555,14 +563,41 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			}
 		}
 		updateContainerBottomMargin()
+		// Re-dispatch window insets so child fragments update their RecyclerView bottom padding.
+		ViewCompat.requestApplyInsets(viewBinding.container)
+	}
+
+	private fun setupContainerInsetsListener() {
+		// When the nav bar is pinned, augment the bottom system-bar inset dispatched to child
+		// fragments by the pill's visual height. Fragment RecyclerViews apply this as bottom
+		// padding, so the last row can always be scrolled fully into view above the bar — without
+		// adding a container margin that would break the edge-to-edge look of the gesture area.
+		ViewCompat.setOnApplyWindowInsetsListener(viewBinding.container) { _, windowInsets ->
+			val extraBottom = if (settings.isNavBarPinned && !settings.isLegacyNavigationBar) {
+				((viewBinding.bottomNav?.height ?: 0) - navSystemBarBottom).coerceAtLeast(0)
+			} else {
+				0
+			}
+			if (extraBottom == 0) {
+				windowInsets
+			} else {
+				val type = WindowInsetsCompat.Type.systemBars()
+				val current = windowInsets.getInsets(type)
+				WindowInsetsCompat.Builder(windowInsets)
+					.setInsets(
+						type,
+						Insets.of(current.left, current.top, current.right, current.bottom + extraBottom),
+					)
+					.build()
+			}
+		}
 	}
 
 	private fun updateContainerBottomMargin() {
-		// The bottom navigation bar is a floating pill. Even when it's pinned (kept from hiding on
-		// scroll), the content must keep filling the full height *behind* it — otherwise the strip
-		// under the pill falls back to the solid window background and the bar stops looking
-		// floating. So the container never gets a bottom margin for the pinned bar; pinning only
-		// affects whether the bar/search hide on scroll.
+		// The bottom navigation bar is a floating pill. Content fills the full height *behind* it
+		// so the bar looks floating — the container never gets a bottom margin for the nav bar.
+		// Extra scrollable space when pinned is handled by augmenting window insets dispatched to
+		// child fragments (see the container insets listener set up in onCreate).
 		with(viewBinding.container) {
 			val params = layoutParams as MarginLayoutParams
 			if (params.bottomMargin != 0) {

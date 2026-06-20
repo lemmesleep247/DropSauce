@@ -14,8 +14,8 @@ enum class ColorScheme(
 ) {
 
 	DEFAULT(R.style.ThemeOverlay_Kotatsu_Totoro, R.string.theme_name_totoro),
-	MONET(R.style.ThemeOverlay_Kotatsu_Monet, R.string.theme_name_dynamic),
 	EXPRESSIVE(R.style.ThemeOverlay_Kotatsu_Expressive, R.string.theme_name_expressive),
+	MONET(R.style.ThemeOverlay_Kotatsu_Monet, R.string.theme_name_dynamic),
 	MIKU(R.style.ThemeOverlay_Kotatsu_Miku, R.string.theme_name_miku),
 	RENA(R.style.ThemeOverlay_Kotatsu_Asuka, R.string.theme_name_asuka),
 	FROG(R.style.ThemeOverlay_Kotatsu_Mion, R.string.theme_name_mion),

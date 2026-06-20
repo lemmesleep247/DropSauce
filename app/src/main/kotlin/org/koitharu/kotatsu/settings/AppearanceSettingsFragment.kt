@@ -495,8 +495,8 @@ private fun AppearanceScreen(
 						subtitle = stringResource(R.string.main_screen_fab_summary),
 						checked = mainFab,
 						onCheckedChange = { mainFab = it },
-						icon = R.drawable.ic_add,
-						
+						icon = R.drawable.ic_read,
+
 						shape = pos.shape,
 					)
 				}

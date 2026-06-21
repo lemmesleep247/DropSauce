@@ -757,9 +757,6 @@
     <string name="reader_chapter_toast">Показати спливаюче вікно зміни розділу</string>
     <string name="reader_chapter_toast_summary">Показувати спливаюче повідомлення з назвою розділу, коли її змінено</string>
     <string name="rename">Перейменувати</string>
-    <string name="save_filter">Зберегти фільтр</string>
-    <string name="overwrite">Перезаписати</string>
-    <string name="filter_overwrite_confirm">Фільтр з назвою \"%s\" вже існує. Перезаписати його?</string>
     <string name="storage_and_network">Зберігання та мережа</string>
     <string name="data_removal">Вилучення даних</string>
     <string name="privacy">Конфіденційність</string>

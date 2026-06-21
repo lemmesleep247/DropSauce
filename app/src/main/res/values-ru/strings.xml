@@ -755,9 +755,6 @@
     <string name="reader_chapter_toast">Отображать сообщение о смене главы</string>
     <string name="reader_chapter_toast_summary">Показывать всплывающее сообщение с названием главы при переходе между главами</string>
     <string name="rename">Переименовать</string>
-    <string name="save_filter">Сохранить фильтр</string>
-    <string name="overwrite">Перезаписать</string>
-    <string name="filter_overwrite_confirm">Фильтр с именем \"%s\" уже существует. Перезаписать?</string>
     <string name="storage_and_network">Хранилище и сеть</string>
     <string name="data_removal">Удаление данных</string>
     <string name="privacy">Приватность</string>

@@ -757,9 +757,6 @@
     <string name="no_chapters_in_manga">Tato manga neobsahuje žádné kapitoly</string>
     <string name="chapters_load_failed">Načítání kapitol selhalo</string>
     <string name="rename">Přejmenovat</string>
-    <string name="save_filter">Uložit filtr</string>
-    <string name="overwrite">Nahradit</string>
-    <string name="filter_overwrite_confirm">Filtr pojmenován\"%s\" již existuje. Chcete ho nahradit?</string>
     <string name="storage_and_network">Uložiště a síť</string>
     <string name="data_removal">Odstranění dat</string>
     <string name="privacy">Soukromí</string>

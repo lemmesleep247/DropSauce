@@ -755,9 +755,6 @@
     <string name="reader_chapter_toast">Hiện thông báo chuyển chương</string>
     <string name="reader_chapter_toast_summary">Hiển thị một bong bóng nổi nho nhỏ ở phía dưới màn hình cùng với tên của chương truyện khi bạn đọc sang một chương truyện mới</string>
     <string name="rename">Đặt tên</string>
-    <string name="save_filter">Lưu bộ lọc</string>
-    <string name="overwrite">Đè lên</string>
-    <string name="filter_overwrite_confirm">Một bộ lộc có tên là \"%s\" đã tồn tại trước đó. Bạn có muốn ghi đè nó lên không?</string>
     <string name="storage_and_network">Lưu trữ và mạng</string>
     <string name="data_removal">Xoá dữ liệu</string>
     <string name="privacy">Quyền riêng tư</string>

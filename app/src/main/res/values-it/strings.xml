@@ -757,9 +757,6 @@
     <string name="reader_chapter_toast">Mostra popup di cambio capitolo</string>
     <string name="reader_chapter_toast_summary">Mostra un messaggio pop-up con un titolo del capitolo quando è cambiato</string>
     <string name="rename">Rinomina</string>
-    <string name="save_filter">Salva filtro</string>
-    <string name="overwrite">Sovrascrivi</string>
-    <string name="filter_overwrite_confirm">Un filtro di nome \"%s\" esiste già. Vuoi sovrascriverlo?</string>
     <string name="storage_and_network">Memoria e rete</string>
     <string name="data_removal">Rimozione dei dati</string>
     <string name="privacy">Privacy</string>

@@ -757,9 +757,6 @@
     <string name="reader_chapter_toast">Bölüm değişikliği açılır penceresini göster</string>
     <string name="reader_chapter_toast_summary">Değiştirildiğinde bölüm başlığını içeren bir açılır pencere mesajı göster</string>
     <string name="rename">Yeniden adlandır</string>
-    <string name="save_filter">Filtreyi kaydet</string>
-    <string name="overwrite">Üzerine yaz</string>
-    <string name="filter_overwrite_confirm">\"%s\" adında bir filtre zaten var. Üzerine yazmak istiyor musunuz?</string>
     <string name="storage_and_network">Depolama ve ağ</string>
     <string name="data_removal">Verilerin silinmesi</string>
     <string name="privacy">Gizlilik</string>

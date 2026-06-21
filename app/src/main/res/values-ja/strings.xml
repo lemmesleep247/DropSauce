@@ -593,9 +593,6 @@
     <string name="no_chapters_in_manga">この漫画には利用可能なチャプターが含まれていません</string>
     <string name="chapters_load_failed">チャプターリストの読み込みに失敗</string>
     <string name="rename">リネーム</string>
-    <string name="save_filter">フィルターを保存</string>
-    <string name="overwrite">上書き</string>
-    <string name="filter_overwrite_confirm">「%s」という名前のフィルターが既に存在します。上書きしますか？</string>
     <string name="storage_and_network">ストレージとネットワーク</string>
     <string name="data_removal">データ削除</string>
     <string name="privacy">プライバシー</string>

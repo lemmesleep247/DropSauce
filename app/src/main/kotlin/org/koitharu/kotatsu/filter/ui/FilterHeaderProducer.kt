@@ -7,6 +7,7 @@ import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.filter.data.PersistableFilter
 import org.koitharu.kotatsu.filter.ui.model.FilterHeaderModel
+import org.koitharu.kotatsu.mihon.MihonFilterMapper
 import org.koitharu.kotatsu.filter.ui.model.FilterProperty
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaListFilterCapabilities
@@ -33,6 +34,7 @@ class FilterHeaderProducer @Inject constructor(
                 savedFilters = saved,
                 tagsProperty = tags,
                 snapshot = snapshot.listFilter,
+                isDynamic = filterCoordinator.isDynamicFilter,
                 limit = 12,
             )
             FilterHeaderModel(
@@ -49,10 +51,27 @@ class FilterHeaderProducer @Inject constructor(
         savedFilters: FilterProperty<PersistableFilter>,
         tagsProperty: FilterProperty<MangaTag>,
         snapshot: MangaListFilter,
+        isDynamic: Boolean,
         limit: Int,
     ): List<ChipsView.ChipModel> {
         val result = ArrayDeque<ChipsView.ChipModel>(savedFilters.availableItems.size + limit + 3)
-        if (snapshot.query.isNullOrEmpty() || capabilities.isSearchWithFiltersSupported) {
+        if (isDynamic) {
+            // Dynamic Mihon sources encode their filters into tags; show only the active ones (the real
+            // sort lives on the toolbar button, so it's excluded here). DB tag suggestions don't map to
+            // the source's FilterList, so they are not shown.
+            for (tag in tagsProperty.selectedItems) {
+                if (tag.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX)) {
+                    continue
+                }
+                result.addFirst(
+                    ChipsView.ChipModel(
+                        title = tag.title,
+                        isChecked = true,
+                        data = tag,
+                    ),
+                )
+            }
+        } else if (snapshot.query.isNullOrEmpty() || capabilities.isSearchWithFiltersSupported) {
             val selectedTags = tagsProperty.selectedItems.toMutableSet()
             var tags = if (selectedTags.isEmpty()) {
                 searchRepository.getTagsSuggestion("", limit, source)

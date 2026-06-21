@@ -63,6 +63,8 @@ import org.koitharu.kotatsu.favourites.ui.categories.FavouriteCategoriesActivity
 import org.koitharu.kotatsu.favourites.ui.categories.edit.FavouritesCategoryEditActivity
 import org.koitharu.kotatsu.favourites.ui.categories.select.FavoriteDialog
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
+import org.koitharu.kotatsu.filter.ui.mihon.MihonFilterSheetFragment
+import org.koitharu.kotatsu.filter.ui.mihon.MihonSortSheet
 import org.koitharu.kotatsu.filter.ui.sheet.FilterSheetFragment
 import org.koitharu.kotatsu.filter.ui.tags.TagsCatalogSheet
 import org.koitharu.kotatsu.history.ui.HistoryActivity
@@ -465,10 +467,20 @@ class AppRouter private constructor(
         ImportDialogFragment().showDistinct()
     }
 
-    fun showFilterSheet(): Boolean = if (isFilterSupported()) {
-        FilterSheetFragment().showDistinct()
-    } else {
-        false
+    fun showFilterSheet(): Boolean {
+        val coordinator = currentFilterCoordinator() ?: return false
+        return if (coordinator.isDynamicFilter) {
+            // Mihon sources render their own dynamic FilterList; the local library keeps the structured sheet.
+            MihonFilterSheetFragment().showDistinct()
+        } else {
+            FilterSheetFragment().showDistinct()
+        }
+    }
+
+    /** Opens the compact sort picker for the current list (the source's own sort, or the built-in orders). */
+    fun showSortSheet(): Boolean {
+        currentFilterCoordinator() ?: return false
+        return MihonSortSheet().showDistinct()
     }
 
     fun showTagsCatalogSheet(excludeMode: Boolean) {
@@ -570,10 +582,12 @@ class AppRouter private constructor(
 
     /** Public utils **/
 
-    fun isFilterSupported(): Boolean = when {
-        fragment != null -> FilterCoordinator.find(fragment) != null
-        activity != null -> activity is FilterCoordinator.Owner
-        else -> false
+    fun isFilterSupported(): Boolean = currentFilterCoordinator() != null
+
+    private fun currentFilterCoordinator(): FilterCoordinator? = when {
+        fragment != null -> FilterCoordinator.find(fragment)
+        activity is FilterCoordinator.Owner -> (activity as FilterCoordinator.Owner).filterCoordinator
+        else -> null
     }
 
     fun isChapterPagesSheetShown(): Boolean {

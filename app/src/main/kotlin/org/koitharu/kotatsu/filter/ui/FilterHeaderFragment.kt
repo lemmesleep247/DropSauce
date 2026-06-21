@@ -62,7 +62,11 @@ class FilterHeaderFragment : BaseFragment<FragmentFilterHeaderBinding>(), ChipsV
             }
 
             is String -> Unit
-            null -> router.showTagsCatalogSheet(excludeMode = false)
+            null -> if (filter.isDynamicFilter) {
+                router.showFilterSheet()
+            } else {
+                router.showTagsCatalogSheet(excludeMode = false)
+            }
         }
     }
 

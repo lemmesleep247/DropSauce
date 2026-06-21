@@ -40,11 +40,17 @@ class LazyMihonMangaRepository(
 	private val extensionManager: MihonExtensionManager,
 	private val cache: MemoryContentCache,
 	private val context: Context,
-) : MangaRepository {
+) : MangaRepository, MihonFilterHost {
 
 	@Volatile
 	private var delegate: MihonMangaRepository? = null
 	private val resolveMutex = Mutex()
+
+	// The lazy proxy only exists for Mihon ("MIHON_…") sources, so dynamic filters are always supported.
+	override val supportsDynamicFilters: Boolean
+		get() = true
+
+	override suspend fun loadDefaultFilterList() = resolve().loadDefaultFilterList()
 
 	override val sortOrders: Set<SortOrder>
 		get() = delegate?.sortOrders ?: EnumSet.allOf(SortOrder::class.java)

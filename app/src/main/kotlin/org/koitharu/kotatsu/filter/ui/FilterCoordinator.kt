@@ -26,10 +26,14 @@ import org.koitharu.kotatsu.core.util.ext.asFlow
 import org.koitharu.kotatsu.core.util.ext.lifecycleScope
 import org.koitharu.kotatsu.core.util.ext.sortedByOrdinal
 import org.koitharu.kotatsu.core.util.ext.sortedWithSafe
+import eu.kanade.tachiyomi.source.model.Filter
+import eu.kanade.tachiyomi.source.model.FilterList
 import org.koitharu.kotatsu.filter.data.PersistableFilter
 import org.koitharu.kotatsu.filter.data.SavedFiltersRepository
 import org.koitharu.kotatsu.filter.ui.model.FilterProperty
 import org.koitharu.kotatsu.filter.ui.tags.TagTitleComparator
+import org.koitharu.kotatsu.mihon.MihonFilterHost
+import org.koitharu.kotatsu.mihon.MihonFilterMapper
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.Demographic
@@ -277,8 +281,89 @@ class FilterCoordinator @Inject constructor(
         )
     }.stateIn(coroutineScope, SharingStarted.Lazily, FilterProperty.EMPTY)
 
+    private val filterHost: MihonFilterHost?
+        get() = repository as? MihonFilterHost
+
+    /** True when the source exposes a dynamic Mihon [FilterList] that should use the dynamic filter UI. */
+    val isDynamicFilter: Boolean
+        get() = filterHost?.supportsDynamicFilters == true
+
     fun reset() {
         currentListFilter.value = MangaListFilter.EMPTY
+    }
+
+    /**
+     * Loads the source's filters: [WorkingFilters.defaults] in their default state and
+     * [WorkingFilters.working] with the currently-applied filter decoded onto it. Both are fresh,
+     * independently-mutable instances.
+     */
+    suspend fun loadWorkingFilters(): WorkingFilters {
+        val host = filterHost ?: return WorkingFilters(FilterList(), FilterList())
+        val defaults = host.loadDefaultFilterList()
+        val working = host.loadDefaultFilterList()
+        MihonFilterMapper.decode(working, currentListFilter.value)
+        return WorkingFilters(working = working, defaults = defaults)
+    }
+
+    /** Encodes the mutated [working] list (vs [defaults]) into the active filter, keeping the search query. */
+    fun applyDynamicFilters(working: FilterList, defaults: FilterList) {
+        val tags = MihonFilterMapper.encode(working, defaults, repository.source)
+        val query = currentListFilter.value.takeQueryIfSupported()
+        currentListFilter.value = MangaListFilter(query = query, tags = tags)
+    }
+
+    /** Loads the current sort state for the compact sort picker (the source's own sort, or the built-in orders). */
+    suspend fun loadSortState(): SortState {
+        val host = filterHost
+        if (host?.supportsDynamicFilters == true) {
+            val working = host.loadDefaultFilterList()
+            MihonFilterMapper.decode(working, currentListFilter.value)
+            when (val ref = MihonFilterMapper.findSortFilter(working)) {
+                is MihonFilterMapper.SortRef.OfSort -> {
+                    val selection = ref.filter.state
+                    return SortState.Source(
+                        title = ref.filter.name,
+                        options = ref.filter.values.toList(),
+                        selectedIndex = selection?.index ?: -1,
+                        isAscending = selection?.ascending == true,
+                        supportsDirection = true,
+                    )
+                }
+
+                is MihonFilterMapper.SortRef.OfSelect -> {
+                    return SortState.Source(
+                        title = ref.filter.name,
+                        options = ref.filter.values.map { it.toString() },
+                        selectedIndex = ref.filter.state,
+                        isAscending = false,
+                        supportsDirection = false,
+                    )
+                }
+
+                null -> Unit
+            }
+        }
+        return SortState.Native(
+            options = availableSortOrders.sortedByOrdinal(),
+            selected = currentSortOrder.value,
+        )
+    }
+
+    /** Applies a source sort selection ([Filter.Sort] or sort [Filter.Select]), preserving other filters. */
+    fun applySourceSort(index: Int, isAscending: Boolean) = coroutineScope.launch {
+        val host = filterHost ?: return@launch
+        val defaults = host.loadDefaultFilterList()
+        val working = host.loadDefaultFilterList()
+        MihonFilterMapper.decode(working, currentListFilter.value)
+        when (val ref = MihonFilterMapper.findSortFilter(working)) {
+            is MihonFilterMapper.SortRef.OfSort -> ref.filter.state = Filter.Sort.Selection(index, isAscending)
+            is MihonFilterMapper.SortRef.OfSelect -> if (index in ref.filter.values.indices) {
+                ref.filter.state = index
+            }
+
+            null -> return@launch
+        }
+        applyDynamicFilters(working, defaults)
     }
 
     fun snapshot() = Snapshot(
@@ -309,10 +394,6 @@ class FilterCoordinator @Inject constructor(
             newFilter = MangaListFilter(query = newFilter.query)
         }
         set(newFilter)
-    }
-
-    fun saveCurrentFilter(name: String) = coroutineScope.launch {
-        savedFiltersRepository.save(repository.source, name, currentListFilter.value)
     }
 
     fun renameSavedFilter(id: Int, newName: String) = coroutineScope.launch {
@@ -519,6 +600,29 @@ class FilterCoordinator @Inject constructor(
         val sortOrder: SortOrder,
         val listFilter: MangaListFilter,
     )
+
+    /** A fresh pair of Mihon filter lists: the user-editable [working] copy and the [defaults] baseline. */
+    class WorkingFilters(
+        val working: FilterList,
+        val defaults: FilterList,
+    )
+
+    /** Sort options surfaced by the compact sort picker. */
+    sealed interface SortState {
+
+        data class Source(
+            val title: String,
+            val options: List<String>,
+            val selectedIndex: Int,
+            val isAscending: Boolean,
+            val supportsDirection: Boolean,
+        ) : SortState
+
+        data class Native(
+            val options: List<SortOrder>,
+            val selected: SortOrder,
+        ) : SortState
+    }
 
     interface Owner {
 

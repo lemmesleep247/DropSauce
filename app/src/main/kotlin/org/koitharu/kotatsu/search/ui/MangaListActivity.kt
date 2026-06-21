@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
 import androidx.fragment.app.Fragment
@@ -47,7 +48,9 @@ import org.koitharu.kotatsu.databinding.ActivityMangaListBinding
 import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
 import org.koitharu.kotatsu.filter.ui.FilterHeaderFragment
+import org.koitharu.kotatsu.filter.ui.mihon.MihonFilterSheetFragment
 import org.koitharu.kotatsu.filter.ui.sheet.FilterSheetFragment
+import org.koitharu.kotatsu.mihon.MihonFilterMapper
 import org.koitharu.kotatsu.list.ui.preview.PreviewFragment
 import org.koitharu.kotatsu.local.ui.LocalListFragment
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
@@ -162,7 +165,8 @@ class MangaListActivity :
 				replace(R.id.container_filter_header, FilterHeaderFragment::class.java, null)
 			}
 			if (viewBinding.containerSide != null) {
-				replace(R.id.container_side, FilterSheetFragment::class.java, null)
+				// reloadList only fires for remote (Mihon) multi-language sources, which are dynamic.
+				replace(R.id.container_side, MihonFilterSheetFragment::class.java, null)
 			}
 			runOnCommit { findFilterOwner()?.let { initFilter(it) } }
 		}
@@ -199,7 +203,7 @@ class MangaListActivity :
 
 	override fun onClick(v: View) {
 		when (v.id) {
-			R.id.button_order -> router.showFilterSheet()
+			R.id.button_order -> router.showSortSheet()
 		}
 	}
 
@@ -210,7 +214,14 @@ class MangaListActivity :
 		},
 	)
 
-	fun hidePreview() = setSideFragment(FilterSheetFragment::class.java, null)
+	fun hidePreview() = setSideFragment(filterSheetClass(findFilterOwner()), null)
+
+	private fun filterSheetClass(owner: FilterCoordinator.Owner?): Class<out Fragment> =
+		if (owner?.filterCoordinator?.isDynamicFilter == true) {
+			MihonFilterSheetFragment::class.java
+		} else {
+			FilterSheetFragment::class.java
+		}
 
 	private fun initList(source: MangaSource, filter: MangaListFilter?, sortOrder: SortOrder?) {
 		val fm = supportFragmentManager
@@ -237,7 +248,7 @@ class MangaListActivity :
 	private fun initFilter(filterOwner: FilterCoordinator.Owner) {
 		if (viewBinding.containerSide != null) {
 			if (supportFragmentManager.findFragmentById(R.id.container_side) == null) {
-				setSideFragment(FilterSheetFragment::class.java, null)
+				setSideFragment(filterSheetClass(filterOwner), null)
 			}
 		} else if (viewBinding.containerFilterHeader != null) {
 			if (supportFragmentManager.findFragmentById(R.id.container_filter_header) == null) {
@@ -252,9 +263,19 @@ class MangaListActivity :
 		if (chipSort != null) {
 			val filterBadge = ViewBadge(chipSort, this)
 			filterBadge.setMaxCharacterCount(0)
+			val isDynamic = filter.isDynamicFilter
 			filter.observe().observe(this) { snapshot ->
-				chipSort.setTextAndVisible(snapshot.sortOrder.titleRes)
-				filterBadge.counter = if (snapshot.listFilter.hasNonSearchOptions()) 1 else 0
+				if (isDynamic) {
+					// The real sort lives inside the Mihon FilterList (encoded as a "srt@" tag); show its
+					// value on the button and only count non-sort tags towards the "filter applied" badge.
+					val sortTag = snapshot.listFilter.tags.firstOrNull { it.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX) }
+					chipSort.text = sortTag?.title?.substringAfter(": ") ?: getString(snapshot.sortOrder.titleRes)
+					chipSort.isVisible = true
+					filterBadge.counter = if (snapshot.listFilter.tags.any { !it.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX) }) 1 else 0
+				} else {
+					chipSort.setTextAndVisible(snapshot.sortOrder.titleRes)
+					filterBadge.counter = if (snapshot.listFilter.hasNonSearchOptions()) 1 else 0
+				}
 			}
 		} else {
 			filter.observe().map {

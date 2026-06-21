@@ -39,7 +39,7 @@ class MihonMangaRepository(
 	override val source: MihonMangaSource,
 	cache: MemoryContentCache,
 	context: Context,
-) : CachingMangaRepository(cache) {
+) : CachingMangaRepository(cache), MihonFilterHost {
 
 	private val sourceSettings = SourceSettings(context, source)
 
@@ -312,13 +312,20 @@ class MihonMangaRepository(
 		val index: Int,
 	)
 
-	override suspend fun getFilterOptions(): MangaListFilterOptions {
-		val mihonFilters = try {
+	// Filters are rendered dynamically from the source's own FilterList (see MihonFilterHost /
+	// MihonFilterSheetFragment), so the structured Kotatsu options stay empty — nothing is flattened
+	// into the genres list anymore.
+	override suspend fun getFilterOptions(): MangaListFilterOptions = MangaListFilterOptions()
+
+	override val supportsDynamicFilters: Boolean
+		get() = true
+
+	override suspend fun loadDefaultFilterList(): FilterList = withContext(Dispatchers.IO) {
+		try {
 			mihonSource.getFilterList()
 		} catch (e: Exception) {
 			FilterList()
 		}
-		return MihonFilterMapper.mapOptions(mihonFilters, source)
 	}
 
 	private fun MangaListFilter.toMihonFilterList(): FilterList {
@@ -327,7 +334,7 @@ class MihonMangaRepository(
 		} catch (e: Exception) {
 			return FilterList()
 		}
-		MihonFilterMapper.updateMihonFilters(mihonFilters, this)
+		MihonFilterMapper.decode(mihonFilters, this)
 		return mihonFilters
 	}
 

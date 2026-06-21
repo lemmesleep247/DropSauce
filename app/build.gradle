@@ -216,6 +216,7 @@ dependencies {
 	implementation libs.play.services.auth
 
 	implementation libs.okhttp
+	implementation libs.okhttp.brotli
 	implementation libs.okhttp.tls
 	implementation libs.okhttp.dnsoverhttps
 	implementation libs.okio

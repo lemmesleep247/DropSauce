@@ -5,17 +5,17 @@
 	xmlns:tools="http://schemas.android.com/tools">
 
 	<item
-		android:id="@+id/action_random"
-		android:icon="@drawable/ic_dice"
+		android:id="@+id/action_filter"
+		android:icon="@drawable/ic_filter_funnel"
 		android:orderInCategory="10"
-		android:title="@string/random"
+		android:title="@string/filter"
 		app:showAsAction="ifRoom" />
 
 	<item
-		android:id="@+id/action_filter"
-		android:icon="@drawable/ic_filter_menu"
+		android:id="@+id/action_random"
+		android:icon="@drawable/ic_dice"
 		android:orderInCategory="30"
-		android:title="@string/filter"
+		android:title="@string/random"
 		app:showAsAction="never" />
 
 	<item

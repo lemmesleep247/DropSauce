@@ -224,6 +224,7 @@
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
     <string name="reset_filter">Reset filter</string>
+    <string name="no_filters_available">This source has no filters</string>
     <string name="enter_name">Enter name</string>
     <string name="pinned_sources_only">Pinned sources only</string>
     <string name="hide_empty_sources">Hide empty sources</string>

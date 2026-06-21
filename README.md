@@ -162,9 +162,8 @@ You can send a Pull Request for your patches, fixes, or new features here.
 
 1. Fork the repository.
 2. Create a focused branch for your change.
-3. Make the change and keep it scoped.
-4. Build locally with `./gradlew :app:assembleDebug`.
-5. Open a Pull Request with a short explanation of what changed.
+3. Build locally with `./gradlew :app:assembleDebug`.
+4. Open a Pull Request with a short explanation of what changed.
 
 Small fixes are welcome. Clear screenshots or short screen recordings are extra helpful for UI changes.
 

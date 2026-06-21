@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.appcompat.widget.ActionMenuView
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -14,8 +13,6 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.children
-import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -229,21 +226,13 @@ class DetailsExpressiveActivity :
 		}
 	}
 
-	// The back button stays pinned/floating at top-left at all times. The action (overflow) pill is
-	// treated as part of the page: it slides up with the content and fades out as you scroll down, then
-	// returns as you scroll back to the top. No surface scrim fades in and the toolbar title stays hidden,
-	// so the bar never turns into a solid bar on scroll.
+	// The back button (top-left) and the action (overflow) pill (top-right) both stay pinned/floating
+	// at all times, regardless of scroll position. No surface scrim fades in and the toolbar title
+	// stays hidden, so the bar never turns into a solid bar on scroll. We only track whether the
+	// content is at the top so pull-to-refresh is enabled only there.
 	private fun onContentScroll(scrollY: Int) {
 		contentAtTop = scrollY <= 0
 		updateSwipeRefreshEnabled()
-		val actionMenu = viewBinding.toolbar.children.firstOrNull { it is ActionMenuView }
-		if (actionMenu != null) {
-			actionMenu.translationY = -scrollY.toFloat()
-			val fadeDistance = actionMenu.height.takeIf { it > 0 } ?: 1
-			actionMenu.alpha = (1f - scrollY.toFloat() / fadeDistance).coerceIn(0f, 1f)
-			// Drop it from layout/touch handling once fully faded so it can't catch taps off-screen.
-			actionMenu.isVisible = actionMenu.alpha > 0.01f
-		}
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {

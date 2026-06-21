@@ -568,7 +568,7 @@ private fun FinishSlide(actions: OnboardingActions) {
         ActionCard(
             items = listOf(
                 ActionItem(R.drawable.ic_github, R.string.source_code, true, actions.onOpenGithub),
-                ActionItem(R.drawable.ic_discord, R.string.discord, true, actions.onOpenDiscord),
+                ActionItem(R.drawable.ic_discord, R.string.onboarding_discord, true, actions.onOpenDiscord),
                 ActionItem(R.drawable.ic_web, R.string.onboarding_visit_website, true, actions.onVisitWebsite),
             ),
         )

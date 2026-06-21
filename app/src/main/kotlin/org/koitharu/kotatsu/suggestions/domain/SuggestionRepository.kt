@@ -2,6 +2,8 @@ package org.koitharu.kotatsu.suggestions.domain
 
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.entity.toEntities
 import org.koitharu.kotatsu.core.db.entity.toEntity
@@ -37,6 +39,18 @@ class SuggestionRepository @Inject constructor(
 		return db.getSuggestionDao().getRandom(limit).map {
 			it.toManga()
 		}
+	}
+
+	/**
+	 * Reactive variant of [getRandomList]: emits a fresh random subset whenever the set of stored
+	 * suggestions changes (e.g. after a manual refresh), so observers like the Explore carousel stay
+	 * in sync instead of being frozen until the next app start. Re-shuffles only when the suggestion
+	 * membership actually changes, not on unrelated row updates.
+	 */
+	fun observeRandomList(limit: Int): Flow<List<Manga>> {
+		return observeAll()
+			.distinctUntilChangedBy { list -> list.mapTo(HashSet(list.size)) { it.id } }
+			.map { it.shuffled().take(limit) }
 	}
 
 	suspend fun clear() {

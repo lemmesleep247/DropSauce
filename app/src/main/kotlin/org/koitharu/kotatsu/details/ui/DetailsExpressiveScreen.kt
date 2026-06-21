@@ -77,12 +77,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -852,9 +855,6 @@ private fun StatPills(
 				)
 			}
 		}
-		manga.state?.let { state ->
-			Pill(text = stringResource(state.titleResId), accent = accent)
-		}
 		if (showContentRating) {
 			when (manga.contentRating) {
 				ContentRating.SUGGESTIVE -> Pill(text = "16+", accent = accent)
@@ -873,28 +873,139 @@ private fun StatPills(
 				)
 			}
 		}
-		if (!manga.isLocal) {
-			val srcText = sourceTitle?.takeUnless { it.isBlank() } ?: manga.source.getTitle(ctx)
-			val faviconRequest = remember(manga.source) {
-				ImageRequest.Builder(ctx)
-					.data(manga.source.faviconUri())
-					.mangaSourceExtra(manga.source)
-					.crossfade(true)
-					.build()
+		// Status and the source/extension are always kept together on a single horizontal line; the
+		// source name auto-shrinks to fit rather than wrapping to a second line.
+		if (manga.state != null || !manga.isLocal) {
+			Row(
+				modifier = Modifier.fillMaxWidth(),
+				horizontalArrangement = if (centered) {
+					Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+				} else {
+					Arrangement.spacedBy(8.dp)
+				},
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				manga.state?.let { state ->
+					Pill(text = stringResource(state.titleResId), accent = accent)
+				}
+				if (!manga.isLocal) {
+					val srcText = sourceTitle?.takeUnless { it.isBlank() } ?: manga.source.getTitle(ctx)
+					val faviconRequest = remember(manga.source) {
+						ImageRequest.Builder(ctx)
+							.data(manga.source.faviconUri())
+							.mangaSourceExtra(manga.source)
+							.crossfade(true)
+							.build()
+					}
+					SourcePill(
+						text = srcText,
+						faviconRequest = faviconRequest,
+						imageLoader = imageLoader,
+						// In the centered hero the row spans the full width, so a fixed-size centered pill
+						// looks right; in the compact layout the row is narrow, so let the name scale down.
+						autoResize = !centered,
+						onClick = onSourceClick,
+						modifier = if (centered) Modifier else Modifier.weight(1f, fill = false),
+					)
+				}
 			}
-			Pill(text = srcText, accent = accent, onClick = onSourceClick) {
-				AsyncImage(
-					model = faviconRequest,
-					imageLoader = imageLoader,
-					contentDescription = null,
-					error = painterResource(R.drawable.ic_manga_source),
-					fallback = painterResource(R.drawable.ic_manga_source),
-					modifier = Modifier
-						.size(16.dp)
-						.clip(RoundedCornerShape(4.dp)),
+		}
+	}
+}
+
+@Composable
+private fun SourcePill(
+	text: String,
+	faviconRequest: ImageRequest,
+	imageLoader: ImageLoader,
+	autoResize: Boolean,
+	onClick: () -> Unit,
+	modifier: Modifier = Modifier,
+) {
+	Surface(
+		shape = RoundedCornerShape(50),
+		color = MaterialTheme.colorScheme.surfaceContainerHigh,
+		modifier = modifier.clickable(onClick = onClick),
+	) {
+		Row(
+			modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.spacedBy(6.dp),
+		) {
+			AsyncImage(
+				model = faviconRequest,
+				imageLoader = imageLoader,
+				contentDescription = null,
+				error = painterResource(R.drawable.ic_manga_source),
+				fallback = painterResource(R.drawable.ic_manga_source),
+				modifier = Modifier
+					.size(16.dp)
+					.clip(RoundedCornerShape(4.dp)),
+			)
+			val labelStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+			val contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+			if (autoResize) {
+				AutoResizeText(
+					text = text,
+					color = contentColor,
+					baseStyle = labelStyle,
+					minTextSize = 9.sp,
+					modifier = Modifier.weight(1f, fill = false),
+				)
+			} else {
+				Text(
+					text = text,
+					style = labelStyle,
+					color = contentColor,
+					maxLines = 1,
+					overflow = TextOverflow.Ellipsis,
 				)
 			}
 		}
+	}
+}
+
+/**
+ * Single-line text that shrinks its font size (down to [minTextSize]) until it fits the available
+ * width, instead of wrapping or being clipped. Used so the source/extension name always fits on the
+ * status row.
+ */
+@Composable
+private fun AutoResizeText(
+	text: String,
+	color: Color,
+	baseStyle: TextStyle,
+	minTextSize: TextUnit,
+	modifier: Modifier = Modifier,
+) {
+	val measurer = rememberTextMeasurer()
+	val density = LocalDensity.current
+	BoxWithConstraints(modifier) {
+		val maxWidthPx = with(density) { maxWidth.toPx() }
+		val fontSize = remember(text, maxWidthPx, baseStyle) {
+			var size = baseStyle.fontSize
+			if (maxWidthPx > 0f && size.isSp) {
+				while (size.value > minTextSize.value) {
+					val width = measurer.measure(
+						text = text,
+						style = baseStyle.copy(fontSize = size),
+						maxLines = 1,
+						softWrap = false,
+					).size.width
+					if (width <= maxWidthPx) break
+					size = (size.value - 1f).sp
+				}
+			}
+			size
+		}
+		Text(
+			text = text,
+			color = color,
+			style = baseStyle.copy(fontSize = fontSize),
+			maxLines = 1,
+			softWrap = false,
+			overflow = TextOverflow.Ellipsis,
+		)
 	}
 }
 

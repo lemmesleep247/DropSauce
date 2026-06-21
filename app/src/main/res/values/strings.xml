@@ -88,7 +88,7 @@
     <string name="internal_storage">Internal storage</string>
     <string name="external_storage">External storage</string>
     <string name="app_update_available">A new version of the app is available</string>
-    <string name="open_in_browser">Open in web browser</string>
+    <string name="open_in_browser">Open WebView</string>
     <string name="back_to_top">Back to top</string>
     <string name="notifications">Notifications</string>
     <string name="enabled_d_of_d" tools:ignore="PluralsCandidate">%1$d of %2$d on</string>
@@ -573,9 +573,10 @@
     <string name="onboarding_finish_description">Join the DropSauce community and visit our website to stay up to date.</string>
     <string name="onboarding_sync_title">Sync &amp; Restore</string>
     <string name="onboarding_sync_description">Sign in with Google to sync your library across devices, or restore a backup to pick up where you left off.</string>
-    <string name="onboarding_restore_dropsauce">Restore DropSauce backup</string>
-    <string name="onboarding_restore_tachiyomi">Restore Tachiyomi favorites</string>
+    <string name="onboarding_restore_dropsauce">Restore Kotatsu backup</string>
+    <string name="onboarding_restore_tachiyomi">Restore Tachi favorites</string>
     <string name="onboarding_visit_website">Visit website</string>
+    <string name="onboarding_discord">Join Discord</string>
     <string name="onboarding_default_destination">Using default app storage</string>
     <string name="onboarding_full_black_oled">Full black for OLED</string>
     <string name="backup_date_">Backup date: %s</string>

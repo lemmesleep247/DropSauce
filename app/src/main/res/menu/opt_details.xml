@@ -8,7 +8,7 @@
 		android:icon="?actionModeShareDrawable"
 		android:orderInCategory="15"
 		android:title="@string/share"
-		app:showAsAction="ifRoom" />
+		app:showAsAction="never" />
 
 	<item
 		android:id="@+id/action_save"

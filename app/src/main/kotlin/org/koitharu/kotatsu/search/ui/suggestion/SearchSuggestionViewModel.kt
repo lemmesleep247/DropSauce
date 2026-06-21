@@ -53,12 +53,13 @@ class SearchSuggestionViewModel @Inject constructor(
 	val suggestion: Flow<List<SearchSuggestionItem>> = combine(
 		query.debounce(DEBOUNCE_TIMEOUT),
 		settings.observeAsFlow(AppSettings.KEY_SEARCH_SUGGESTION_TYPES) { searchSuggestionTypes },
+		settings.observeAsFlow(AppSettings.KEY_QUICK_FILTER) { isQuickFilterEnabled },
 		invalidationTrigger,
 	)
-	{ a, b, _ ->
-		Pair(a, b)
-	}.mapLatest { (searchQuery, types) ->
-		buildSearchSuggestion(searchQuery, types)
+	{ searchQuery, types, isQuickFilterEnabled, _ ->
+		Triple(searchQuery, types, isQuickFilterEnabled)
+	}.mapLatest { (searchQuery, types, isQuickFilterEnabled) ->
+		buildSearchSuggestion(searchQuery, types, isQuickFilterEnabled)
 	}.distinctUntilChanged()
 		.withErrorHandling()
 		.flowOn(Dispatchers.Default)
@@ -91,9 +92,12 @@ class SearchSuggestionViewModel @Inject constructor(
 	private suspend fun buildSearchSuggestion(
 		searchQuery: String,
 		types: Set<SearchSuggestionType>,
+		isQuickFilterEnabled: Boolean,
 	): List<SearchSuggestionItem> = coroutineScope {
 		listOfNotNull(
-			if (SearchSuggestionType.GENRES in types) {
+			// The genre chip row under the search bar acts as a quick filter, so it follows the
+			// "Show quick filters" appearance setting in addition to the genre suggestion type.
+			if (isQuickFilterEnabled && SearchSuggestionType.GENRES in types) {
 				async { getTags(searchQuery) }
 			} else {
 				null

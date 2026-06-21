@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
@@ -41,7 +41,6 @@ import org.koitharu.kotatsu.list.ui.model.TipModel
 import org.koitharu.kotatsu.mihon.MihonExtensionLoader
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaSource
-import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.settings.sources.catalog.ExternalExtensionRepoRepository
 import org.koitharu.kotatsu.suggestions.domain.SuggestionRepository
 import javax.inject.Inject
@@ -241,13 +240,14 @@ class ExploreViewModel @Inject constructor(
 		LoadingState,
 	)
 
-	private fun getSuggestionFlow() = isSuggestionsEnabled.mapLatest { isEnabled ->
+	private fun getSuggestionFlow() = isSuggestionsEnabled.flatMapLatest { isEnabled ->
 		if (isEnabled) {
-			runCatchingCancellable {
-				suggestionRepository.getRandomList(SUGGESTIONS_COUNT)
-			}.getOrDefault(emptyList())
+			// Observe the suggestions reactively so the carousel refreshes in place when suggestions
+			// are regenerated (e.g. from the Suggestions screen) instead of staying stale until restart.
+			suggestionRepository.observeRandomList(SUGGESTIONS_COUNT)
+				.catch { emit(emptyList()) }
 		} else {
-			emptyList()
+			flowOf(emptyList())
 		}
 	}
 

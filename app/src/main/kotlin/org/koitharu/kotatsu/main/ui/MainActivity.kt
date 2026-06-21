@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.main.ui
 
 import android.content.Intent
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -20,6 +21,8 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.core.graphics.ColorUtils
+import com.google.android.material.color.MaterialColors
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -138,6 +141,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.buttonSettings.setOnClickListener {
 			router.openSettings()
 		}
+		applyStatusBarScrim()
 		fadingAppbarMediator =
 			FadingAppbarMediator(viewBinding.appbar, viewBinding.layoutSearch)
 
@@ -302,6 +306,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			topMargin = barsInsets.top
 			bottomMargin = barsInsets.bottom
 		}
+		// Size the top scrim to cover the status bar and fade out just below it, so content that
+		// scrolls up under the (transparent) status bar stays legible instead of looking messy.
+		viewBinding.statusBarScrim.updateLayoutParams {
+			height = barsInsets.top + resources.getDimensionPixelOffset(R.dimen.margin_normal)
+		}
 		updateContainerBottomMargin()
 		return insets.consume(v, typeMask, start = viewBinding.navRail != null).also {
 			handleSearchSuggestionsInsets(it)
@@ -411,6 +420,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		if (topFragment is FavouritesContainerFragment) {
 			viewBinding.appbar.fitsSystemWindows = true
 			fadingAppbarMediator.bind()
+			// On first launch the freshly-added Favourites fragment and its ViewPager2 settle their
+			// layout *after* the app bar has already measured its scroll range with the just-toggled
+			// fitsSystemWindows, so the search bar + category tabs won't collapse on scroll until
+			// something forces a re-measure — which is why it only starts working after switching tabs
+			// and back. Re-dispatch insets and re-measure the app bar once laid out so it scrolls off
+			// from the very first open too.
+			viewBinding.appbar.post {
+				ViewCompat.requestApplyInsets(viewBinding.appbar)
+				viewBinding.appbar.requestLayout()
+			}
 		} else {
 			viewBinding.appbar.fitsSystemWindows = false
 			fadingAppbarMediator.unbind()
@@ -512,10 +531,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		updateContainerBottomMargin()
 	}
 
+	// Builds the themed top-of-screen fade: densest (~85%) at the very top where the status bar sits,
+	// then a smooth multi-stop fade to fully transparent. The colour follows the app's surface colour
+	// so it adapts to the active theme/colour scheme.
+	private fun applyStatusBarScrim() {
+		val scrim = viewBinding.statusBarScrim
+		val surface = MaterialColors.getColor(scrim, com.google.android.material.R.attr.colorSurface)
+		val alphas = floatArrayOf(0.85f, 0.62f, 0.4f, 0.22f, 0.1f, 0f)
+		val colors = IntArray(alphas.size) { i ->
+			ColorUtils.setAlphaComponent(surface, (alphas[i] * 255f).toInt())
+		}
+		scrim.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors)
+	}
+
 	private fun handleSearchSuggestionsInsets(insets: WindowInsetsCompat) {
 		val typeMask = WindowInsetsCompat.Type.ime() or WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
-		viewBinding.recyclerViewSearch.setPadding(barsInsets.left, 0, barsInsets.right, barsInsets.bottom)
+		// Add a gap between the active search field and the content below it (filter chips / suggestions).
+		val topGap = resources.getDimensionPixelOffset(R.dimen.list_spacing_large)
+		viewBinding.recyclerViewSearch.setPadding(barsInsets.left, topGap, barsInsets.right, barsInsets.bottom)
 	}
 
 	private fun initSearch() {

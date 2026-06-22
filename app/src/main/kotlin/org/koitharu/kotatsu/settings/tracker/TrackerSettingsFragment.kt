@@ -297,8 +297,8 @@ private fun TrackerScreen(
 				item { pos ->
 					NavigationSettingsItem(
 						title = stringResource(R.string.notifications),
-						icon = R.drawable.ic_notification,
-						
+						icon = R.drawable.ic_list_detailed,
+
 						shape = pos.shape,
 						enabled = enabled,
 						onClick = onOpenLegacyNotifications,

@@ -45,7 +45,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,11 +103,11 @@ fun OnboardingScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { PAGE_COUNT })
     val scope = rememberCoroutineScope()
-    val currentPage = pagerState.currentPage
-    val isLastPage = currentPage == PAGE_COUNT - 1
+    val isLastPage by remember { derivedStateOf { pagerState.currentPage == PAGE_COUNT - 1 } }
+    val backEnabled by remember { derivedStateOf { pagerState.currentPage > 0 } }
 
-    BackHandler(enabled = currentPage > 0) {
-        scope.launch { pagerState.animateScrollToPage(currentPage - 1) }
+    BackHandler(enabled = backEnabled) {
+        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -198,7 +200,7 @@ fun OnboardingScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 repeat(PAGE_COUNT) { index ->
-                    val isSelected = index == currentPage
+                    val isSelected by remember(index) { derivedStateOf { index == pagerState.currentPage } }
                     val dotWidth by animateDpAsState(
                         targetValue = if (isSelected) 24.dp else 8.dp,
                         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -222,7 +224,7 @@ fun OnboardingScreen(
                     if (isLastPage) {
                         actions.onFinish()
                     } else {
-                        scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
+                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.primary,

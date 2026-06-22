@@ -167,6 +167,13 @@ private fun stableId(sourceName: String, type: String, value: String): Long {
 	return "$sourceName|$type|$value".hashCode().toLong() and Long.MAX_VALUE
 }
 
+/**
+ * The deterministic id this app assigns to a Mihon manga — a pure function of the source name
+ * (`MIHON_<catalogueSourceId>`) and the manga url. Lets the Kotatsu migration compute the canonical
+ * id offline (no network) so a swapped manga matches what the source would return when browsed.
+ */
+fun mihonMangaId(sourceName: String, url: String): Long = stableId(sourceName, "manga", url)
+
 private fun resolveUrl(baseUrl: String?, value: String?): String? {
 	if (value.isNullOrBlank()) return null
 	if (value.startsWith("http://") || value.startsWith("https://")) return value

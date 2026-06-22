@@ -44,21 +44,21 @@ class KotatsuMigrationService : CoroutineIntentService() {
 		val legacy = useCase.scan()
 		manager.onStart(legacy.size)
 		if (legacy.isEmpty()) {
-			val summary = MigrationSummary(0, 0, 0, 0, 0, 0, emptySet())
+			val summary = MigrationSummary(0, 0, 0, 0, 0, emptySet())
 			manager.onFinish(summary)
 			notifyResult(startId, summary)
 			return
 		}
+		useCase.prepare() // load installed extensions once before resolving
 		var migrated = 0
 		var needsExtension = 0
-		var notFound = 0
 		var noMapping = 0
 		var failed = 0
 		val missingExtensions = linkedSetOf<String>()
-		legacy.forEachIndexed { index, item ->
-			updateForeground(this, done = index, total = legacy.size)
-			manager.onProgress(done = index, total = legacy.size, migrated = migrated)
-			powerManager.withPartialWakeLock(TAG) {
+		powerManager.withPartialWakeLock(TAG) {
+			legacy.forEachIndexed { index, item ->
+				updateForeground(this, done = index, total = legacy.size)
+				manager.onProgress(done = index, total = legacy.size, migrated = migrated)
 				val outcome = runCatchingCancellable { useCase.migrate(item) }
 					.getOrElse { Outcome.Failed(target = null, message = it.message) }
 				when (outcome) {
@@ -67,7 +67,6 @@ class KotatsuMigrationService : CoroutineIntentService() {
 						needsExtension++
 						missingExtensions += outcome.target.sourceName
 					}
-					is Outcome.NotFound -> notFound++
 					Outcome.NoMapping -> noMapping++
 					is Outcome.Failed -> failed++
 				}
@@ -77,7 +76,6 @@ class KotatsuMigrationService : CoroutineIntentService() {
 			total = legacy.size,
 			migrated = migrated,
 			needsExtension = needsExtension,
-			notFound = notFound,
 			noMapping = noMapping,
 			failed = failed,
 			missingExtensions = missingExtensions,

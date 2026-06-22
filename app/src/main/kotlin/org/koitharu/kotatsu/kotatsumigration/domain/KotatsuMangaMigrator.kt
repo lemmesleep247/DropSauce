@@ -3,228 +3,127 @@ package org.koitharu.kotatsu.kotatsumigration.domain
 import androidx.room.withTransaction
 import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
 import org.koitharu.kotatsu.core.db.MangaDatabase
-import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
-import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.history.data.HistoryEntity
-import org.koitharu.kotatsu.history.data.toMangaHistory
+import org.koitharu.kotatsu.mihon.model.MihonMangaSource
+import org.koitharu.kotatsu.mihon.model.mihonMangaId
 import org.koitharu.kotatsu.parsers.model.Manga
-import org.koitharu.kotatsu.parsers.model.MangaChapter
-import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
 import org.koitharu.kotatsu.tracker.data.TrackEntity
 import javax.inject.Inject
 
 /**
- * Re-keys every piece of user data attached to [oldManga] onto [newManga] (which lives on the
- * mapped Mihon source), then retires the old entry. A corrected fork of
- * [org.koitharu.kotatsu.alternatives.domain.MigrateUseCase]:
- *  - **bookmarks** and **stats** are migrated (the original silently dropped them),
- *  - reading-progress **percent is preserved** by recomputing it from the chapter we map to
- *    (the original reset it to zero),
- *  - chapters are matched by (volume, number) so history/bookmark positions survive.
+ * Re-keys a restored Kotatsu library entry onto its mapped Mihon source **offline** — no network.
  *
- * Because Kotatsu→Mihon migration stays on the *same website*, chapter lists line up closely and
- * the (volume, number) match is near-exact.
+ * Because a Mihon manga's id is a pure hash of (source name, url) ([mihonMangaId]), the canonical
+ * new id is computable without fetching. We store the same manga under that new id with the Mihon
+ * source, move all user data (favourites, history with **percent preserved**, bookmarks, tracker,
+ * scrobbling, stats) onto it, keep the cached chapters (so "continue reading" still resolves), and
+ * delete the old row — its remaining children fall away via `ON DELETE CASCADE`.
+ *
+ * Manga details (live chapter list) load lazily the first time the user opens the manga, exactly
+ * like any other manga. If the Kotatsu url happens to differ from the extension's url scheme, the
+ * open-time `getDetails` 404s and the app's existing [org.koitharu.kotatsu.explore.domain.RecoverMangaUseCase]
+ * repairs the url by title-search — keeping the same id, so favourites/history stay attached.
  */
 class KotatsuMangaMigrator @Inject constructor(
-	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val mangaDataRepository: MangaDataRepository,
 	private val database: MangaDatabase,
 ) {
 
-	suspend operator fun invoke(oldManga: Manga, newManga: Manga) {
-		val oldDetails = if (oldManga.chapters.isNullOrEmpty()) {
-			runCatchingCancellable {
-				mangaRepositoryFactory.create(oldManga.source).getDetails(oldManga)
-			}.getOrDefault(oldManga)
-		} else {
-			oldManga
+	/** @return the new manga id, or null if nothing changed (already migrated). */
+	suspend operator fun invoke(oldManga: Manga, mihonSource: MihonMangaSource): Long? {
+		val oldId = oldManga.id
+		val newId = mihonMangaId(mihonSource.name, oldManga.url)
+		if (newId == oldId) {
+			return null
 		}
-		val newDetails = if (newManga.chapters.isNullOrEmpty()) {
-			mangaRepositoryFactory.create(newManga.source).getDetails(newManga)
-		} else {
-			newManga
-		}
-		if (oldDetails.id == newDetails.id) {
-			return // nothing to do — already the same entity
-		}
-		mangaDataRepository.storeManga(newDetails, replaceExisting = true)
-
-		val oldChaptersById = oldDetails.chapters.orEmpty().associateBy { it.id }
-		val newChapters = newDetails.chapters.orEmpty()
+		// Store the manga under its new identity (source + id), keeping cached chapters so the
+		// reader can resume offline until the first live refresh.
+		val newManga = oldManga.copy(id = newId, source = mihonSource)
+		mangaDataRepository.storeManga(newManga, replaceExisting = true)
 
 		database.withTransaction {
-			// --- favourites (soft-delete leaves a sync tombstone, matching the app's convention) ---
+			// favourites — copy onto the new id (old rows fall away with the old manga via CASCADE)
 			val favouritesDao = database.getFavouritesDao()
-			val oldFavourites = favouritesDao.findAllRaw(oldDetails.id)
-			if (oldFavourites.isNotEmpty()) {
-				favouritesDao.delete(oldDetails.id)
-				for (f in oldFavourites) {
-					favouritesDao.upsert(f.copy(mangaId = newDetails.id))
-				}
+			for (f in favouritesDao.findAllRaw(oldId)) {
+				favouritesDao.upsert(f.copy(mangaId = newId))
 			}
 
-			// --- history (progress preserved via recomputed percent) ---
+			// history — percent + chapter pointer preserved (cached chapters carry the same ids)
 			val historyDao = database.getHistoryDao()
-			val oldHistory = historyDao.find(oldDetails.id)
-			val hasNewHistory = oldHistory != null
-			if (oldHistory != null) {
-				val newHistory = makeNewHistory(oldDetails, newDetails, oldHistory)
-				historyDao.delete(oldDetails.id)
-				historyDao.upsert(newHistory)
-			}
-
-			// --- reading stats (FK -> history, so only when a history row now exists) ---
-			val statsDao = database.getStatsDao()
-			if (hasNewHistory) {
-				val oldStats = statsDao.findAll(oldDetails.id)
-				for (s in oldStats) {
-					statsDao.upsert(s.copy(mangaId = newDetails.id))
-				}
-			}
-			statsDao.deleteAll(oldDetails.id)
-
-			// --- tracker (new-chapters watch) ---
-			val tracksDao = database.getTracksDao()
-			val oldTrack = tracksDao.find(oldDetails.id)
-			if (oldTrack != null) {
-				val lastChapter = newChapters.lastOrNull()
-				tracksDao.delete(oldDetails.id)
-				tracksDao.upsert(
-					TrackEntity(
-						mangaId = newDetails.id,
-						lastChapterId = lastChapter?.id ?: 0L,
-						newChapters = 0,
-						lastCheckTime = System.currentTimeMillis(),
-						lastChapterDate = lastChapter?.uploadDate ?: 0L,
-						lastResult = TrackEntity.RESULT_EXTERNAL_MODIFICATION,
-						lastError = null,
+			historyDao.find(oldId)?.let { h ->
+				historyDao.upsert(
+					HistoryEntity(
+						mangaId = newId,
+						createdAt = h.createdAt,
+						updatedAt = h.updatedAt,
+						chapterId = h.chapterId,
+						page = h.page,
+						scroll = h.scroll,
+						percent = h.percent,
+						deletedAt = 0L,
+						chaptersCount = h.chaptersCount,
 					),
 				)
 			}
 
-			// --- bookmarks (chapter remapped by volume/number; page & scroll kept) ---
+			// stats — FK -> history(manga_id), so the new history above must already exist
+			val statsDao = database.getStatsDao()
+			for (s in statsDao.findAll(oldId)) {
+				statsDao.upsert(s.copy(mangaId = newId))
+			}
+
+			// tracker
+			val tracksDao = database.getTracksDao()
+			tracksDao.find(oldId)?.let { t ->
+				tracksDao.upsert(
+					TrackEntity(
+						mangaId = newId,
+						lastChapterId = t.lastChapterId,
+						newChapters = t.newChapters,
+						lastCheckTime = t.lastCheckTime,
+						lastChapterDate = t.lastChapterDate,
+						lastResult = t.lastResult,
+						lastError = t.lastError,
+					),
+				)
+			}
+
+			// bookmarks — chapter pointer kept (cached chapters carry the same ids)
 			val bookmarksDao = database.getBookmarksDao()
-			val oldBookmarks = bookmarksDao.findAll(oldDetails.id)
+			val oldBookmarks = bookmarksDao.findAll(oldId)
 			if (oldBookmarks.isNotEmpty()) {
-				val remapped = oldBookmarks.map { bm ->
-					BookmarkEntity(
-						mangaId = newDetails.id,
-						pageId = bm.pageId,
-						chapterId = mapChapterId(bm.chapterId, oldChaptersById, newChapters),
-						page = bm.page,
-						scroll = bm.scroll,
-						imageUrl = bm.imageUrl,
-						createdAt = bm.createdAt,
-						percent = bm.percent,
-					)
-				}
-				bookmarksDao.upsert(remapped)
-				for (bm in oldBookmarks) {
-					bookmarksDao.delete(bm)
-				}
+				bookmarksDao.upsert(oldBookmarks.map { it.copy(mangaId = newId) })
 			}
 
-			// --- scrobbling links (no manga FK -> re-key the rows directly, preserving the link) ---
+			// scrobbling — no manga FK, so move explicitly and delete the old rows
 			val scrobblingDao = database.getScrobblingDao()
-			val oldScrobblings = scrobblingDao.findAll(oldDetails.id)
-			if (oldScrobblings.isNotEmpty()) {
-				for (s in oldScrobblings) {
-					scrobblingDao.upsert(
-						org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity(
-							scrobbler = s.scrobbler,
-							id = s.id,
-							mangaId = newDetails.id,
-							targetId = s.targetId,
-							status = s.status,
-							chapter = s.chapter,
-							comment = s.comment,
-							rating = s.rating,
-						),
-					)
-				}
-				for (scrobbler in oldScrobblings.map { it.scrobbler }.distinct()) {
-					scrobblingDao.delete(scrobbler, oldDetails.id)
-				}
+			val oldScrobblings = scrobblingDao.findAll(oldId)
+			for (s in oldScrobblings) {
+				scrobblingDao.upsert(
+					ScrobblingEntity(
+						scrobbler = s.scrobbler,
+						id = s.id,
+						mangaId = newId,
+						targetId = s.targetId,
+						status = s.status,
+						chapter = s.chapter,
+						comment = s.comment,
+						rating = s.rating,
+					),
+				)
+			}
+			for (scrobbler in oldScrobblings.map { it.scrobbler }.distinct()) {
+				scrobblingDao.delete(scrobbler, oldId)
+			}
+
+			// retire the old entry — CASCADE removes its favourites/history/bookmarks/tracks/stats/
+			// chapters/tags that still reference the old id.
+			database.getMangaDao().find(oldId)?.manga?.let { oldEntity ->
+				database.getMangaDao().delete(listOf(oldEntity))
 			}
 		}
+		return newId
 	}
-
-	private fun makeNewHistory(oldManga: Manga, newManga: Manga, history: HistoryEntity): HistoryEntity {
-		val newAll = newManga.chapters
-		if (newAll.isNullOrEmpty()) {
-			return HistoryEntity(
-				mangaId = newManga.id,
-				createdAt = history.createdAt,
-				updatedAt = history.updatedAt,
-				chapterId = history.chapterId,
-				page = history.page,
-				scroll = history.scroll,
-				percent = history.percent,
-				deletedAt = 0L,
-				chaptersCount = history.chaptersCount,
-			)
-		}
-		val oldChapters = oldManga.chapters
-		if (oldChapters.isNullOrEmpty()) {
-			// Old entry has no cached chapters: distribute by percent across the new list.
-			val branch = newManga.getPreferredBranch(null)
-			val list = newAll.filter { it.branch == branch }.ifEmpty { newAll }
-			val index = if (history.percent in 0f..1f) (list.lastIndex * history.percent).toInt() else 0
-			val current = list.getOrElse(index) { list.first() }
-			return HistoryEntity(
-				mangaId = newManga.id,
-				createdAt = history.createdAt,
-				updatedAt = history.updatedAt,
-				chapterId = current.id,
-				page = history.page,
-				scroll = history.scroll,
-				percent = percentForIndex(index, list.size),
-				deletedAt = 0L,
-				chaptersCount = list.size,
-			)
-		}
-		val branch = oldManga.getPreferredBranch(history.toMangaHistory())
-		val oldBranch = oldChapters.filter { it.branch == branch }.ifEmpty { oldChapters }
-		var index = oldBranch.indexOfFirst { it.id == history.chapterId }
-		if (index < 0) {
-			index = if (history.percent in 0f..1f) (oldBranch.lastIndex * history.percent).toInt() else 0
-		}
-		val oldChapter = oldBranch.getOrElse(index) { oldBranch.first() }
-		val newBranches = newAll.groupBy { it.branch }
-		val newBranch = if (newBranches.containsKey(branch)) branch else newManga.getPreferredBranch(null)
-		val newList = newBranches[newBranch] ?: newAll
-		val newChapter = newList.findByNumber(oldChapter.volume, oldChapter.number)
-			?: newList.getOrNull(index)
-			?: newList.last()
-		val newIndex = newList.indexOf(newChapter).coerceAtLeast(0)
-		return HistoryEntity(
-			mangaId = newManga.id,
-			createdAt = history.createdAt,
-			updatedAt = history.updatedAt,
-			chapterId = newChapter.id,
-			page = history.page,
-			scroll = history.scroll,
-			percent = percentForIndex(newIndex, newList.size),
-			deletedAt = 0L,
-			chaptersCount = newList.size,
-		)
-	}
-
-	private fun mapChapterId(
-		oldChapterId: Long,
-		oldChaptersById: Map<Long, MangaChapter>,
-		newChapters: List<MangaChapter>,
-	): Long {
-		val oldChapter = oldChaptersById[oldChapterId] ?: return oldChapterId
-		val match = newChapters.findByNumber(oldChapter.volume, oldChapter.number)
-			?: newChapters.firstOrNull { it.volume == oldChapter.volume && it.number == oldChapter.number }
-		return match?.id ?: oldChapterId
-	}
-
-	private fun percentForIndex(index: Int, count: Int): Float =
-		if (count <= 0) 0f else ((index + 1).toFloat() / count).coerceIn(0f, 1f)
-
-	private fun List<MangaChapter>.findByNumber(volume: Int, number: Float): MangaChapter? =
-		if (number <= 0f) null else firstOrNull { it.volume == volume && it.number == number }
 }

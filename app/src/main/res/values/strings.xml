@@ -168,7 +168,7 @@
     <string name="import_from_other_apps">Import from other apps</string>
     <string name="migrate_from_kotatsu">Migrate Kotatsu library</string>
     <string name="migrate_from_kotatsu_summary">Move a restored Kotatsu backup onto your installed extensions</string>
-    <string name="migrate_from_kotatsu_confirm">This will find each manga from your restored Kotatsu backup on the matching installed extension and move all of your favourites, history, bookmarks and tracking over to it. Make sure the matching extensions are installed first. Continue?</string>
+    <string name="migrate_from_kotatsu_confirm">This moves your restored Kotatsu library onto the matching installed extensions, carrying over favourites, history, bookmarks and tracking. It only takes a moment — each manga\'s chapters are loaded the first time you open it. Install the matching extensions first. Continue?</string>
     <string name="kotatsu_migration_running">Migrating Kotatsu library…</string>
     <string name="kotatsu_migration_progress">Migrating… %1$d/%2$d</string>
     <string name="kotatsu_migration_complete">Migration finished</string>

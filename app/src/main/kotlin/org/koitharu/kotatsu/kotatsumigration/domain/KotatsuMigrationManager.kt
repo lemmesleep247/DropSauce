@@ -52,10 +52,9 @@ data class MigrationSummary(
 	val total: Int,
 	val migrated: Int,
 	val needsExtension: Int,
-	val notFound: Int,
 	val noMapping: Int,
 	val failed: Int,
 	val missingExtensions: Set<String>,
 ) {
-	val skipped: Int get() = needsExtension + notFound + noMapping + failed
+	val skipped: Int get() = needsExtension + noMapping + failed
 }

@@ -27,6 +27,16 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 		get() = prefs.getEnumValue(KEY_SORT_ORDER, SortOrder::class.java)
 		set(value) = prefs.edit { putEnumValue(KEY_SORT_ORDER, value) }
 
+	// Remembers a Mihon source's last-selected sort (a "srt@…" filter tag) so it survives app restarts.
+	// The native [defaultSortOrder] above only covers built-in SortOrders, not the dynamic FilterList sort.
+	var lastSortTagKey: String?
+		get() = prefs.getString(KEY_LAST_SORT_KEY, null)
+		set(value) = prefs.edit { putString(KEY_LAST_SORT_KEY, value) }
+
+	var lastSortTagTitle: String?
+		get() = prefs.getString(KEY_LAST_SORT_TITLE, null)
+		set(value) = prefs.edit { putString(KEY_LAST_SORT_TITLE, value) }
+
 
 	val isCaptchaNotificationsDisabled: Boolean
 		get() = prefs.getBoolean(KEY_NO_CAPTCHA, false)
@@ -107,5 +117,7 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 		const val KEY_NO_CAPTCHA = "no_captcha"
 		const val KEY_SLOWDOWN = "slowdown"
 		const val KEY_SORT_ORDER = "sort_order"
+		const val KEY_LAST_SORT_KEY = "last_sort_key"
+		const val KEY_LAST_SORT_TITLE = "last_sort_title"
 	}
 }

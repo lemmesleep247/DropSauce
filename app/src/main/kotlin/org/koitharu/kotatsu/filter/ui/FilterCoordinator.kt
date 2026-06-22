@@ -1,8 +1,10 @@
 package org.koitharu.kotatsu.filter.ui
 
+import android.content.Context
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.ViewModelLifecycle
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -14,13 +16,16 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.LocaleComparator
 import org.koitharu.kotatsu.core.util.ext.asFlow
 import org.koitharu.kotatsu.core.util.ext.lifecycleScope
@@ -58,14 +63,16 @@ class FilterCoordinator @Inject constructor(
     mangaRepositoryFactory: MangaRepository.Factory,
     private val searchRepository: MangaSearchRepository,
     private val savedFiltersRepository: SavedFiltersRepository,
+    @ApplicationContext context: Context,
     lifecycle: ViewModelLifecycle,
 ) {
 
     private val coroutineScope = lifecycle.lifecycleScope + Dispatchers.Default
     private val repository = mangaRepositoryFactory.create(MangaSource(savedStateHandle[RemoteListFragment.ARG_SOURCE]))
     private val sourceLocale: String? = null
+    private val sourceSettings = SourceSettings(context, repository.source)
 
-    private val currentListFilter = MutableStateFlow(MangaListFilter.EMPTY)
+    private val currentListFilter = MutableStateFlow(restoreSortFilter())
     private val currentSortOrder = MutableStateFlow(repository.defaultSortOrder)
 
     private val availableSortOrders = repository.sortOrders
@@ -287,6 +294,33 @@ class FilterCoordinator @Inject constructor(
     /** True when the source exposes a dynamic Mihon [FilterList] that should use the dynamic filter UI. */
     val isDynamicFilter: Boolean
         get() = filterHost?.supportsDynamicFilters == true
+
+    init {
+        // Persist the active source sort (the "srt@…" tag) per source so it survives app restarts.
+        if (isDynamicFilter) {
+            currentListFilter
+                .map { f -> f.tags.firstOrNull { it.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX) } }
+                .distinctUntilChanged()
+                .onEach { sortTag ->
+                    sourceSettings.lastSortTagKey = sortTag?.key
+                    sourceSettings.lastSortTagTitle = sortTag?.title
+                }
+                .launchIn(coroutineScope)
+        }
+    }
+
+    /** Rebuilds the last-saved sort tag (if any) so a dynamic source opens with its remembered sort. */
+    private fun restoreSortFilter(): MangaListFilter {
+        if (!isDynamicFilter) {
+            return MangaListFilter.EMPTY
+        }
+        val key = sourceSettings.lastSortTagKey
+        val title = sourceSettings.lastSortTagTitle
+        if (key.isNullOrEmpty() || title == null || !key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX)) {
+            return MangaListFilter.EMPTY
+        }
+        return MangaListFilter(tags = setOf(MangaTag(title = title, key = key, source = repository.source)))
+    }
 
     fun reset() {
         currentListFilter.value = MangaListFilter.EMPTY

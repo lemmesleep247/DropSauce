@@ -337,8 +337,8 @@ private fun ReaderScreen(
 						subtitle = stringResource(R.string.reader_optimize_summary),
 						checked = readerOptimize,
 						onCheckedChange = { readerOptimize = it },
-						icon = R.drawable.ic_auto_fix,
-						
+						icon = R.drawable.ic_filter_funnel,
+
 						shape = pos.shape,
 					)
 				}

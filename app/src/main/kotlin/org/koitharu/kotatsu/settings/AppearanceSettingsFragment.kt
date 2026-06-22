@@ -397,8 +397,8 @@ private fun AppearanceScreen(
 						title = stringResource(R.string.show_reading_indicators),
 						checked = readingIndicator,
 						onCheckedChange = { readingIndicator = it },
-						icon = R.drawable.ic_read,
-						
+						icon = R.drawable.ic_history,
+
 						shape = pos.shape,
 					)
 				}

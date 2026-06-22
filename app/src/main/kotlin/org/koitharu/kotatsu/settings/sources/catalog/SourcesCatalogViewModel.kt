@@ -329,12 +329,24 @@ class SourcesCatalogViewModel @Inject constructor(
 		}
 
 		val installedIds = allMihonSources.value.mapTo(HashSet()) { it.sourceId }
+		// id -> (package, display name) for every source the configured repo offers, so a
+		// MIHON_<id> library entry from ANY origin (DropSauce/GDrive/Kotatsu/Mihon backup) can be
+		// recommended even if it isn't in the baked migration map.
+		val repoSourceIndex = HashMap<Long, Pair<String, String>>()
+		for (entry in available) {
+			val fallbackName = entry.name.removePrefix("Tachiyomi: ").trim()
+			for (src in entry.sources) {
+				val sid = src.id.toLongOrNull() ?: continue
+				repoSourceIndex.putIfAbsent(sid, entry.packageName to src.name.ifBlank { fallbackName })
+			}
+		}
 		val recommended = computeRecommendedExtensions(
 			installedPkgs = installed.keys,
 			installedIds = installedIds,
 			inProgress = inProgressPackages,
 			query = q,
 			repoUrl = repoUrl,
+			repoSourceIndex = repoSourceIndex,
 		)
 		val recommendedPackages = recommended.mapTo(HashSet(recommended.size)) { it.packageName }
 
@@ -458,6 +470,7 @@ class SourcesCatalogViewModel @Inject constructor(
 		inProgress: Set<String>,
 		query: String?,
 		repoUrl: String?,
+		repoSourceIndex: Map<Long, Pair<String, String>>,
 	): List<SourceCatalogItem.Extension> {
 		val sources = runCatching {
 			mangaDatabase.getMangaDao().findExternalSourcesInLibrary()
@@ -468,18 +481,22 @@ class SourcesCatalogViewModel @Inject constructor(
 		for (name in sources) {
 			val id = name.removePrefix("MIHON_").substringBefore(':').toLongOrNull() ?: continue
 			if (id in installedIds) continue
-			val target = kotatsuSourceMap.resolveById(id) ?: continue
-			val pkg = target.packageName
+			// Prefer the live repo index (complete for the configured repo); fall back to the baked
+			// migration map so popular sources are still recommended with no repo configured.
+			val ref = repoSourceIndex[id]
+				?: kotatsuSourceMap.resolveById(id)?.let { it.packageName to it.sourceName }
+				?: continue
+			val (pkg, displayName) = ref
 			if (pkg.isBlank() || pkg in installedPkgs || !seen.add(pkg)) continue
 			if (query != null &&
-				!target.sourceName.contains(query, ignoreCase = true) &&
+				!displayName.contains(query, ignoreCase = true) &&
 				!pkg.contains(query, ignoreCase = true)
 			) {
 				continue
 			}
 			out += SourceCatalogItem.Extension(
 				packageName = pkg,
-				title = target.sourceName,
+				title = displayName,
 				subtitle = appContext.getString(R.string.recommended_extension_subtitle),
 				action = SourceCatalogItem.Extension.Action.INSTALL,
 				isInProgress = pkg in inProgress,

@@ -172,8 +172,15 @@
     <string name="kotatsu_migration_running">Migrating Kotatsu library…</string>
     <string name="kotatsu_migration_progress">Migrating… %1$d/%2$d</string>
     <string name="kotatsu_migration_complete">Migration finished</string>
-    <string name="kotatsu_migration_result">Migrated %1$d of %2$d manga</string>
-    <string name="kotatsu_migration_missing_extensions">Install these extensions and run again: %1$s</string>
+    <string name="kotatsu_migration_result">Converted %1$d of %2$d manga</string>
+    <string name="kotatsu_migration_missing_extensions">Install these extensions to read them: %1$s</string>
+    <string name="recommended_to_install">Recommended for your library</string>
+    <string name="recommended_extension_subtitle">Needed by manga in your library</string>
+    <string name="kotatsu_migration_started">Migrating your library…</string>
+    <string name="kotatsu_migration_done_all">Migrated %1$d manga onto your installed extensions.</string>
+    <string name="kotatsu_migration_done_pending">Converted %1$d of %2$d manga. Install these extensions to read them — they\'re listed under \"Recommended for your library\" in the extension manager:\n\n%3$s</string>
+    <string name="extensions_to_install_title">Install extensions</string>
+    <string name="extensions_to_install_message">Your backup uses these sources. Install their extensions — they\'re listed under \"Recommended for your library\" in the extension manager:\n\n%1$s</string>
     <string name="preparing_">Preparing...</string>
     <string name="file_not_found">File not found</string>
     <string name="data_restored_success">All data was restored</string>

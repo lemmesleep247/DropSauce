@@ -33,40 +33,60 @@ class KotatsuSourceMap @Inject constructor(
 
 	private val mutex = Mutex()
 	@Volatile
-	private var entries: Map<String, MihonTarget>? = null
+	private var tables: Tables? = null
 
+	/** Resolve a legacy Kotatsu source name (e.g. `MANGADEX`) to its Mihon target. */
 	suspend fun resolve(sourceName: String): MihonTarget? {
-		return load()[sourceName.trim().uppercase()]
+		return load().byName[sourceName.trim().uppercase()]
 	}
 
-	private suspend fun load(): Map<String, MihonTarget> {
-		entries?.let { return it }
+	/**
+	 * Reverse lookup by Mihon source id. Used to surface "recommended to install" extensions for
+	 * `MIHON_<id>` library entries whose extension isn't installed (the id is in the asset because
+	 * the entry was produced by this migration).
+	 */
+	suspend fun resolveById(sourceId: Long): MihonTarget? {
+		return load().byId[sourceId]
+	}
+
+	private suspend fun load(): Tables {
+		tables?.let { return it }
 		return mutex.withLock {
-			entries?.let { return it }
+			tables?.let { return it }
 			val parsed = withContext(Dispatchers.IO) { parse() }
-			entries = parsed
+			tables = parsed
 			parsed
 		}
 	}
 
-	private fun parse(): Map<String, MihonTarget> = try {
+	private fun parse(): Tables = try {
 		val raw = context.resources.openRawResource(R.raw.kotatsu_source_map).use { stream ->
 			stream.readBytes().toString(Charsets.UTF_8)
 		}
 		val file = json.decodeFromString(SourceMapFile.serializer(), raw)
-		buildMap(file.entries.size) {
-			for ((enumName, entry) in file.entries) {
-				val id = entry.id.toLongOrNull() ?: continue
-				put(
-					enumName.uppercase(),
-					MihonTarget(sourceId = id, sourceName = entry.name),
-				)
-			}
+		val byName = LinkedHashMap<String, MihonTarget>(file.entries.size)
+		val byId = LinkedHashMap<Long, MihonTarget>(file.entries.size)
+		for ((enumName, entry) in file.entries) {
+			val id = entry.id.toLongOrNull() ?: continue
+			val target = MihonTarget(
+				sourceId = id,
+				sourceName = entry.name,
+				packageName = entry.pkg,
+			)
+			byName[enumName.uppercase()] = target
+			// Many Kotatsu enums can map to one Mihon id (language variants); first wins.
+			byId.putIfAbsent(id, target)
 		}
+		Tables(byName, byId)
 	} catch (e: Exception) {
 		e.printStackTraceDebug()
-		emptyMap()
+		Tables(emptyMap(), emptyMap())
 	}
+
+	private class Tables(
+		val byName: Map<String, MihonTarget>,
+		val byId: Map<Long, MihonTarget>,
+	)
 
 	private companion object {
 		val json = Json { ignoreUnknownKeys = true }
@@ -81,6 +101,7 @@ class KotatsuSourceMap @Inject constructor(
 	private class Entry(
 		@SerialName("id") val id: String,
 		@SerialName("name") val name: String = "",
+		@SerialName("pkg") val pkg: String = "",
 	)
 }
 
@@ -90,4 +111,6 @@ data class MihonTarget(
 	val sourceId: Long,
 	/** Display name of the Mihon source, for reporting (e.g. "MangaDex"). */
 	val sourceName: String,
+	/** Extension package name, so we can recommend installing the matching extension. */
+	val packageName: String,
 )

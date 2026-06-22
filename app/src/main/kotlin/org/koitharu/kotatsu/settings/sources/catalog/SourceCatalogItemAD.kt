@@ -103,6 +103,9 @@ fun sourceCatalogItemExtensionAD(
 				fallbackName = item.packageName,
 			)
 		} else {
+			// Cancel any pending async load left over from a recycled row first; otherwise a
+			// late-resolving request can clobber this generated favicon with another extension's icon.
+			binding.imageViewIcon.disposeImage()
 			binding.imageViewIcon.setImageDrawable(
 				FaviconDrawable(
 					context = context,

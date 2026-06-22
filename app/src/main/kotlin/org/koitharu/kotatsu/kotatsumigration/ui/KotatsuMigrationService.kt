@@ -45,13 +45,13 @@ class KotatsuMigrationService : CoroutineIntentService() {
 		val legacy = useCase.scan()
 		manager.onStart(legacy.size)
 		if (legacy.isEmpty()) {
-			val summary = MigrationSummary(total = 0, migrated = 0, missingExtensions = emptySet())
-			manager.onFinish(summary)
-			notifyResult(startId, summary)
+			// Nothing to migrate (e.g. auto-run after restoring DropSauce's own backup) — finish silently.
+			manager.onFinish(MigrationSummary(total = 0, migrated = 0, pendingExtension = 0, missingExtensions = emptySet()))
 			return
 		}
 		useCase.prepare() // load installed extensions once before resolving
 		var migrated = 0
+		var pendingExtension = 0
 		val missingExtensions = linkedSetOf<String>()
 		powerManager.withPartialWakeLock(TAG) {
 			legacy.forEachIndexed { index, item ->
@@ -61,7 +61,10 @@ class KotatsuMigrationService : CoroutineIntentService() {
 					.getOrElse { Outcome.Failed(it.message) }
 				when (outcome) {
 					Outcome.Migrated -> migrated++
-					is Outcome.ExtensionNotInstalled -> missingExtensions += outcome.target.sourceName
+					is Outcome.ConvertedPendingExtension -> {
+						pendingExtension++
+						missingExtensions += outcome.target.sourceName
+					}
 					is Outcome.Failed -> outcome.message?.let { Log.w(TAG, "Migration skipped one entry: $it") }
 					Outcome.NoMapping -> Unit // no Mihon equivalent — reflected in the X/Y count
 				}
@@ -70,6 +73,7 @@ class KotatsuMigrationService : CoroutineIntentService() {
 		val summary = MigrationSummary(
 			total = legacy.size,
 			migrated = migrated,
+			pendingExtension = pendingExtension,
 			missingExtensions = missingExtensions,
 		)
 		manager.onFinish(summary)
@@ -137,7 +141,7 @@ class KotatsuMigrationService : CoroutineIntentService() {
 	private fun notifyResult(startId: Int, summary: MigrationSummary) {
 		if (!checkNotificationPermission(CHANNEL_ID)) return
 		val text = buildString {
-			append(getString(R.string.kotatsu_migration_result, summary.migrated, summary.total))
+			append(getString(R.string.kotatsu_migration_result, summary.converted, summary.total))
 			if (summary.missingExtensions.isNotEmpty()) {
 				append('\n')
 				append(

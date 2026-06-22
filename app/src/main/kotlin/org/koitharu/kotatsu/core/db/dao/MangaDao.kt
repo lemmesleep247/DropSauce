@@ -56,6 +56,23 @@ abstract class MangaDao {
 	)
 	abstract suspend fun findLegacyMangaWithUserData(): List<MangaWithTags>
 
+	/**
+	 * Distinct external (`MIHON_<id>`) source names referenced by the user's library (favourites or
+	 * history). Used to recommend installing the matching extensions for migrated entries whose
+	 * extension isn't installed yet.
+	 */
+	@Query(
+		"""
+		SELECT DISTINCT source FROM manga
+		WHERE source LIKE 'MIHON\_%' ESCAPE '\'
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		""",
+	)
+	abstract suspend fun findExternalSourcesInLibrary(): List<String>
+
 	@Query("SELECT author FROM manga WHERE author LIKE :query GROUP BY author ORDER BY COUNT(author) DESC LIMIT :limit")
 	abstract suspend fun findAuthors(query: String, limit: Int): List<String>
 

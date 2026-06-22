@@ -1,10 +1,12 @@
 package org.koitharu.kotatsu.kotatsumigration.domain
 
 import org.koitharu.kotatsu.core.db.MangaDatabase
+import org.koitharu.kotatsu.core.model.MissingMangaSource
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.kotatsumigration.data.KotatsuSourceMap
 import org.koitharu.kotatsu.kotatsumigration.data.MihonTarget
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import javax.inject.Inject
 
 /**
@@ -35,13 +37,18 @@ class KotatsuMigrationUseCase @Inject constructor(
 
 	suspend fun migrate(legacy: LegacyManga): Outcome {
 		val target = sourceMap.resolve(legacy.sourceName) ?: return Outcome.NoMapping
-		val mihonSource = mihonExtensionManager.getMihonMangaSourceById(target.sourceId)
-			?: return Outcome.ExtensionNotInstalled(target)
+		// Convert regardless of whether the extension is installed: if it is, link to the live
+		// source; if not, store a MissingMangaSource carrying the display name so the entry still
+		// shows in the library and is recommended for install. Either way the new id is identical
+		// (a pure hash of source name + url), so installing the extension later "lights it up".
+		val installed = mihonExtensionManager.getMihonMangaSourceById(target.sourceId)
+		val newSource: MangaSource = installed
+			?: MissingMangaSource("MIHON_${target.sourceId}", target.sourceName)
 		val oldManga = mangaDataRepository.findMangaById(legacy.id, withChapters = true)
 			?: return Outcome.Failed("Manga ${legacy.id} not found")
 		return try {
-			migrator(oldManga, mihonSource)
-			Outcome.Migrated
+			migrator(oldManga, newSource)
+			if (installed != null) Outcome.Migrated else Outcome.ConvertedPendingExtension(target)
 		} catch (e: Exception) {
 			Outcome.Failed(e.message)
 		}
@@ -53,11 +60,11 @@ class KotatsuMigrationUseCase @Inject constructor(
 	)
 
 	sealed interface Outcome {
-		/** Re-keyed successfully. */
+		/** Converted and the matching extension is installed — works immediately. */
 		data object Migrated : Outcome
 
-		/** A mapping exists but its extension isn't installed. */
-		data class ExtensionNotInstalled(val target: MihonTarget) : Outcome
+		/** Converted, but the matching extension isn't installed yet — recommend installing it. */
+		data class ConvertedPendingExtension(val target: MihonTarget) : Outcome
 
 		/** No predefined Mihon equivalent for this Kotatsu source. */
 		data object NoMapping : Outcome

@@ -29,13 +29,20 @@ import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.databinding.ActivityOnboardingBinding
+import org.koitharu.kotatsu.kotatsumigration.domain.KotatsuMigrationManager
+import org.koitharu.kotatsu.kotatsumigration.ui.showExtensionInstallPromptDialog
+import org.koitharu.kotatsu.kotatsumigration.ui.showKotatsuMigrationCompleteDialog
 import org.koitharu.kotatsu.main.ui.MainActivity
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class OnboardingActivity : BaseActivity<ActivityOnboardingBinding>() {
 
     private val viewModel by viewModels<WelcomeViewModel>()
+
+    @Inject
+    lateinit var migrationManager: KotatsuMigrationManager
 
     private var permissionStates by mutableStateOf(OnboardingPermissions(false, false, false))
 
@@ -89,6 +96,15 @@ class OnboardingActivity : BaseActivity<ActivityOnboardingBinding>() {
                 getString(R.string.data_restored_success)
             }
             Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+            // Tachiyomi/Mihon backup referenced extensions that aren't installed — prompt to install.
+            result.report?.missingSources?.let { showExtensionInstallPromptDialog(it) }
+        }
+        // A restored Kotatsu-fork (DropSauce) backup auto-migrates in the background; surface it here.
+        migrationManager.onStarted.observeEvent(this) {
+            Toast.makeText(this, R.string.kotatsu_migration_started, Toast.LENGTH_SHORT).show()
+        }
+        migrationManager.onCompleted.observeEvent(this) { summary ->
+            showKotatsuMigrationCompleteDialog(summary)
         }
 
         refreshPermissionStates()

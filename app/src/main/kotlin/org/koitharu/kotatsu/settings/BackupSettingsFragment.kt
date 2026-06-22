@@ -35,9 +35,12 @@ import org.koitharu.kotatsu.backup.local.ui.restore.RestoreDialogFragment
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.util.ext.checkNotificationPermission
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.kotatsumigration.domain.KotatsuMigrationManager
 import org.koitharu.kotatsu.kotatsumigration.domain.MigrationState
 import org.koitharu.kotatsu.kotatsumigration.ui.KotatsuMigrationService
+import org.koitharu.kotatsu.kotatsumigration.ui.showExtensionInstallPromptDialog
+import org.koitharu.kotatsu.kotatsumigration.ui.showKotatsuMigrationCompleteDialog
 import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
@@ -97,7 +100,7 @@ class BackupSettingsFragment : BaseComposeSettingsFragment(R.string.backup_resto
 
 					is MigrationState.Finished -> stringResource(
 						R.string.kotatsu_migration_result,
-						s.summary.migrated,
+						s.summary.converted,
 						s.summary.total,
 					)
 
@@ -134,6 +137,12 @@ class BackupSettingsFragment : BaseComposeSettingsFragment(R.string.backup_resto
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
+		migrationManager.onStarted.observeEvent(viewLifecycleOwner) {
+			Toast.makeText(requireContext(), R.string.kotatsu_migration_started, Toast.LENGTH_SHORT).show()
+		}
+		migrationManager.onCompleted.observeEvent(viewLifecycleOwner) { summary ->
+			requireContext().showKotatsuMigrationCompleteDialog(summary)
+		}
 	}
 
 	private fun confirmAndStartKotatsuMigration() {
@@ -166,31 +175,11 @@ class BackupSettingsFragment : BaseComposeSettingsFragment(R.string.backup_resto
 			Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
 			if (result.isSuccess) {
 				restoreReport?.let {
-					showRestoreDiagnostics(it)
+					requireContext().showExtensionInstallPromptDialog(it.missingSources)
 					showRestoreNotification(it)
 				}
 			}
 		}
-	}
-
-	private fun showRestoreDiagnostics(report: RestoreReport) {
-		val lines = buildList {
-			add(getString(R.string.restore_report_restored_simple, report.restoredMangaCount))
-			if (report.missingSources.isNotEmpty()) {
-				add(
-					getString(
-						R.string.restore_report_missing_extensions_compact,
-						report.missingSources.joinToString("\n"),
-					),
-				)
-			}
-		}
-		if (lines.size <= 1) return
-		buildAlertDialog(requireContext()) {
-			setTitle(R.string.restore_diagnostics_title)
-			setMessage(lines.joinToString(separator = "\n\n"))
-			setPositiveButton(android.R.string.ok, null)
-		}.show()
 	}
 
 	private fun showRestoreNotification(report: RestoreReport) {

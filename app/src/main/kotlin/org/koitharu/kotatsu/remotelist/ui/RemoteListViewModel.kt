@@ -167,7 +167,7 @@ open class RemoteListViewModel @Inject constructor(
 				throw e
 			} catch (e: Throwable) {
 				e.printStackTraceDebug()
-				if (filterState.hasSourceSort() && e.isGatewayTimeout()) {
+				if (filterState.hasSourceSort() && e.isNotFound()) {
 					filterCoordinator.resetSourceSort()
 					onBrokenSortFallback.call(Unit)
 					hasNextPage.value = false
@@ -224,9 +224,9 @@ open class RemoteListViewModel @Inject constructor(
 	private fun FilterCoordinator.Snapshot.hasSourceSort(): Boolean =
 		listFilter.tags.any { it.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX) }
 
-	private fun Throwable.isGatewayTimeout(): Boolean = when (this) {
-		is HttpException -> code == HttpURLConnection.HTTP_GATEWAY_TIMEOUT
-		is HttpStatusException -> statusCode == HttpURLConnection.HTTP_GATEWAY_TIMEOUT
-		else -> cause?.isGatewayTimeout() == true
+	private fun Throwable.isNotFound(): Boolean = when (this) {
+		is HttpException -> code == HttpURLConnection.HTTP_NOT_FOUND
+		is HttpStatusException -> statusCode == HttpURLConnection.HTTP_NOT_FOUND
+		else -> cause?.isNotFound() == true
 	}
 }

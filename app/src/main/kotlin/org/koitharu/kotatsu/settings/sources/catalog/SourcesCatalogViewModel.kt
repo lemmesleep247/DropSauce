@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.LocalizedAppContext
+import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.kotatsumigration.data.KotatsuSourceMap
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
@@ -35,6 +37,8 @@ class SourcesCatalogViewModel @Inject constructor(
 	private val externalRepoRepository: ExternalExtensionRepoRepository,
 	private val mihonExtensionLoader: MihonExtensionLoader,
 	private val settings: AppSettings,
+	private val kotatsuSourceMap: KotatsuSourceMap,
+	private val mangaDatabase: MangaDatabase,
 ) : BaseViewModel() {
 
 	private val appContext = context
@@ -324,7 +328,18 @@ class SourcesCatalogViewModel @Inject constructor(
 			)
 		}
 
+		val installedIds = allMihonSources.value.mapTo(HashSet()) { it.sourceId }
+		val recommended = computeRecommendedExtensions(
+			installedPkgs = installed.keys,
+			installedIds = installedIds,
+			inProgress = inProgressPackages,
+			query = q,
+			repoUrl = repoUrl,
+		)
+		val recommendedPackages = recommended.mapTo(HashSet(recommended.size)) { it.packageName }
+
 		for (entry in available) {
+			if (entry.packageName in recommendedPackages) continue // surfaced in the Recommended section
 			if (settings.isNsfwContentDisabled && entry.isNsfw != 0) continue
 			if (locale != null && entry.lang != locale) continue
 			if (q != null && !entry.name.contains(q, ignoreCase = true) && !entry.packageName.contains(q, ignoreCase = true)) continue
@@ -376,6 +391,7 @@ class SourcesCatalogViewModel @Inject constructor(
 		availableItems.sortWith(titleComparator)
 
 		return buildList {
+			// The "no repository" / error hint always stays pinned at the very top.
 			if (!hasRepo) {
 				add(
 					SourceCatalogItem.Hint(
@@ -392,6 +408,10 @@ class SourcesCatalogViewModel @Inject constructor(
 						text = R.string.extensions_repo_load_error,
 					),
 				)
+			}
+			if (recommended.isNotEmpty()) {
+				add(org.koitharu.kotatsu.list.ui.model.ListHeader(R.string.recommended_to_install))
+				addAll(recommended)
 			}
 			if (pending.isNotEmpty()) {
 				add(
@@ -425,6 +445,51 @@ class SourcesCatalogViewModel @Inject constructor(
 
 	private suspend fun getAvailableEntries(repoUrl: String, forceRefresh: Boolean): List<ExternalExtensionRepoEntry> {
 		return externalRepoRepository.getExtensions(repoUrl, forceRefresh)
+	}
+
+	/**
+	 * Extensions the user's library needs but that aren't installed: derived from `MIHON_<id>`
+	 * sources referenced by favourites/history whose id is in the migration map (so we know the
+	 * package + name) and isn't currently installed. Shown even when no repository is configured.
+	 */
+	private suspend fun computeRecommendedExtensions(
+		installedPkgs: Set<String>,
+		installedIds: Set<Long>,
+		inProgress: Set<String>,
+		query: String?,
+		repoUrl: String?,
+	): List<SourceCatalogItem.Extension> {
+		val sources = runCatching {
+			mangaDatabase.getMangaDao().findExternalSourcesInLibrary()
+		}.getOrDefault(emptyList())
+		if (sources.isEmpty()) return emptyList()
+		val seen = HashSet<String>()
+		val out = ArrayList<SourceCatalogItem.Extension>()
+		for (name in sources) {
+			val id = name.removePrefix("MIHON_").substringBefore(':').toLongOrNull() ?: continue
+			if (id in installedIds) continue
+			val target = kotatsuSourceMap.resolveById(id) ?: continue
+			val pkg = target.packageName
+			if (pkg.isBlank() || pkg in installedPkgs || !seen.add(pkg)) continue
+			if (query != null &&
+				!target.sourceName.contains(query, ignoreCase = true) &&
+				!pkg.contains(query, ignoreCase = true)
+			) {
+				continue
+			}
+			out += SourceCatalogItem.Extension(
+				packageName = pkg,
+				title = target.sourceName,
+				subtitle = appContext.getString(R.string.recommended_extension_subtitle),
+				action = SourceCatalogItem.Extension.Action.INSTALL,
+				isInProgress = pkg in inProgress,
+				// Real extension icon when a repo is configured; otherwise the row falls back to a
+				// generated favicon (handled in the adapter).
+				iconUrl = repoUrl?.takeIf { it.isNotBlank() }?.let { externalRepoRepository.resolveIconUrl(it, pkg) },
+			)
+		}
+		out.sortBy { it.title.lowercase() }
+		return out
 	}
 
 	companion object {

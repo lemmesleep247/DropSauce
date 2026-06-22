@@ -5,9 +5,9 @@ import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.history.data.HistoryEntity
-import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.mihon.model.mihonMangaId
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
 import org.koitharu.kotatsu.tracker.data.TrackEntity
 import javax.inject.Inject
@@ -31,16 +31,21 @@ class KotatsuMangaMigrator @Inject constructor(
 	private val database: MangaDatabase,
 ) {
 
-	/** @return the new manga id, or null if nothing changed (already migrated). */
-	suspend operator fun invoke(oldManga: Manga, mihonSource: MihonMangaSource): Long? {
+	/**
+	 * @param newSource the target Mihon source: the running [org.koitharu.kotatsu.mihon.model.MihonMangaSource]
+	 *  when its extension is installed, otherwise a `MissingMangaSource("MIHON_<id>", title)` so the
+	 *  entry still converts and shows its cached title until the extension is installed.
+	 * @return the new manga id, or null if nothing changed (already migrated).
+	 */
+	suspend operator fun invoke(oldManga: Manga, newSource: MangaSource): Long? {
 		val oldId = oldManga.id
-		val newId = mihonMangaId(mihonSource.name, oldManga.url)
+		val newId = mihonMangaId(newSource.name, oldManga.url)
 		if (newId == oldId) {
 			return null
 		}
 		// Store the manga under its new identity (source + id), keeping cached chapters so the
 		// reader can resume offline until the first live refresh.
-		val newManga = oldManga.copy(id = newId, source = mihonSource)
+		val newManga = oldManga.copy(id = newId, source = newSource)
 		mangaDataRepository.storeManga(newManga, replaceExisting = true)
 
 		database.withTransaction {

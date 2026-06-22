@@ -65,6 +65,13 @@ private fun View.applyMarginIndent(depth: Int) {
 	}
 }
 
+private fun View.applyInputPaddingIndent(depth: Int) {
+	val step = (INDENT_DP * resources.displayMetrics.density).toInt()
+	val base = resources.getDimensionPixelOffset(R.dimen.margin_normal)
+	val inset = base + depth * step
+	updatePaddingRelative(start = inset, end = inset)
+}
+
 private fun headerDelegate() =
 	adapterDelegateViewBinding<MihonFilterItem.Header, MihonFilterItem, ItemFilterHeaderBinding>(
 		{ inflater, parent -> ItemFilterHeaderBinding.inflate(inflater, parent, false) },
@@ -158,7 +165,7 @@ private fun textDelegate(listener: MihonFilterListener) =
 			if (binding.editText.text?.toString() != item.value) {
 				binding.editText.setText(item.value)
 			}
-			binding.layoutInput.applyMarginIndent(item.depth)
+			binding.root.applyInputPaddingIndent(item.depth)
 		}
 	}
 
@@ -176,7 +183,7 @@ private fun selectDelegate(listener: MihonFilterListener) =
 			)
 			val selected = item.options.getOrNull(item.selectedIndex).orEmpty()
 			binding.editSelect.setText(selected, false)
-			binding.layoutInput.applyMarginIndent(item.depth)
+			binding.root.applyInputPaddingIndent(item.depth)
 		}
 	}
 

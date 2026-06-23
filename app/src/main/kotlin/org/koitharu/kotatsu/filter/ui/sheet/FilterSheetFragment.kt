@@ -144,9 +144,8 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
 
     override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
         val typeMask = WindowInsetsCompat.Type.systemBars()
-        viewBinding?.layoutBottom?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-            bottomMargin = insets.getInsets(typeMask).bottom
-        }
+        val barsInsets = insets.getInsets(typeMask)
+        viewBinding?.scrollView?.updatePadding(bottom = barsInsets.bottom)
         return insets.consume(v, typeMask, bottom = true)
     }
 

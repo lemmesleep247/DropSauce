@@ -193,29 +193,12 @@ abstract class BaseAdaptiveSheet<B : ViewBinding> : AppCompatDialogFragment(),
 
 	protected fun setHalfExpanded() {
 		val sheetDialog = dialog as? BottomSheetDialog ?: return
-		val screenHeight = resources.displayMetrics.heightPixels
-		val halfHeight = (screenHeight * HALF_EXPANDED_RATIO).toInt()
-		val sheetView = dialog?.findViewById<View>(materialR.id.design_bottom_sheet)
-
-		fun setSheetHeight(height: Int) {
-			view?.updateLayoutParams { this.height = height }
-			sheetView?.updateLayoutParams { this.height = height }
+		view?.updateLayoutParams {
+			height = LayoutParams.MATCH_PARENT
 		}
-
-		setSheetHeight(halfHeight)
-
-		addSheetCallback(object : AdaptiveSheetCallback {
-			override fun onStateChanged(sheet: View, newState: Int) {
-				when (newState) {
-					// Set full height as soon as animation begins so the expand animation looks correct
-					AdaptiveSheetBehavior.STATE_SETTLING -> setSheetHeight(LayoutParams.MATCH_PARENT)
-					BottomSheetBehavior.STATE_HALF_EXPANDED -> setSheetHeight(halfHeight)
-				}
-			}
-
-			override fun onSlide(sheet: View, slideOffset: Float) {}
-		}, viewLifecycleOwner)
-
+		dialog?.findViewById<View>(materialR.id.design_bottom_sheet)?.updateLayoutParams {
+			height = LayoutParams.MATCH_PARENT
+		}
 		sheetDialog.behavior.apply {
 			isFitToContents = false
 			isHideable = true

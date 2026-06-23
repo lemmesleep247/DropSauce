@@ -67,7 +67,7 @@ class DetectReaderModeUseCase @Inject constructor(
 			val page = pages.getOrNull(index) ?: continue
 			val isWebtoon = runCatchingCancellable {
 				val url = repository.getPageUrl(page)
-				val size = getImageSize(url, page)
+				val size = getImageSize(url, page, repository)
 				size.width * MIN_WEBTOON_RATIO < size.height
 			}.getOrNull() ?: continue
 			totalVotes++
@@ -77,7 +77,7 @@ class DetectReaderModeUseCase @Inject constructor(
 		return webtoonVotes * 2 > totalVotes
 	}
 
-	private suspend fun getImageSize(url: String, page: MangaPage): Size {
+	private suspend fun getImageSize(url: String, page: MangaPage, repository: MangaRepository): Size {
 		val uri = url.toUri()
 		return when {
 			uri.isZipUri() -> runInterruptible(Dispatchers.IO) {
@@ -90,8 +90,14 @@ class DetectReaderModeUseCase @Inject constructor(
 				uri.toFile().inputStream().use { getBitmapSize(it) }
 			}
 			else -> {
-				val request = PageLoader.createPageRequest(url, page.source)
-				imageProxyInterceptor.interceptPageRequest(request, okHttpClient).use {
+				// Prefer the extension's getImage() (handles relative imageUrls like MangaDex
+				// "/data/...", decryption, and per-source headers); fall back to a direct request.
+				val response = repository.getImageStream(url, page)
+					?: imageProxyInterceptor.interceptPageRequest(
+						PageLoader.createPageRequest(url, page.source),
+						okHttpClient,
+					)
+				response.use {
 					runInterruptible(Dispatchers.IO) {
 						getBitmapSize(it.body.byteStream())
 					}

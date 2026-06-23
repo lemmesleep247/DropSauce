@@ -66,21 +66,31 @@ class MangaPageFetcher(
 		return loadPage(pageUrl, imageHeaders, repo)
 	}
 
-	private suspend fun loadPage(pageUrl: String, imageHeaders: Headers?, repo: MangaRepository): FetchResult? =
-		if (pageUrl.toUri().isNetworkUri()) {
-			fetchPage(pageUrl, imageHeaders, repo)
+	private suspend fun loadPage(pageUrl: String, imageHeaders: Headers?, repo: MangaRepository): FetchResult? {
+		// Use the extension's getImage() first when available — it handles decryption/unscrambling
+		// and resolves sources whose page url is not a directly-fetchable http(s) url (e.g. MangaDex
+		// returns a relative "/data/..." imageUrl with the host kept inside the extension). Without
+		// this, such a url is misread as a local file path below and fails with FileNotFoundException.
+		repo.getImageStream(pageUrl, page)?.let {
+			return consumeResponse(it, pageUrl)
+		}
+		return if (pageUrl.toUri().isNetworkUri()) {
+			fetchPage(pageUrl, imageHeaders)
 		} else {
 			imageLoader.fetch(pageUrl, options)
 		}
+	}
 
-	private suspend fun fetchPage(pageUrl: String, imageHeaders: Headers?, repo: MangaRepository): FetchResult {
-		// Use extension's getImage() when available — handles decryption/unscrambling.
-		// Falls back to direct OkHttp fetch for non-Mihon sources.
-		val response = repo.getImageStream(pageUrl, page)
-			?: imageProxyInterceptor.interceptPageRequest(
-				PageLoader.createPageRequest(pageUrl, page.source, imageHeaders),
-				okHttpClient,
-			)
+	private suspend fun fetchPage(pageUrl: String, imageHeaders: Headers?): FetchResult {
+		// Direct OkHttp fetch for non-extension sources (getImageStream returned null).
+		val response = imageProxyInterceptor.interceptPageRequest(
+			PageLoader.createPageRequest(pageUrl, page.source, imageHeaders),
+			okHttpClient,
+		)
+		return consumeResponse(response, pageUrl)
+	}
+
+	private suspend fun consumeResponse(response: Response, pageUrl: String): FetchResult {
 		return response.use { r ->
 			if (!r.isSuccessful) {
 				throw HttpException(r.toNetworkResponse())

@@ -157,7 +157,10 @@ fun MangaChapter.toSChapter(): SChapter = SChapter.create().apply {
 fun Page.toMangaPage(source: MihonMangaSource, chapterUrl: String): MangaPage = MangaPage(
 	id = stableId(source.name, "page", "$chapterUrl|$index"),
 	url = imageUrl ?: url,
-	preview = imageUrl,
+	// preview is loaded directly as an image (Coil/SSIV), so only keep it when it is an absolute
+	// http(s) url. Some extensions (e.g. MangaDex) return a relative imageUrl like "/data/..." whose
+	// host lives inside the extension — using it as a preview would fail as a bogus local file path.
+	preview = imageUrl?.takeIf { it.startsWith("http://") || it.startsWith("https://") },
 	source = source,
 )
 

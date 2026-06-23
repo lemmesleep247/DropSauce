@@ -72,10 +72,11 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>() {
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
-		viewBinding?.layoutBottom?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-			bottomMargin = barsInsets.bottom
-		}
-		viewBinding?.recyclerView?.updatePadding(left = barsInsets.left, right = barsInsets.right)
+		viewBinding?.recyclerView?.updatePadding(
+			left = barsInsets.left,
+			right = barsInsets.right,
+			bottom = barsInsets.bottom,
+		)
 		return insets.consume(v, typeMask, bottom = true)
 	}
 }

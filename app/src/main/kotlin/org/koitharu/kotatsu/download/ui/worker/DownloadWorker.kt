@@ -87,7 +87,7 @@ import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.exception.TooManyRequestExceptions
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
-import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.mapToSet
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -209,7 +209,7 @@ class DownloadWorker @AssistedInject constructor(
 				)
 				val coverUrl = mangaDetails.largeCoverUrl.ifNullOrEmpty { mangaDetails.coverUrl }
 				if (!coverUrl.isNullOrEmpty()) {
-					downloadFile(coverUrl, destination, repo.source).let { file ->
+					downloadFile(coverUrl, destination, repo).let { file ->
 						output.addCover(file, getMediaType(coverUrl, file))
 						file.deleteAwait()
 					}
@@ -234,7 +234,7 @@ class DownloadWorker @AssistedInject constructor(
 									runFailsafe {
 										val url = repo.getPageUrl(page)
 										val file = cache[url]
-											?: downloadFile(url, destination, repo.source)
+											?: downloadFile(url, destination, repo, page)
 										output.addPage(
 											chapter = chapter,
 											file = file,
@@ -373,8 +373,10 @@ class DownloadWorker @AssistedInject constructor(
 	private suspend fun downloadFile(
 		url: String,
 		destination: File,
-		source: MangaSource,
+		repo: MangaRepository,
+		page: MangaPage? = null,
 	): File {
+		val source = repo.source
 		if (url.startsWith("content:", ignoreCase = true) || url.startsWith("file:", ignoreCase = true)) {
 			val uri = url.toUri()
 			val cr = applicationContext.contentResolver
@@ -394,14 +396,23 @@ class DownloadWorker @AssistedInject constructor(
 			}
 			return file
 		}
-		val request = PageLoader.createPageRequest(url, source)
 		slowdownDispatcher.delay(source)
-		return imageProxyInterceptor.interceptPageRequest(request, okHttp)
+		// Mihon extensions must fetch through their own getImage(): it resolves sources that return
+		// relative image urls (e.g. MangaDex "/data/..."), runs decryption/unscrambling overrides,
+		// and applies per-source headers (Referer, etc.). Falls back to a direct request for
+		// non-extension sources (getImageStream returns null) and for covers (page == null).
+		val response = page?.let { repo.getImageStream(url, it) }
+			?: run {
+				val imageHeaders = page?.let { repo.getImageRequestHeaders(url, it) }
+				val request = PageLoader.createPageRequest(url, source, imageHeaders)
+				imageProxyInterceptor.interceptPageRequest(request, okHttp)
+			}
+		return response
 			.ensureSuccess()
-			.use { response ->
+			.use { r ->
 				var file: File? = null
 				try {
-					response.body.use { body ->
+					r.body.use { body ->
 						file = destination.createTempFile(
 							ext = MimeTypes.getExtension(body.contentType()?.toMimeType())
 						)

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.core.model.chaptersCount
+import org.koitharu.kotatsu.core.model.isExternalSource
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -53,7 +54,10 @@ class AutoFixUseCase @Inject constructor(
 		val details = if (this.chapters != null) this else repo.getDetails(this)
 		val firstChapter = details.chapters?.firstOrNull() ?: return@runCatchingCancellable false
 		val pageUrl = repo.getPageUrl(repo.getPages(firstChapter).first())
-		pageUrl.toHttpUrlOrNull() != null
+		// Most sources expose a fetchable http(s) page url. Some extensions (e.g. MangaDex) return a
+		// relative imageUrl whose host is resolved internally by getImage(), so a non-blank url from
+		// an external source still indicates a healthy, page-serving source.
+		pageUrl.toHttpUrlOrNull() != null || (source.isExternalSource() && pageUrl.isNotEmpty())
 	}.getOrDefault(false)
 
 	private suspend fun Manga.getDetailsSafe() = runCatchingCancellable {

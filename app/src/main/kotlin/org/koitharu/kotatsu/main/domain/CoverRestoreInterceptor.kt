@@ -7,12 +7,9 @@ import coil3.request.ImageResult
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.core.model.isLocal
-import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.util.ext.bookmarkKey
-import org.koitharu.kotatsu.core.util.ext.mangaKey
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
-import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -20,7 +17,6 @@ import java.util.Collections
 import javax.inject.Inject
 
 class CoverRestoreInterceptor @Inject constructor(
-	private val dataRepository: MangaDataRepository,
 	private val bookmarksRepository: BookmarksRepository,
 	private val repositoryFactory: MangaRepository.Factory,
 ) : Interceptor {
@@ -31,6 +27,11 @@ class CoverRestoreInterceptor @Inject constructor(
 		val request = chain.request
 		val result = chain.proceed()
 		if (result is ErrorResult && result.throwable.shouldRestore()) {
+			// Note: manga covers are intentionally NOT restored here. Doing so triggered a network
+			// `repo.find()` per failed cover on the favourites/history lists at launch, which made
+			// every cover load slowly and appear "greyed out". A manga's cover is now refreshed from
+			// the source only when the entry is opened (see DetailsExpressiveScreen.CoverCard); on the
+			// lists, covers are served from the disk cache via a stable per-manga key instead.
 			request.extras[bookmarkKey]?.let {
 				return if (restoreBookmark(it)) {
 					chain.withRequest(request.newBuilder().build()).proceed()
@@ -38,45 +39,8 @@ class CoverRestoreInterceptor @Inject constructor(
 					result
 				}
 			}
-			request.extras[mangaKey]?.let {
-				return if (restoreManga(it)) {
-					chain.withRequest(request.newBuilder().build()).proceed()
-				} else {
-					result
-				}
-			}
 		}
 		return result
-	}
-
-	private suspend fun restoreManga(manga: Manga): Boolean {
-		val key = manga.publicUrl
-		if (!blacklist.add(key)) {
-			return false
-		}
-		val restored = runCatchingCancellable {
-			restoreMangaImpl(manga)
-		}.onFailure { e ->
-			e.printStackTraceDebug()
-		}.getOrDefault(false)
-		if (restored) {
-			blacklist.remove(key)
-		}
-		return restored
-	}
-
-	private suspend fun restoreMangaImpl(manga: Manga): Boolean {
-		if (dataRepository.findMangaById(manga.id, withChapters = false) == null || manga.isLocal) {
-			return false
-		}
-		val repo = repositoryFactory.create(manga.source)
-		val fixed = repo.find(manga) ?: return false
-		return if (fixed != manga) {
-			dataRepository.storeManga(fixed, replaceExisting = true)
-			fixed.coverUrl != manga.coverUrl
-		} else {
-			false
-		}
 	}
 
 	private suspend fun restoreBookmark(bookmark: Bookmark): Boolean {

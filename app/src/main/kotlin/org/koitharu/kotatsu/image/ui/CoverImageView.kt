@@ -37,6 +37,7 @@ import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.isNetworkError
 import org.koitharu.kotatsu.core.util.ext.mangaExtra
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
+import org.koitharu.kotatsu.core.util.ext.stableMangaCoverKey
 import org.koitharu.kotatsu.favourites.domain.model.Cover
 import org.koitharu.kotatsu.parsers.exception.ContentUnavailableException
 import org.koitharu.kotatsu.parsers.exception.ParseException
@@ -133,6 +134,7 @@ class CoverImageView @JvmOverloads constructor(
 		newRequestBuilder()
 			.data(coverUrl)
 			.mangaExtra(manga)
+			.stableMangaCoverKey(manga, coverUrl)
 			.build(),
 	)
 

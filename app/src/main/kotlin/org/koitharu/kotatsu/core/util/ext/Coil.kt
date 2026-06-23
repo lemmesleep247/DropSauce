@@ -57,6 +57,30 @@ fun ImageRequest.Builder.mangaExtra(manga: Manga?): ImageRequest.Builder = apply
 	mangaSourceExtra(manga?.source)
 }
 
+/**
+ * Pins a cover's disk-cache entry to a stable key derived from the manga id instead of the
+ * (possibly rotating) source cover URL. Many sources serve covers from signed/CDN URLs that
+ * change between sessions; without a stable key Coil would treat each new URL as a cache miss
+ * and re-download every cover on launch, showing the loading placeholder ("greyed out" covers).
+ *
+ * With a stable key the cover is fetched once and then served from disk on every subsequent
+ * launch — instantly, with no network round-trip — exactly like a local/custom cover.
+ *
+ * Only applied to remote (http) covers; local/custom `file://` covers are already stable.
+ * A fresh copy is pulled from the source only when the manga is opened (see the details screen),
+ * which overwrites this entry.
+ */
+fun ImageRequest.Builder.stableMangaCoverKey(manga: Manga?, coverUrl: String?): ImageRequest.Builder = apply {
+	if (manga != null && isRemoteCoverUrl(coverUrl)) {
+		diskCacheKey(mangaCoverDiskCacheKey(manga.id))
+	}
+}
+
+fun mangaCoverDiskCacheKey(mangaId: Long): String = "cover:$mangaId"
+
+fun isRemoteCoverUrl(url: String?): Boolean =
+	url != null && (url.startsWith("http://", ignoreCase = true) || url.startsWith("https://", ignoreCase = true))
+
 fun ImageRequest.Builder.bookmarkExtra(bookmark: Bookmark): ImageRequest.Builder = apply {
 	extras[bookmarkKey] = bookmark
 	mangaSourceExtra(bookmark.manga.source)

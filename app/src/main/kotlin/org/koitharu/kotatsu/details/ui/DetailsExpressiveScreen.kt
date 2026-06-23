@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import org.koitharu.kotatsu.R
@@ -97,7 +98,10 @@ import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.prefs.DetailsUiMode
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
 import org.koitharu.kotatsu.core.util.FileSize
+import org.koitharu.kotatsu.core.util.ext.isRemoteCoverUrl
+import org.koitharu.kotatsu.core.util.ext.mangaCoverDiskCacheKey
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
+import org.koitharu.kotatsu.core.util.ext.stableMangaCoverKey
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.ui.model.HistoryInfo
 import org.koitharu.kotatsu.details.ui.scrobbling.labelResId
@@ -594,6 +598,7 @@ private fun HeroSection(
 					.height(COVER_HEIGHT),
 				corner = 24.dp,
 				nsfwLabel = null,
+				forceRefresh = details?.isLoaded == true,
 				actions = actions,
 			)
 			Spacer(Modifier.height(20.dp))
@@ -662,6 +667,7 @@ private fun HeroSection(
 						modifier = Modifier.width(COMPACT_COVER_WIDTH),
 						corner = 20.dp,
 						nsfwLabel = nsfwLabel,
+						forceRefresh = details?.isLoaded == true,
 						actions = actions,
 					)
 					Column {
@@ -729,6 +735,7 @@ private fun CoverCard(
 	modifier: Modifier,
 	corner: Dp,
 	nsfwLabel: String?,
+	forceRefresh: Boolean,
 	actions: DetailsExpressiveActions,
 ) {
 	val ctx = LocalContext.current
@@ -739,12 +746,32 @@ private fun CoverCard(
 		shadowElevation = 16.dp,
 		modifier = modifier,
 	) {
-		val coverRequest = remember(coverUrl, manga.source) {
+		// The visible cover always loads from cache via the stable per-manga key, so it appears
+		// instantly with no "greyed out" placeholder — exactly like a local cover.
+		val coverRequest = remember(coverUrl, manga.id, manga.source) {
 			ImageRequest.Builder(ctx)
 				.data(coverUrl)
 				.crossfade(true)
 				.mangaSourceExtra(manga.source)
+				.stableMangaCoverKey(manga, coverUrl)
 				.build()
+		}
+		// Once the entry has been opened and its details loaded, silently re-check the source for a
+		// new cover in the background and overwrite the cached copy. The visible cover is untouched
+		// (no flicker); a genuinely changed cover then shows up on the lists and on the next open.
+		if (forceRefresh && isRemoteCoverUrl(coverUrl)) {
+			LaunchedEffect(manga.id, coverUrl) {
+				imageLoader.enqueue(
+					ImageRequest.Builder(ctx)
+						.data(coverUrl)
+						.mangaSourceExtra(manga.source)
+						.diskCacheKey(mangaCoverDiskCacheKey(manga.id))
+						.diskCachePolicy(CachePolicy.WRITE_ONLY)
+						.memoryCachePolicy(CachePolicy.DISABLED)
+						.networkCachePolicy(CachePolicy.ENABLED)
+						.build(),
+				)
+			}
 		}
 		Box(modifier = Modifier.fillMaxSize()) {
 			AsyncImage(

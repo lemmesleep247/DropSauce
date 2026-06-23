@@ -93,15 +93,13 @@ fun mangaGridItemAD(
 		binding.imageViewCover.setImageAsync(item.coverUrl, item.manga)
 		binding.badge.number = item.counter
 		binding.badge.isVisible = item.counter > 0
-		// Counter badge sits at the top-right; the progress pill only shares that corner when the title
-		// is over the cover. In that case shift the badge left of the pill so they don't overlap.
-		binding.badge.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-			marginEnd = if (item.progress != null && isTitleOverCover) {
-				context.resources.getDimensionPixelOffset(R.dimen.card_indicator_offset) +
-					context.resources.getDimensionPixelOffset(R.dimen.card_indicator_size) +
-					(4f * density).toInt()
+		// Counter badge sits at the top-left. Shift the info icons view down if the badge is visible
+		// so they do not overlap.
+		binding.iconsView.updateLayoutParams<FrameLayout.LayoutParams> {
+			topMargin = if (item.counter > 0) {
+				(32f * density).toInt()
 			} else {
-				context.resources.getDimensionPixelOffset(R.dimen.margin_small)
+				(16f * density).toInt()
 			}
 		}
 	}

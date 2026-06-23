@@ -421,10 +421,6 @@ class SourcesCatalogViewModel @Inject constructor(
 					),
 				)
 			}
-			if (recommended.isNotEmpty()) {
-				add(org.koitharu.kotatsu.list.ui.model.ListHeader(R.string.recommended_to_install))
-				addAll(recommended)
-			}
 			if (pending.isNotEmpty()) {
 				add(
 					org.koitharu.kotatsu.list.ui.model.ListHeader(
@@ -438,6 +434,10 @@ class SourcesCatalogViewModel @Inject constructor(
 			if (installedSorted.isNotEmpty()) {
 				add(org.koitharu.kotatsu.list.ui.model.ListHeader(R.string.installed))
 				addAll(installedSorted)
+			}
+			if (recommended.isNotEmpty()) {
+				add(org.koitharu.kotatsu.list.ui.model.ListHeader(R.string.recommended_to_install))
+				addAll(recommended)
 			}
 			if (availableItems.isNotEmpty()) {
 				add(org.koitharu.kotatsu.list.ui.model.ListHeader(R.string.available_to_install))

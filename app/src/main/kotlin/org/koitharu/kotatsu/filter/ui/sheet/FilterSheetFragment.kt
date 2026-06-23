@@ -31,6 +31,10 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.dialog.setEditText
 import org.koitharu.kotatsu.core.ui.model.titleRes
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_DRAGGING
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_EXPANDED
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_SETTLING
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetCallback
 import org.koitharu.kotatsu.core.ui.sheet.BaseAdaptiveSheet
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.core.util.ext.consume
@@ -59,6 +63,7 @@ import java.util.Locale
 class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
     AdapterView.OnItemSelectedListener,
     View.OnClickListener,
+    AdaptiveSheetCallback,
     ChipsView.OnChipClickListener,
     ChipsView.OnChipLongClickListener,
     ChipsView.OnChipCloseClickListener {
@@ -123,11 +128,28 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
             }
         binding.buttonReset.setOnClickListener(this)
         binding.buttonDone.setOnClickListener(this)
+        addSheetCallback(this, viewLifecycleOwner)
     }
 
     override fun onStart() {
         super.onStart()
         setHalfExpanded()
+    }
+
+    override fun onStateChanged(sheet: View, newState: Int) {
+        if (newState == STATE_DRAGGING || newState == STATE_SETTLING) {
+            return
+        }
+        // Snap the drag handle to its resting state for programmatic moves; manual drags drive it via onSlide.
+        viewBinding?.headerBar?.setDragHandleCollapseProgress(if (newState == STATE_EXPANDED) 1f else 0f)
+    }
+
+    override fun onSlide(sheet: View, slideOffset: Float) {
+        // Melt the drag handle away over the top stretch of the drag so reaching full screen is one
+        // seamless motion rather than the handle snapping out once expanded.
+        val binding = viewBinding ?: return
+        val progress = (slideOffset - DRAG_HANDLE_COLLAPSE_START) / (1f - DRAG_HANDLE_COLLAPSE_START)
+        binding.headerBar.setDragHandleCollapseProgress(progress)
     }
 
     private fun SheetFilterBinding.adjustForEmbeddedLayout() {
@@ -145,7 +167,10 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
     override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
         val typeMask = WindowInsetsCompat.Type.systemBars()
         val barsInsets = insets.getInsets(typeMask)
-        viewBinding?.scrollView?.updatePadding(bottom = barsInsets.bottom)
+        // The action buttons now sit at the bottom, so the navigation-bar inset must keep them clear.
+        // Preserve the layout's own vertical breathing room on top of the system inset.
+        val basePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
+        viewBinding?.layoutBottom?.updatePadding(bottom = basePadding + barsInsets.bottom)
         return insets.consume(v, typeMask, bottom = true)
     }
 
@@ -505,5 +530,11 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
             }
             setNegativeButton(android.R.string.cancel, null)
         }.show()
+    }
+
+    private companion object {
+        // Slide offset (0 = half, 1 = full screen) at which the drag handle starts collapsing. Kept above
+        // the half-expanded resting offset so the handle stays full at the centre position.
+        const val DRAG_HANDLE_COLLAPSE_START = 0.65f
     }
 }

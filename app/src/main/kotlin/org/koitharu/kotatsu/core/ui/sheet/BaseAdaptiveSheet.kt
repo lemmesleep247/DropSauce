@@ -202,8 +202,10 @@ abstract class BaseAdaptiveSheet<B : ViewBinding> : AppCompatDialogFragment(),
 		sheetDialog.behavior.apply {
 			isFitToContents = false
 			isHideable = true
+			// Keep the sheet natively draggable (don't set isDraggable = false): direct drags on the
+			// header/empty areas move the sheet while nested list scrolls stay independent. Disabling it
+			// would force the header-bar manual-drag fallback, which can't be grabbed from the body.
 			setDraggableOnNestedScroll(false)
-			isDraggable = false
 			skipCollapsed = true
 			halfExpandedRatio = HALF_EXPANDED_RATIO
 			state = BottomSheetBehavior.STATE_HALF_EXPANDED
@@ -334,6 +336,6 @@ abstract class BaseAdaptiveSheet<B : ViewBinding> : AppCompatDialogFragment(),
 	}
 
 	private companion object {
-		const val HALF_EXPANDED_RATIO = 0.5f
+		const val HALF_EXPANDED_RATIO = 0.62f
 	}
 }

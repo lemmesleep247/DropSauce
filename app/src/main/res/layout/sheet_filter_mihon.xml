@@ -13,34 +13,6 @@
 		android:layout_height="wrap_content"
 		app:title="@string/filter" />
 
-	<LinearLayout
-		android:id="@+id/layout_bottom"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:gravity="center_vertical"
-		android:paddingHorizontal="@dimen/margin_normal"
-		android:paddingVertical="@dimen/margin_small">
-
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/button_reset"
-			style="?materialButtonOutlinedStyle"
-			android:layout_width="0dp"
-			android:layout_height="wrap_content"
-			android:layout_marginEnd="@dimen/margin_small"
-			android:layout_weight="1"
-			android:text="@string/reset" />
-
-		<com.google.android.material.button.MaterialButton
-			android:id="@+id/button_done"
-			style="?materialButtonTonalStyle"
-			android:layout_width="0dp"
-			android:layout_height="wrap_content"
-			android:layout_marginStart="@dimen/margin_small"
-			android:layout_weight="1"
-			android:text="@string/done" />
-
-	</LinearLayout>
-
 	<FrameLayout
 		android:id="@+id/layout_body"
 		android:layout_width="match_parent"
@@ -78,5 +50,33 @@
 			tools:visibility="gone" />
 
 	</FrameLayout>
+
+	<LinearLayout
+		android:id="@+id/layout_bottom"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:paddingHorizontal="@dimen/margin_normal"
+		android:paddingVertical="@dimen/margin_small">
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_reset"
+			style="?materialButtonOutlinedStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginEnd="@dimen/margin_small"
+			android:layout_weight="1"
+			android:text="@string/reset" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_done"
+			style="?materialButtonTonalStyle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="@dimen/margin_small"
+			android:layout_weight="1"
+			android:text="@string/done" />
+
+	</LinearLayout>
 
 </LinearLayout>

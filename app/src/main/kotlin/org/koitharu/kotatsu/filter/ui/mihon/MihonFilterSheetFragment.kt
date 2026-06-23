@@ -14,6 +14,11 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.withCreationCallback
+import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_DRAGGING
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_EXPANDED
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_SETTLING
+import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetCallback
 import org.koitharu.kotatsu.core.ui.sheet.BaseAdaptiveSheet
 import org.koitharu.kotatsu.core.util.ext.consume
 import org.koitharu.kotatsu.core.util.ext.observe
@@ -21,7 +26,7 @@ import org.koitharu.kotatsu.databinding.SheetFilterMihonBinding
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
 
 @AndroidEntryPoint
-class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>() {
+class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), AdaptiveSheetCallback {
 
 	private val viewModel by viewModels<MihonFilterViewModel>(
 		extrasProducer = {
@@ -52,11 +57,28 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>() {
 		viewModel.isEmptyState.observe(viewLifecycleOwner) {
 			binding.textViewHolder.isVisible = it
 		}
+		addSheetCallback(this, viewLifecycleOwner)
 	}
 
 	override fun onStart() {
 		super.onStart()
 		setHalfExpanded()
+	}
+
+	override fun onStateChanged(sheet: View, newState: Int) {
+		if (newState == STATE_DRAGGING || newState == STATE_SETTLING) {
+			return
+		}
+		// Snap the drag handle to its resting state for programmatic moves; manual drags drive it via onSlide.
+		viewBinding?.headerBar?.setDragHandleCollapseProgress(if (newState == STATE_EXPANDED) 1f else 0f)
+	}
+
+	override fun onSlide(sheet: View, slideOffset: Float) {
+		// Melt the drag handle away over the top stretch of the drag so reaching full screen is one
+		// seamless motion rather than the handle snapping out once expanded.
+		val binding = viewBinding ?: return
+		val progress = (slideOffset - DRAG_HANDLE_COLLAPSE_START) / (1f - DRAG_HANDLE_COLLAPSE_START)
+		binding.headerBar.setDragHandleCollapseProgress(progress)
 	}
 
 	private fun SheetFilterMihonBinding.adjustForEmbeddedLayout() {
@@ -75,8 +97,17 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>() {
 		viewBinding?.recyclerView?.updatePadding(
 			left = barsInsets.left,
 			right = barsInsets.right,
-			bottom = barsInsets.bottom,
 		)
+		// The action buttons now sit at the bottom, so the navigation-bar inset must keep them clear.
+		// Preserve the layout's own vertical breathing room on top of the system inset.
+		val basePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
+		viewBinding?.layoutBottom?.updatePadding(bottom = basePadding + barsInsets.bottom)
 		return insets.consume(v, typeMask, bottom = true)
+	}
+
+	private companion object {
+		// Slide offset (0 = half, 1 = full screen) at which the drag handle starts collapsing. Kept above
+		// the half-expanded resting offset so the handle stays full at the centre position.
+		const val DRAG_HANDLE_COLLAPSE_START = 0.65f
 	}
 }

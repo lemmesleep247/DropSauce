@@ -192,17 +192,6 @@ private fun AboutScreen(
 				}
 				item { pos ->
 					ActionSettingsItem(
-						title = stringResource(R.string.about_app_translation_summary),
-						subtitle = stringResource(R.string.url_weblate),
-						icon = R.drawable.ic_language,
-						shape = pos.shape,
-						onClick = {
-							onOpenLink(R.string.url_weblate, R.string.about_app_translation_summary)
-						},
-					)
-				}
-				item { pos ->
-					ActionSettingsItem(
 						title = stringResource(R.string.discord),
 						subtitle = stringResource(R.string.url_discord_web),
 						icon = R.drawable.ic_discord,

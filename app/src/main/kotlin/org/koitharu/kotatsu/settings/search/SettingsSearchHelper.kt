@@ -304,7 +304,6 @@ class SettingsSearchHelper @Inject constructor(
 			group(sectionCrumbs, "Links") { crumbs ->
 				addItem("about_help", R.string.user_manual, R.string.url_user_manual, crumbs, AboutSettingsFragment::class.java)
 				addItem("about_github", R.string.source_code, R.string.url_github, crumbs, AboutSettingsFragment::class.java)
-				addItem("about_app_translation", R.string.about_app_translation_summary, R.string.url_weblate, crumbs, AboutSettingsFragment::class.java)
 				addItem("about_discord", R.string.discord, R.string.url_discord_web, crumbs, AboutSettingsFragment::class.java)
 			}
 		}

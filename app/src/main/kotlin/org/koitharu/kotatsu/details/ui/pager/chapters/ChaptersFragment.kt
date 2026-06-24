@@ -140,10 +140,15 @@ class ChaptersFragment :
 		if (listener != null && listener.onChapterSelected(item.chapter)) {
 			dismissParentDialog()
 		} else {
+			val state = if (item.isCurrent && viewModel.readingState.value?.chapterId == item.chapter.id) {
+				viewModel.readingState.value!!
+			} else {
+				ReaderState(item.chapter.id, 0, 0)
+			}
 			router.openReader(
 				ReaderIntent.Builder(view.context)
 					.manga(viewModel.getMangaOrNull() ?: return)
-					.state(ReaderState(item.chapter.id, 0, 0))
+					.state(state)
 					.build(),
 			)
 		}

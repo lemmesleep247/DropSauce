@@ -893,13 +893,6 @@ private fun StatPills(
 				)
 			}
 		}
-		if (showContentRating) {
-			when (manga.contentRating) {
-				ContentRating.SUGGESTIVE -> Pill(text = "16+", accent = accent)
-				ContentRating.ADULT -> Pill(text = "18+", accent = accent, highlighted = true)
-				else -> Unit
-			}
-		}
 		val locale = details?.getLocale()
 		if (locale != null) {
 			Pill(text = locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) }, accent = accent) {
@@ -913,7 +906,8 @@ private fun StatPills(
 		}
 		// Status and the source/extension are always kept together on a single horizontal line; the
 		// source name auto-shrinks to fit rather than wrapping to a second line.
-		if (manga.state != null || !manga.isLocal) {
+		val hasContentRating = showContentRating && (manga.contentRating == ContentRating.SUGGESTIVE || manga.contentRating == ContentRating.ADULT)
+		if (hasContentRating || manga.state != null || !manga.isLocal) {
 			Row(
 				modifier = Modifier.fillMaxWidth(),
 				horizontalArrangement = if (centered) {
@@ -923,6 +917,13 @@ private fun StatPills(
 				},
 				verticalAlignment = Alignment.CenterVertically,
 			) {
+				if (hasContentRating) {
+					when (manga.contentRating) {
+						ContentRating.SUGGESTIVE -> Pill(text = "16+", accent = accent)
+						ContentRating.ADULT -> Pill(text = "18+", accent = accent)
+						else -> Unit
+					}
+				}
 				manga.state?.let { state ->
 					Pill(text = stringResource(state.titleResId), accent = accent)
 				}

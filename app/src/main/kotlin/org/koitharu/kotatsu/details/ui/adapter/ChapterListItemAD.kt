@@ -41,6 +41,7 @@ fun chapterListItemAD(
 					cornerRadius = radius
 					setColor(accent)
 				}
+				binding.viewCurrentIndicator.isVisible = true
 				binding.textViewTitle.drawableStart = null
 				binding.textViewTitle.setTextColor(accent)
 				binding.textViewDescription.setTextColor(accent)
@@ -51,6 +52,7 @@ fun chapterListItemAD(
 
 			item.isUnread -> {
 				binding.viewCurrentIndicator.background = null
+				binding.viewCurrentIndicator.isVisible = false
 				binding.textViewTitle.drawableStart = if (item.isNew) {
 					ContextCompat.getDrawable(context, R.drawable.ic_new)
 				} else {
@@ -65,6 +67,7 @@ fun chapterListItemAD(
 
 			else -> {
 				binding.viewCurrentIndicator.background = null
+				binding.viewCurrentIndicator.isVisible = false
 				binding.textViewTitle.drawableStart = null
 				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))
 				binding.textViewDescription.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))

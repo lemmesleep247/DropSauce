@@ -9,19 +9,19 @@
 	android:baselineAligned="false"
 	android:gravity="center_vertical"
 	android:minHeight="@dimen/chapter_list_item_height"
-	android:orientation="horizontal">
+	android:orientation="horizontal"
+	android:paddingStart="?android:listPreferredItemPaddingStart">
 
 	<View
 		android:id="@+id/viewCurrentIndicator"
 		android:layout_width="4dp"
 		android:layout_height="28dp"
-		android:layout_marginStart="8dp" />
+		android:layout_marginEnd="8dp" />
 
 	<LinearLayout
 		android:layout_width="0dp"
 		android:layout_height="wrap_content"
 		android:layout_marginVertical="8dp"
-		android:layout_marginStart="?android:listPreferredItemPaddingStart"
 		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
 		android:layout_weight="1"
 		android:orientation="vertical">

@@ -5,7 +5,10 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import eu.kanade.tachiyomi.network.JavaScriptEngine
 import eu.kanade.tachiyomi.network.NetworkHelper
+import eu.kanade.tachiyomi.network.interceptor.IgnoreGzipInterceptor
+import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
+import okhttp3.brotli.BrotliInterceptor
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialFormat
 import kotlinx.serialization.StringFormat
@@ -107,10 +110,24 @@ class KotoNetworkHelper(
 		socketFactory(baseClient.socketFactory)
 		hostnameVerifier(baseClient.hostnameVerifier)
 
+		// Mirror Mihon's NetworkHelper exactly. UncaughtExceptionInterceptor runs outermost so
+		// any non-IOException thrown deeper in the chain (e.g. by an extension interceptor) is
+		// wrapped as IOException — extensions' RxJava/retry code expects only IOExceptions.
+		addInterceptor(UncaughtExceptionInterceptor())
+
 		// Ensure every extension request carries a User-Agent when the source didn't set one,
-		// using the same configurable default as Mihon. Added first so it runs outermost,
-		// before Cloudflare detection sees the request.
+		// using the same configurable default as Mihon. Added before Cloudflare detection so it
+		// runs before the challenge check sees the request.
 		addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
+
+		// Decompression parity with Mihon: handle gzip+brotli at the network layer. Many modern
+		// CDNs (e.g. those fronting Comick/MangaDex) negotiate Brotli; without these the body is
+		// delivered still-compressed and parsing fails silently. IgnoreGzipInterceptor strips a
+		// manually-set "Accept-Encoding: gzip" so BrotliInterceptor can advertise "gzip, br" and
+		// transparently decode both. Added as network interceptors, like Mihon, so they observe
+		// the actual on-wire encoding. (The app's own GZipInterceptor is skipped below.)
+		addNetworkInterceptor(IgnoreGzipInterceptor())
+		addNetworkInterceptor(BrotliInterceptor)
 
 		baseClient.interceptors.forEach { interceptor ->
 			// Skip GZip (handled by OkHttp) and Kotatsu's CloudFlareInterceptor: the latter throws

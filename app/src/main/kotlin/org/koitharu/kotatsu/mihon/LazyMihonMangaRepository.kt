@@ -79,6 +79,8 @@ class LazyMihonMangaRepository(
 	override suspend fun getImageStream(pageUrl: String, page: MangaPage): Response? =
 		delegate?.getImageStream(pageUrl, page)
 
+	override suspend fun getCoverStream(url: String): Response? = delegate?.getCoverStream(url)
+
 	override suspend fun getFilterOptions(): MangaListFilterOptions = resolve().getFilterOptions()
 
 	override suspend fun getRelated(seed: Manga): List<Manga> = resolve().getRelated(seed)

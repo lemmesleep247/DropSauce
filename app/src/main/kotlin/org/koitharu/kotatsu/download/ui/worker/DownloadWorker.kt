@@ -397,11 +397,13 @@ class DownloadWorker @AssistedInject constructor(
 			return file
 		}
 		slowdownDispatcher.delay(source)
-		// Mihon extensions must fetch through their own getImage(): it resolves sources that return
-		// relative image urls (e.g. MangaDex "/data/..."), runs decryption/unscrambling overrides,
-		// and applies per-source headers (Referer, etc.). Falls back to a direct request for
-		// non-extension sources (getImageStream returns null) and for covers (page == null).
-		val response = page?.let { repo.getImageStream(url, it) }
+		// Mihon extensions must fetch through their own client. For pages, getImageStream() runs the
+		// extension's getImage(): it resolves relative image urls (e.g. MangaDex "/data/..."), runs
+		// decryption/unscrambling overrides, and applies per-source headers (Referer, etc.). For
+		// covers (page == null), getCoverStream() fetches via the extension's client + headers like
+		// Mihon's MangaCoverFetcher — the app's shared client is 403'd by some cover CDNs (e.g.
+		// Comick). Both return null for non-extension sources, falling back to a direct request.
+		val response = (if (page != null) repo.getImageStream(url, page) else repo.getCoverStream(url))
 			?: run {
 				val imageHeaders = page?.let { repo.getImageRequestHeaders(url, it) }
 				val request = PageLoader.createPageRequest(url, source, imageHeaders)

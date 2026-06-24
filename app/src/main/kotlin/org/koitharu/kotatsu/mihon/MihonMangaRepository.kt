@@ -6,10 +6,12 @@ import android.content.Context
 import android.util.Log
 import androidx.core.net.toUri
 import eu.kanade.tachiyomi.network.HttpException
+import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import okhttp3.Headers
+import okhttp3.Request
 import okhttp3.Response
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -33,6 +35,7 @@ import org.koitharu.kotatsu.parsers.model.MangaListFilterCapabilities
 import org.koitharu.kotatsu.parsers.model.MangaListFilterOptions
 import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.parsers.model.SortOrder
+import tachiyomi.domain.chapter.service.ChapterRecognition
 import java.io.IOException
 import java.util.EnumSet
 
@@ -179,17 +182,23 @@ class MihonMangaRepository(
 
 		Log.d(TAG, "rawChapters count: ${rawChapters.size} (unique: ${uniqueChapters.size}), source: ${source.name}")
 
-		// Reverse raw chapters (assuming newest-first from source) and assign virtual numbers
+		val mangaTitle = try { sManga.title } catch (_: UninitializedPropertyAccessException) { "" }
+
+		// Mihon convention: getChapterList() returns chapters newest-first and the source order IS the
+		// canonical reading order. So reverse to oldest-first (Kotatsu's list order) but DON'T re-sort
+		// by number afterwards — sorting scrambles sources whose chapter_number is missing/duplicated
+		// (bonus chapters, multi-part, scanlator variants). For the number itself, mirror Mihon and
+		// derive it from the chapter name via ChapterRecognition when the extension left it unset
+		// (chapter_number < 0), instead of inventing a sequential index.
 		val chapters = uniqueChapters.asReversed()
-			.mapIndexed { index, sChapter ->
-				val chapterNumber = if (sChapter.chapter_number >= 0) {
-					sChapter.chapter_number
-				} else {
-					(index + 1).toFloat()
-				}
-				sChapter.toMangaChapter(source, chapterNumber)
+			.map { sChapter ->
+				val number = ChapterRecognition.parseChapterNumber(
+					mangaTitle = mangaTitle,
+					chapterName = sChapter.name,
+					chapterNumber = sChapter.chapter_number.toDouble(),
+				).toFloat().coerceAtLeast(0f)
+				sChapter.toMangaChapter(source, number)
 			}
-			.sortedBy { it.number }
 
 		// Fallback for missing details fields
 		details.url = sManga.url
@@ -281,6 +290,21 @@ class MihonMangaRepository(
 			val httpSource = mihonSource as? HttpSource ?: return@withContext null
 			httpSource.getImage(page.toMihonPage(pageUrl))
 		}
+
+	/**
+	 * Fetches a cover/thumbnail through the extension's own client + headers — identical to Mihon's
+	 * MangaCoverFetcher and to [org.koitharu.kotatsu.core.image.MihonImageFetcher]. Lets non-Coil
+	 * paths (e.g. the download worker saving a cover) avoid the app's shared client, which some
+	 * sources 403.
+	 */
+	override suspend fun getCoverStream(url: String): Response? = withContext(Dispatchers.IO) {
+		val httpSource = mihonSource as? HttpSource ?: return@withContext null
+		val request = Request.Builder()
+			.url(url)
+			.headers(httpSource.headers)
+			.build()
+		httpSource.client.newCall(request).awaitSuccess()
+	}
 
 	private fun MangaPage.toMihonPage(imageUrl: String): Page {
 		val ref = url.toMihonPageRef()

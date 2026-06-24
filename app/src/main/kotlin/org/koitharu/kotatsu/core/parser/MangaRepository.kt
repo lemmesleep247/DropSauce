@@ -57,6 +57,15 @@ interface MangaRepository {
 	 */
 	suspend fun getImageStream(pageUrl: String, page: MangaPage): Response? = null
 
+	/**
+	 * Fetches a non-page image (e.g. a cover/thumbnail) through the source's own client + headers,
+	 * or null to fall back to the default fetch path. Mirrors how Mihon downloads covers via the
+	 * source client — some sources (e.g. Comick) 403 the app's shared client on their cover CDN even
+	 * though reading works. Used by code paths that fetch covers OUTSIDE Coil (Coil already routes
+	 * Mihon covers through MihonImageFetcher).
+	 */
+	suspend fun getCoverStream(url: String): Response? = null
+
 	suspend fun getFilterOptions(): MangaListFilterOptions
 
 	suspend fun getRelated(seed: Manga): List<Manga>

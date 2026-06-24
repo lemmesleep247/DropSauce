@@ -13,6 +13,7 @@ import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.parsers.model.MangaState
 import org.koitharu.kotatsu.parsers.model.MangaTag
+import org.koitharu.kotatsu.parsers.model.RATING_UNKNOWN
 
 private const val TAG = "MihonDataConverters"
 
@@ -35,6 +36,10 @@ fun SManga.toManga(
 	val safeArtist = try { artist } catch (_: UninitializedPropertyAccessException) { null }
 	val safeDescription = try { description } catch (_: UninitializedPropertyAccessException) { null }
 	val safeStatus = try { status } catch (_: UninitializedPropertyAccessException) { SManga.UNKNOWN }
+	// extensions-lib 1.5+ metadata. Wrapped defensively in case an extension's SManga impl throws.
+	val safeAltTitles = runCatching { altTitles }.getOrNull().orEmpty()
+	val safeContentRating = runCatching { contentRating }.getOrNull()
+	val safeScore = runCatching { score }.getOrNull()
 
 	val resolvedCover = resolveUrl(baseUrl, safeThumbnail)
 	val resolvedUrl = if (publicUrl.isNotBlank()) {
@@ -47,14 +52,22 @@ fun SManga.toManga(
 	val adultGenres = setOf("adult", "hentai", "18+", "nsfw", "mature", "ecchi")
 	val isContentNsfw = source.isNsfw || safeGenres?.any { it.lowercase() in adultGenres } == true
 
+	// Prefer the source's explicit content rating (extensions-lib 1.5+) over the genre heuristic,
+	// matching Mihon. Only fall back to the heuristic when the source reports SAFE/unset.
+	val resolvedContentRating = when (safeContentRating) {
+		SManga.ContentRating.ADULT -> ContentRating.ADULT
+		SManga.ContentRating.SUGGESTIVE -> ContentRating.SUGGESTIVE
+		else -> if (isContentNsfw) ContentRating.ADULT else null
+	}
+
 	return Manga(
 		id = stableId(source.name, "manga", safeUrl),
 		title = safeTitle,
-		altTitles = emptySet(),
+		altTitles = safeAltTitles.mapNotNullTo(LinkedHashSet()) { it.trim().takeIf(String::isNotEmpty) },
 		url = safeUrl,
 		publicUrl = resolvedUrl,
-		rating = -1f,
-		contentRating = if (isContentNsfw) ContentRating.ADULT else null,
+		rating = safeScore?.takeIf { it in 0..100 }?.let { it / 100f } ?: RATING_UNKNOWN,
+		contentRating = resolvedContentRating,
 		coverUrl = resolvedCover,
 		largeCoverUrl = resolvedCover,
 		tags = safeGenres.orEmpty().mapTo(LinkedHashSet()) { genre ->

@@ -139,6 +139,7 @@ class ChaptersFragment :
 
 	override fun onItemClick(item: ChapterListItem, view: View) {
 		if (selectionController?.onItemClick(item.chapter.id) == true) {
+			view.clearFocus()
 			return
 		}
 		val listener = findParentCallback(ReaderNavigationCallback::class.java)

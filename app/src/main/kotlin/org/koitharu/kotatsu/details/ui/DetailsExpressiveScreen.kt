@@ -1237,19 +1237,15 @@ private fun DescriptionCard(
 		val locale = details?.getLocale()
 		Row(
 			modifier = Modifier.fillMaxWidth(),
-			horizontalArrangement = Arrangement.spacedBy(8.dp),
 			verticalAlignment = Alignment.CenterVertically,
 		) {
-			if (manga.hasRating) {
-				Pill(text = String.format(Locale.ROOT, "%.1f", manga.rating * 5f), accent = accent, highlighted = true) {
-					Icon(
-						painter = painterResource(R.drawable.ic_star_small),
-						contentDescription = null,
-						tint = accent,
-						modifier = Modifier.size(15.dp),
-					)
-				}
-			}
+			Text(
+				text = stringResource(R.string.description),
+				style = MaterialTheme.typography.titleMedium,
+				fontWeight = FontWeight.SemiBold,
+				color = MaterialTheme.colorScheme.onSurface,
+			)
+			Spacer(modifier = Modifier.weight(1f))
 			locale?.let {
 				Pill(
 					text = it.getDisplayLanguage(it).replaceFirstChar { ch -> ch.titlecase(it) },
@@ -1263,14 +1259,18 @@ private fun DescriptionCard(
 						modifier = Modifier.size(15.dp),
 					)
 				}
+				Spacer(modifier = Modifier.width(8.dp))
 			}
-			Spacer(modifier = Modifier.weight(1f))
-			Text(
-				text = stringResource(R.string.description),
-				style = MaterialTheme.typography.titleMedium,
-				fontWeight = FontWeight.SemiBold,
-				color = MaterialTheme.colorScheme.onSurface,
-			)
+			if (manga.hasRating) {
+				Pill(text = String.format(Locale.ROOT, "%.1f", manga.rating * 5f), accent = accent, highlighted = true) {
+					Icon(
+						painter = painterResource(R.drawable.ic_star_small),
+						contentDescription = null,
+						tint = accent,
+						modifier = Modifier.size(15.dp),
+					)
+				}
+			}
 		}
 		Spacer(Modifier.height(10.dp))
 		Box(

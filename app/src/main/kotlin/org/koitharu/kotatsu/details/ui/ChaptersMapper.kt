@@ -103,6 +103,13 @@ fun List<ChapterListItem>.withVolumeHeaders(
 			}
 		}
 	}
+	if (showMissingChapters) {
+		val trailingGap = calculateTrailingGap()
+		if (trailingGap > 0) {
+			val last = lastOrNull() ?: return result
+			result.add(MissingChapters(id = "missing-start-${last.chapter.id}", count = trailingGap))
+		}
+	}
 	return result
 }
 
@@ -111,4 +118,17 @@ private fun calculateChapterGap(num1: Float, num2: Float): Int {
 	val higher = maxOf(num1, num2)
 	val lower = minOf(num1, num2)
 	return kotlin.math.floor(higher).toInt() - kotlin.math.floor(lower).toInt() - 1
+}
+
+// Chapters the user is missing from the beginning of the manga (e.g. their list starts at
+// chapter 43 of a 1-indexed series → 42 missing). The `insertSeparators`-style footer row sits
+// after the last chapter in Mihon's layout, so we mirror that with a count derived from whichever
+// end of the ordered list holds the lowest chapter number.
+private fun List<ChapterListItem>.calculateTrailingGap(): Int {
+	if (isEmpty()) return 0
+	val first = first().chapter.number
+	val last = last().chapter.number
+	if (first < 0f || last < 0f) return 0
+	val lowest = kotlin.math.floor(minOf(first, last)).toInt()
+	return (lowest - 1).coerceAtLeast(0)
 }

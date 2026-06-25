@@ -4,31 +4,40 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:gravity="center"
+	android:gravity="center_vertical"
+	android:minHeight="@dimen/chapter_list_item_height"
 	android:orientation="horizontal"
-	android:paddingVertical="8dp"
-	android:paddingHorizontal="16dp">
+	android:paddingStart="?android:listPreferredItemPaddingStart"
+	android:paddingEnd="?android:listPreferredItemPaddingEnd"
+	android:paddingVertical="6dp">
+
+	<View
+		android:id="@+id/viewCurrentIndicator"
+		android:layout_width="4dp"
+		android:layout_height="20dp"
+		android:layout_marginEnd="8dp"
+		android:background="?attr/colorPrimary" />
 
 	<View
 		android:layout_width="0dp"
 		android:layout_height="1dp"
 		android:layout_weight="1"
-		android:background="?attr/colorOutlineVariant" />
+		android:background="?attr/colorOutline" />
 
 	<TextView
 		android:id="@+id/textView_missing"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:layout_marginHorizontal="16dp"
-		android:textAppearance="?attr/textAppearanceLabelMedium"
-		android:textColor="?attr/colorOnSurfaceVariant"
-		android:alpha="0.7"
+		android:layout_marginHorizontal="14dp"
+		android:singleLine="true"
+		android:textAppearance="?attr/textAppearanceLabelLarge"
+		android:textColor="?attr/colorPrimary"
 		tools:text="Missing 3 chapters" />
 
 	<View
 		android:layout_width="0dp"
 		android:layout_height="1dp"
 		android:layout_weight="1"
-		android:background="?attr/colorOutlineVariant" />
+		android:background="?attr/colorOutline" />
 
 </LinearLayout>

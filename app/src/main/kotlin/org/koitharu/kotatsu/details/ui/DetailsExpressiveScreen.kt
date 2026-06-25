@@ -247,7 +247,12 @@ fun DetailsExpressiveScreen(
 				Spacer(Modifier.height(8.dp))
 				ProgressCard(historyInfo = historyInfo, isLoading = isLoading, accent = accentColor)
 
-				DescriptionCard(description = details.description)
+				DescriptionCard(
+					description = details.description,
+					manga = manga,
+					details = details,
+					accent = accentColor,
+				)
 
 				TagsSection(tags = tags, accent = accentColor, onTagClick = actions.onTagClick)
 
@@ -619,7 +624,6 @@ private fun HeroSection(
 				centered = true,
 				showContentRating = true,
 				manga = manga,
-				details = details,
 				sourceTitle = sourceTitle,
 				accent = accent,
 				imageLoader = imageLoader,
@@ -688,7 +692,6 @@ private fun HeroSection(
 							centered = false,
 							showContentRating = false,
 							manga = manga,
-							details = details,
 							sourceTitle = sourceTitle,
 							accent = accent,
 							imageLoader = imageLoader,
@@ -867,7 +870,6 @@ private fun StatPills(
 	centered: Boolean,
 	showContentRating: Boolean,
 	manga: Manga,
-	details: MangaDetails?,
 	sourceTitle: String?,
 	accent: Color,
 	imageLoader: ImageLoader,
@@ -883,27 +885,6 @@ private fun StatPills(
 		},
 		verticalArrangement = Arrangement.spacedBy(8.dp),
 	) {
-		if (manga.hasRating) {
-			Pill(text = String.format(Locale.ROOT, "%.1f", manga.rating * 5f), accent = accent, highlighted = true) {
-				Icon(
-					painter = painterResource(R.drawable.ic_star_small),
-					contentDescription = null,
-					tint = accent,
-					modifier = Modifier.size(15.dp),
-				)
-			}
-		}
-		val locale = details?.getLocale()
-		if (locale != null) {
-			Pill(text = locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) }, accent = accent) {
-				Icon(
-					painter = painterResource(R.drawable.ic_language),
-					contentDescription = null,
-					tint = MaterialTheme.colorScheme.onSurfaceVariant,
-					modifier = Modifier.size(15.dp),
-				)
-			}
-		}
 		// Status and the source/extension are always kept together on a single horizontal line; the
 		// source name auto-shrinks to fit rather than wrapping to a second line.
 		val hasContentRating = showContentRating && (manga.contentRating == ContentRating.SUGGESTIVE || manga.contentRating == ContentRating.ADULT)
@@ -1242,18 +1223,55 @@ private fun WavyProgressBar(progress: Float, color: Color, trackColor: Color, mo
 }
 
 @Composable
-private fun DescriptionCard(description: CharSequence?) {
+private fun DescriptionCard(
+	description: CharSequence?,
+	manga: Manga,
+	details: MangaDetails?,
+	accent: Color,
+) {
 	val text = description?.toString()?.trim().orEmpty()
 	var expanded by rememberSaveable { mutableStateOf(false) }
 	var hasOverflow by remember { mutableStateOf(false) }
 	val cardColor = MaterialTheme.colorScheme.surfaceContainerHigh
 	SectionCard {
-		Text(
-			text = stringResource(R.string.description),
-			style = MaterialTheme.typography.titleMedium,
-			fontWeight = FontWeight.SemiBold,
-			color = MaterialTheme.colorScheme.onSurface,
-		)
+		val locale = details?.getLocale()
+		Row(
+			modifier = Modifier.fillMaxWidth(),
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			if (manga.hasRating) {
+				Pill(text = String.format(Locale.ROOT, "%.1f", manga.rating * 5f), accent = accent, highlighted = true) {
+					Icon(
+						painter = painterResource(R.drawable.ic_star_small),
+						contentDescription = null,
+						tint = accent,
+						modifier = Modifier.size(15.dp),
+					)
+				}
+			}
+			locale?.let {
+				Pill(
+					text = it.getDisplayLanguage(it).replaceFirstChar { ch -> ch.titlecase(it) },
+					accent = accent,
+					highlighted = true,
+				) {
+					Icon(
+						painter = painterResource(R.drawable.ic_language),
+						contentDescription = null,
+						tint = accent,
+						modifier = Modifier.size(15.dp),
+					)
+				}
+			}
+			Spacer(modifier = Modifier.weight(1f))
+			Text(
+				text = stringResource(R.string.description),
+				style = MaterialTheme.typography.titleMedium,
+				fontWeight = FontWeight.SemiBold,
+				color = MaterialTheme.colorScheme.onSurface,
+			)
+		}
 		Spacer(Modifier.height(10.dp))
 		Box(
 			modifier = Modifier

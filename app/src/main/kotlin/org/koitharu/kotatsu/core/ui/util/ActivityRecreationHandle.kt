@@ -36,6 +36,14 @@ class ActivityRecreationHandle @Inject constructor() : DefaultActivityLifecycleC
 	}
 
 	/**
+	 * Returns true while a programmatic recreation (theme/colour change) is in progress.
+	 * Other components (e.g. [AppProtectHelper]) can check this to avoid false-positive
+	 * background-detection that would wrongly trigger the lock screen.
+	 */
+	val isRecreating: Boolean
+		get() = isAnimatedRecreateInProgress
+
+	/**
 	 * Flag the next few activity (re)creations as theme-driven so they fade their content in
 	 * instead of popping. An in-place [ActivityCompat.recreate] has no enter transition, so the
 	 * fresh toolbar otherwise visibly settles (back button + title reflow); the fade masks it.
@@ -48,7 +56,9 @@ class ActivityRecreationHandle @Inject constructor() : DefaultActivityLifecycleC
 
 	companion object {
 
-		private const val ANIMATED_RECREATE_WINDOW_MS = 700L
+		// Extend the window a bit beyond the animation window so that any lingering
+		// onActivityStarted callbacks fired by the recreated activity are still covered.
+		private const val ANIMATED_RECREATE_WINDOW_MS = 1_500L
 		private val mainHandler = Handler(Looper.getMainLooper())
 		private val clearAnimatedRecreate = Runnable { isAnimatedRecreateInProgress = false }
 

@@ -100,7 +100,10 @@ class ListSelectionController(
 		}
 		if (handled) {
 			view.hapticFeedback(HapticEffect.LONG_PRESS)
-			view.isPressed = false
+			view.postDelayed({
+				view.isPressed = false
+				view.jumpDrawablesToCurrentState()
+			}, 250)
 		}
 		return handled
 	}

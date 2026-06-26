@@ -269,6 +269,14 @@ class DetailsViewModel @Inject constructor(
 			}
 	}
 
+	suspend fun isSourceRecommended(sourceName: String): Boolean {
+		if (!sourceName.startsWith("MIHON_")) return false
+		val recommended = runCatching {
+			database.getMangaDao().findExternalSourcesInLibrary()
+		}.getOrDefault(emptyList())
+		return sourceName in recommended
+	}
+
 	private fun getScrobbler(index: Int): Scrobbler? {
 		val info = scrobblingInfo.value.getOrNull(index)
 		val scrobbler = if (info != null) {

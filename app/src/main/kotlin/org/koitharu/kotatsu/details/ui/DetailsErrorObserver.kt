@@ -28,12 +28,28 @@ class DetailsErrorObserver(
 ) {
 
 	override suspend fun emit(value: Throwable) {
-		val snackbar = Snackbar.make(host, value.getDisplayMessage(host.context.resources), Snackbar.LENGTH_SHORT)
+		var displayMessage = value.getDisplayMessage(host.context.resources)
+		var isRecommended = false
+		if (value is UnsupportedSourceException) {
+			val manga = value.manga
+			if (manga != null && viewModel.isSourceRecommended(manga.source.name)) {
+				isRecommended = true
+				displayMessage = host.context.resources.getString(R.string.install_extension_to_read_manga)
+			}
+		}
+
+		val snackbar = Snackbar.make(host, displayMessage, Snackbar.LENGTH_SHORT)
 		snackbar.setAnchorView(bottomSheet)
 		if (value is NotFoundException || value is UnsupportedSourceException) {
 			snackbar.duration = Snackbar.LENGTH_INDEFINITE
 		}
 		when {
+			isRecommended -> {
+				snackbar.setAction(R.string.extensions) {
+					router()?.openSourcesCatalog(isExternalOnly = true)
+				}
+			}
+
 			canResolve(value) -> {
 				snackbar.setAction(ExceptionResolver.getResolveStringId(value)) {
 					resolve(value)

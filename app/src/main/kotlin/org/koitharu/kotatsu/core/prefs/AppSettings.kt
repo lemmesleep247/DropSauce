@@ -112,11 +112,12 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	var mainNavItems: List<NavItem>
 		get() {
 			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
-			return if (raw.isNullOrEmpty()) {
+			val items = if (raw.isNullOrEmpty()) {
 				listOf(NavItem.FAVORITES, NavItem.FEED, NavItem.HISTORY, NavItem.EXPLORE)
 			} else {
 				raw.mapNotNull { x -> NavItem.entries.find(x) }.ifEmpty { listOf(NavItem.EXPLORE) }
 			}
+			return items.take(4)
 		}
 		set(value) {
 			prefs.edit {

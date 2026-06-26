@@ -27,6 +27,8 @@ fun chapterListItemAD(
 ) {
 
 	AdapterDelegateClickListenerAdapter(this, clickListener).attach(itemView)
+	itemView.isFocusable = false
+	itemView.isFocusableInTouchMode = false
 
 	bind {
 		binding.textViewTitle.text = item.getTitle(context.resources)

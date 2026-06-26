@@ -6,18 +6,14 @@ name: Preview Build
 # installs alongside the store build. R8/resource shrinking is intentionally OFF so the APK
 # installs cleanly when sideloaded. It's signed with the debug keystore (no secrets needed).
 #
-# The APK is published two ways:
-#   1. As a direct-download asset on a rolling per-branch pre-release (just the .apk, no zip).
-#   2. As a workflow artifact (zipped by GitHub) for anyone who prefers the Actions tab.
-# The SHA-256/SHA-1/MD5 hashes are printed to the run summary and the release notes.
+# The APK is published as a workflow artifact (zipped by GitHub) for anyone who prefers the Actions tab.
+# The SHA-256/SHA-1/MD5 hashes are printed to the run summary.
 on:
-  push:
-    branches:
-      - '**'
+  pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 # Only keep the latest preview build per branch/ref running.
 concurrency:
@@ -104,25 +100,6 @@ jobs:
             echo "| MD5 | \`${MD5}\` |"
           } > release-notes.md
           cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Publish APK as a downloadable pre-release asset
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.apk.outputs.tag }}"
-          # Roll the per-branch pre-release: drop the previous one so only the latest APK is attached.
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          # Small delay so the tag deletion is visible before recreating it.
-          sleep 5
-          gh release create "$TAG" \
-            --target "$GITHUB_SHA" \
-            --title "Preview build — ${GITHUB_REF_NAME}" \
-            --prerelease \
-            --notes-file release-notes.md \
-            "${{ steps.apk.outputs.apk_name }}" \
-            "${{ steps.apk.outputs.apk_name }}.sha256sum"
-          echo "Release published: $(gh release view "$TAG" --json url --jq .url)"
 
       - name: Upload preview APK as a workflow artifact
         uses: actions/upload-artifact@v4

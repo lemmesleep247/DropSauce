@@ -148,12 +148,17 @@ class MihonMangaRepository(
 		val details = try {
 			mihonSource.getMangaDetails(sManga)
 		} catch (e: Exception) {
-			if ((e is IOException || e.cause is IOException)
-				&& e !is CloudFlareException) {
+			if ((e is IOException || e.cause is IOException) && e !is CloudFlareException) {
 				delay(500)
-				mihonSource.getMangaDetails(sManga)
+				try {
+					mihonSource.getMangaDetails(sManga)
+				} catch (e2: Exception) {
+					e2.printStackTrace()
+					sManga
+				}
 			} else {
-				throw e
+				e.printStackTrace()
+				sManga
 			}
 		}
 

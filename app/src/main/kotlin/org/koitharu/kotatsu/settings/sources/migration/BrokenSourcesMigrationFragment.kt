@@ -9,8 +9,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,45 +19,64 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.alternatives.ui.AutoFixService
 import org.koitharu.kotatsu.core.model.MangaSource
-import org.koitharu.kotatsu.core.ui.image.FaviconView
+import org.koitharu.kotatsu.core.parser.favicon.faviconUri
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler.Companion.suppressCaptchaErrors
+import org.koitharu.kotatsu.core.ui.image.FaviconDrawable
 import org.koitharu.kotatsu.core.util.ext.addMenuProvider
+import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
+import org.koitharu.kotatsu.main.ui.nav.DrawablePainter
+import org.koitharu.kotatsu.settings.SettingsActivity
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class BrokenSourcesMigrationFragment :
 	BaseComposeSettingsFragment(R.string.migrate_broken_sources) {
 
 	private val viewModel by viewModels<BrokenSourcesMigrationViewModel>()
+
+	@Inject
+	lateinit var imageLoader: ImageLoader
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
@@ -70,9 +89,23 @@ class BrokenSourcesMigrationFragment :
 				val state by viewModel.state.collectAsState()
 				BrokenSourcesMigrationScreen(
 					state = state,
+					imageLoader = imageLoader,
 					onToggle = viewModel::toggle,
+					onToggleRecommended = {
+						viewModel.toggleAll(state.sources.filter { it.isUnavailable }.map { it.key })
+					},
+					onOpenSource = { source ->
+						(requireActivity() as SettingsActivity).openFragment(
+							SourceMangaListFragment::class.java,
+							SourceMangaListFragment.args(source.sourceKeys, source.title),
+							isFromRoot = false,
+						)
+					},
 					onFix = {
-						if (AutoFixService.startForSources(requireContext(), state.selectedSources)) {
+						val rawSources = state.sources
+							.filter { it.key in state.selectedSources }
+							.flatMapTo(linkedSetOf()) { it.sourceKeys }
+						if (AutoFixService.startForSources(requireContext(), rawSources)) {
 							Toast.makeText(
 								requireContext(),
 								R.string.broken_sources_migration_started,
@@ -93,7 +126,7 @@ class BrokenSourcesMigrationFragment :
 		addMenuProvider(object : MenuProvider {
 			override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 				menu.add(Menu.NONE, MENU_INFO, Menu.NONE, R.string.migration_information).apply {
-					setIcon(R.drawable.ic_info_outline)
+					setIcon(R.drawable.ic_info)
 					setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
 				}
 			}
@@ -114,37 +147,26 @@ class BrokenSourcesMigrationFragment :
 @Composable
 private fun BrokenSourcesMigrationScreen(
 	state: BrokenSourcesMigrationState,
+	imageLoader: ImageLoader,
 	onToggle: (String) -> Unit,
+	onToggleRecommended: () -> Unit,
+	onOpenSource: (LibrarySourceOption) -> Unit,
 	onFix: () -> Unit,
 ) {
 	val unavailableSources = state.sources.filter(LibrarySourceOption::isUnavailable)
 	val mihonSources = state.sources.filterNot(LibrarySourceOption::isUnavailable)
 
 	Column(
-		modifier = Modifier
-			.fillMaxSize()
-			.padding(top = 8.dp),
+		modifier = Modifier.fillMaxSize(),
 	) {
 		AnimatedVisibility(visible = state.isInfoVisible) {
 			Column {
 				Column(
 					modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-					verticalArrangement = Arrangement.spacedBy(8.dp),
 				) {
 					Text(
 						text = stringResource(R.string.migrate_broken_sources_description),
 						style = MaterialTheme.typography.bodyMedium,
-						color = MaterialTheme.colorScheme.onSurfaceVariant,
-					)
-					Text(
-						text = stringResource(R.string.recommended),
-						style = MaterialTheme.typography.titleSmall,
-						fontWeight = FontWeight.SemiBold,
-						color = MaterialTheme.colorScheme.primary,
-					)
-					Text(
-						text = stringResource(R.string.unavailable_library_sources_summary),
-						style = MaterialTheme.typography.bodySmall,
 						color = MaterialTheme.colorScheme.onSurfaceVariant,
 					)
 				}
@@ -183,13 +205,18 @@ private fun BrokenSourcesMigrationScreen(
 					item {
 						SourceSectionHeader(
 							title = stringResource(R.string.recommended),
+							isChecked = unavailableSources.all { it.key in state.selectedSources },
+							onToggle = onToggleRecommended,
+							topPadding = 8.dp,
 						)
 					}
 					items(unavailableSources, key = LibrarySourceOption::key) { source ->
 						SourceCheckboxRow(
 							source = source,
+							imageLoader = imageLoader,
 							isChecked = source.key in state.selectedSources,
 							onToggle = { onToggle(source.key) },
+							onOpenManga = { onOpenSource(source) },
 						)
 						SourceDivider()
 					}
@@ -198,13 +225,16 @@ private fun BrokenSourcesMigrationScreen(
 					item {
 						SourceSectionHeader(
 							title = stringResource(R.string.mihon_sources),
+							topPadding = 28.dp,
 						)
 					}
 					items(mihonSources, key = LibrarySourceOption::key) { source ->
 						SourceCheckboxRow(
 							source = source,
+							imageLoader = imageLoader,
 							isChecked = source.key in state.selectedSources,
 							onToggle = { onToggle(source.key) },
+							onOpenManga = { onOpenSource(source) },
 						)
 						SourceDivider()
 					}
@@ -218,7 +248,7 @@ private fun BrokenSourcesMigrationScreen(
 			shadowElevation = 6.dp,
 			color = MaterialTheme.colorScheme.surfaceContainer,
 		) {
-			Column {
+			Column(modifier = Modifier.navigationBarsPadding()) {
 				HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 				Button(
 					onClick = onFix,
@@ -246,11 +276,23 @@ private fun BrokenSourcesMigrationScreen(
 }
 
 @Composable
-private fun SourceSectionHeader(title: String) {
-	Box(
+private fun SourceSectionHeader(
+	title: String,
+	isChecked: Boolean? = null,
+	onToggle: (() -> Unit)? = null,
+	topPadding: androidx.compose.ui.unit.Dp = 8.dp,
+) {
+	Row(
 		modifier = Modifier
 			.fillMaxWidth()
-			.padding(start = 24.dp, end = 24.dp, top = 22.dp, bottom = 10.dp),
+			.let { if (onToggle != null) it.clickable(onClick = onToggle) else it }
+			.padding(
+				start = 24.dp,
+				end = 16.dp,
+				top = topPadding,
+				bottom = 6.dp,
+			),
+		verticalAlignment = Alignment.CenterVertically,
 	) {
 		Text(
 			text = title,
@@ -258,14 +300,75 @@ private fun SourceSectionHeader(title: String) {
 			fontWeight = FontWeight.SemiBold,
 			color = MaterialTheme.colorScheme.primary,
 		)
+		if (isChecked != null && onToggle != null) {
+			Spacer(Modifier.weight(1f))
+			Checkbox(
+				checked = isChecked,
+				onCheckedChange = { onToggle() },
+			)
+		}
+	}
+}
+
+@Composable
+private fun SourceIcon(
+	source: LibrarySourceOption,
+	imageLoader: ImageLoader,
+) {
+	val context = LocalContext.current
+	val fallbackPainter = remember(context, source.title) {
+		DrawablePainter(
+			FaviconDrawable(
+				context = context,
+				styleResId = R.style.FaviconDrawable_Small,
+				name = source.title,
+			),
+		)
+	}
+	Box(
+		modifier = Modifier
+			.width(40.dp)
+			.height(40.dp)
+			.clip(RoundedCornerShape(8.dp)),
+	) {
+		Image(
+			painter = fallbackPainter,
+			contentDescription = null,
+			modifier = Modifier.fillMaxSize(),
+		)
+		if (!source.isUnavailable) {
+			val mangaSource = remember(source.iconSourceKey, source.title) {
+				MangaSource(source.iconSourceKey, source.title)
+			}
+			val request = remember(context, source.iconUrl, mangaSource) {
+				ImageRequest.Builder(context)
+					.data(source.iconUrl ?: mangaSource.faviconUri())
+					.apply {
+						if (source.iconUrl == null) {
+							mangaSourceExtra(mangaSource)
+							suppressCaptchaErrors()
+						}
+					}
+					.build()
+			}
+			AsyncImage(
+				model = request,
+				imageLoader = imageLoader,
+				contentDescription = null,
+				contentScale = ContentScale.Crop,
+				modifier = Modifier.fillMaxSize(),
+			)
+		}
 	}
 }
 
 @Composable
 private fun SourceCheckboxRow(
 	source: LibrarySourceOption,
+	imageLoader: ImageLoader,
 	isChecked: Boolean,
 	onToggle: () -> Unit,
+	onOpenManga: () -> Unit,
 ) {
 	Row(
 		modifier = Modifier
@@ -275,26 +378,7 @@ private fun SourceCheckboxRow(
 			.padding(horizontal = 16.dp, vertical = 8.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
-		AndroidView(
-			factory = { context ->
-				FaviconView(context).apply {
-					setIconStyle(R.style.FaviconDrawable_Small)
-					applyExternalSourceStyle(true)
-				}
-			},
-			update = { view ->
-				val iconKey = source.iconUrl ?: source.iconSourceKey
-				if (view.tag != iconKey) {
-					view.tag = iconKey
-					if (source.iconUrl != null) {
-						view.setImageFromUrlAsync(source.iconUrl, source.title)
-					} else {
-						view.setImageAsync(MangaSource(source.iconSourceKey, source.title))
-					}
-				}
-			},
-			modifier = Modifier.width(40.dp).height(40.dp),
-		)
+		SourceIcon(source = source, imageLoader = imageLoader)
 		Spacer(Modifier.width(12.dp))
 		Column(modifier = Modifier.weight(1f)) {
 			Text(
@@ -302,11 +386,23 @@ private fun SourceCheckboxRow(
 				style = MaterialTheme.typography.bodyLarge,
 				color = MaterialTheme.colorScheme.onSurface,
 			)
-			Text(
-				text = pluralStringResource(R.plurals.manga_count, source.mangaCount, source.mangaCount),
-				style = MaterialTheme.typography.bodySmall,
-				color = MaterialTheme.colorScheme.onSurfaceVariant,
-			)
+			Row(
+				modifier = Modifier.clickable(onClick = onOpenManga),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				Text(
+					text = pluralStringResource(R.plurals.manga_count, source.mangaCount, source.mangaCount),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.primary,
+				)
+				Spacer(Modifier.width(4.dp))
+				Icon(
+					painter = painterResource(R.drawable.ic_chevron_right),
+					contentDescription = null,
+					tint = MaterialTheme.colorScheme.primary,
+					modifier = Modifier.width(8.dp).height(12.dp),
+				)
+			}
 		}
 		Spacer(Modifier.width(12.dp))
 		Checkbox(

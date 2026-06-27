@@ -65,10 +65,6 @@ class FaviconView @JvmOverloads constructor(
 		)
 	}
 
-	fun setIconStyle(@StyleRes styleResId: Int) {
-		iconStyle = styleResId
-	}
-
 	/**
 	 * Loads an image from [url] asynchronously. Falls back to a [FaviconDrawable] generated from
 	 * [fallbackName] if the URL cannot be loaded.

@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 import org.koitharu.kotatsu.core.db.entity.MangaEntity
 import org.koitharu.kotatsu.core.db.entity.MangaTagsEntity
 import org.koitharu.kotatsu.core.db.entity.MangaWithTags
@@ -97,7 +98,7 @@ abstract class MangaDao {
 		ORDER BY sourceTitle COLLATE NOCASE, source COLLATE NOCASE
 		""",
 	)
-	abstract suspend fun findLibrarySourceUsage(): List<LibrarySourceUsage>
+	abstract fun observeLibrarySourceUsage(): Flow<List<LibrarySourceUsage>>
 
 	@Query(
 		"""
@@ -110,6 +111,20 @@ abstract class MangaDao {
 		""",
 	)
 	abstract suspend fun findLibraryMangaIdsBySources(sources: Collection<String>): List<Long>
+
+	@Transaction
+	@Query(
+		"""
+		SELECT * FROM manga
+		WHERE source IN (:sources)
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		ORDER BY title COLLATE NOCASE
+		""",
+	)
+	abstract suspend fun findLibraryMangaBySources(sources: Collection<String>): List<MangaWithTags>
 
 	@Query("SELECT author FROM manga WHERE author LIKE :query GROUP BY author ORDER BY COUNT(author) DESC LIMIT :limit")
 	abstract suspend fun findAuthors(query: String, limit: Int): List<String>

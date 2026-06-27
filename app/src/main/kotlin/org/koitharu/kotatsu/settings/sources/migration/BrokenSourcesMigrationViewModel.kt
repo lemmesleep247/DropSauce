@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.settings.sources.migration
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.runtime.Immutable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -36,13 +37,13 @@ class BrokenSourcesMigrationViewModel @Inject constructor(
 	val state: StateFlow<BrokenSourcesMigrationState> = _state.asStateFlow()
 
 	init {
-		refresh()
+		observeSources()
 	}
 
-	fun refresh() {
+	private fun observeSources() {
 		viewModelScope.launch {
 			_state.update { it.copy(isLoading = true) }
-			val sources = withContext(Dispatchers.IO) {
+			val metadata = withContext(Dispatchers.IO) {
 				extensionManager.ensureReady()
 				val installedIds = extensionManager.getMihonMangaSources()
 					.mapTo(hashSetOf()) { it.sourceId }
@@ -61,55 +62,67 @@ class BrokenSourcesMigrationViewModel @Inject constructor(
 						}
 					}
 				}
-				database.getMangaDao().findLibrarySourceUsage().map { usage ->
-					val source = MangaSource(usage.source, usage.sourceTitle)
-					val mihonId = usage.source
-						.takeIf { it.startsWith(MIHON_PREFIX) }
-						?.removePrefix(MIHON_PREFIX)
-						?.substringBefore(':')
-						?.toLongOrNull()
-					val mappedLegacySource = if (mihonId == null) {
-						kotatsuSourceMap.resolve(usage.source)
-					} else {
-						null
-					}
-					val representedInExtensionManager = when (mihonId) {
-						null -> mappedLegacySource != null
-						else -> mihonId in installedIds ||
-							mihonId in repositoryIcons ||
-							kotatsuSourceMap.resolveById(mihonId) != null
-					}
-					val representedSourceId = mihonId ?: mappedLegacySource?.sourceId
-					val iconSourceKey = when {
-						mihonId != null -> usage.source
-						mappedLegacySource != null ->
-							"MIHON_${mappedLegacySource.sourceId}:${mappedLegacySource.sourceName}"
-						else -> usage.source
-					}
-					LibrarySourceOption(
-						key = usage.source,
-						title = usage.sourceTitle
-							?.takeIf(String::isNotBlank)
-							?: mappedLegacySource?.sourceName?.takeIf(String::isNotBlank)
-							?: source.getStoredTitleOrNull()
-							?: source.getTitle(context).toReadableSourceName(),
-						mangaCount = usage.mangaCount,
-						isUnavailable = !representedInExtensionManager,
-						iconSourceKey = iconSourceKey,
-						iconUrl = representedSourceId
-							?.takeUnless { it in installedIds }
-							?.let(repositoryIcons::get),
+				SourceMetadata(installedIds, repositoryIcons)
+			}
+			database.getMangaDao().observeLibrarySourceUsage().collect { usages ->
+				val sources = withContext(Dispatchers.IO) { buildOptions(usages, metadata) }
+				_state.update { current ->
+					current.copy(
+						isLoading = false,
+						sources = sources,
+						selectedSources = current.selectedSources.intersect(sources.mapTo(hashSetOf()) { it.key }),
 					)
 				}
 			}
-			_state.update { current ->
-				current.copy(
-					isLoading = false,
-					sources = sources,
-					selectedSources = current.selectedSources.intersect(sources.mapTo(hashSetOf()) { it.key }),
-				)
-			}
 		}
+	}
+
+	private suspend fun buildOptions(
+		usages: List<org.koitharu.kotatsu.core.db.dao.LibrarySourceUsage>,
+		metadata: SourceMetadata,
+	): List<LibrarySourceOption> {
+		val unmerged = usages.map { usage ->
+			val source = MangaSource(usage.source, usage.sourceTitle)
+			val mihonId = usage.source
+				.takeIf { it.startsWith(MIHON_PREFIX) }
+				?.removePrefix(MIHON_PREFIX)
+				?.substringBefore(':')
+				?.toLongOrNull()
+			val mappedLegacySource = if (mihonId == null) {
+				kotatsuSourceMap.resolve(usage.source)
+			} else {
+				null
+			}
+			val represented = when (mihonId) {
+				null -> mappedLegacySource != null
+				else -> mihonId in metadata.installedIds ||
+					mihonId in metadata.repositoryIcons ||
+					kotatsuSourceMap.resolveById(mihonId) != null
+			}
+			val representedSourceId = mihonId ?: mappedLegacySource?.sourceId
+			val title = usage.sourceTitle
+				?.takeIf(String::isNotBlank)
+				?: mappedLegacySource?.sourceName?.takeIf(String::isNotBlank)
+				?: source.getStoredTitleOrNull()
+				?: source.getTitle(context).toReadableSourceName()
+			LibrarySourceOption(
+				key = usage.source,
+				sourceKeys = setOf(usage.source),
+				title = title,
+				mangaCount = usage.mangaCount,
+				isUnavailable = !represented,
+				iconSourceKey = when {
+					mihonId != null -> usage.source
+					mappedLegacySource != null ->
+						"MIHON_${mappedLegacySource.sourceId}:${mappedLegacySource.sourceName}"
+					else -> usage.source
+				},
+				iconUrl = representedSourceId
+					?.takeUnless { it in metadata.installedIds }
+					?.let(metadata.repositoryIcons::get),
+			)
+		}
+		return mergeLibrarySourceOptions(unmerged)
 	}
 
 	fun toggle(source: String) {
@@ -126,13 +139,48 @@ class BrokenSourcesMigrationViewModel @Inject constructor(
 		_state.update { it.copy(selectedSources = emptySet()) }
 	}
 
+	fun toggleAll(sources: Collection<String>) {
+		_state.update { current ->
+			val sourceSet = sources.toSet()
+			current.copy(
+				selectedSources = if (sourceSet.all(current.selectedSources::contains)) {
+					current.selectedSources - sourceSet
+				} else {
+					current.selectedSources + sourceSet
+				},
+			)
+		}
+	}
+
 	fun toggleInfo() {
 		_state.update { it.copy(isInfoVisible = !it.isInfoVisible) }
 	}
 
-	companion object {
-		private const val MIHON_PREFIX = "MIHON_"
+	private companion object {
+		const val MIHON_PREFIX = "MIHON_"
 	}
+}
+
+internal fun mergeLibrarySourceOptions(
+	options: List<LibrarySourceOption>,
+): List<LibrarySourceOption> {
+	return options
+			.groupBy { it.title.trim().lowercase() }
+			.map { (canonicalKey, group) ->
+				val iconSource = group.firstOrNull { !it.isUnavailable && it.iconUrl != null }
+					?: group.firstOrNull { !it.isUnavailable }
+					?: group.first()
+				LibrarySourceOption(
+					key = canonicalKey,
+					sourceKeys = group.flatMapTo(linkedSetOf()) { it.sourceKeys },
+					title = group.first().title,
+					mangaCount = group.sumOf { it.mangaCount },
+					isUnavailable = group.all { it.isUnavailable },
+					iconSourceKey = iconSource.iconSourceKey,
+					iconUrl = iconSource.iconUrl,
+				)
+			}
+			.sortedBy { it.title.lowercase() }
 }
 
 private fun String.toReadableSourceName(): String {
@@ -142,6 +190,7 @@ private fun String.toReadableSourceName(): String {
 		.joinToString(" ") { word -> word.replaceFirstChar { it.titlecase() } }
 }
 
+@Immutable
 data class BrokenSourcesMigrationState(
 	val isLoading: Boolean = false,
 	val isInfoVisible: Boolean = false,
@@ -149,11 +198,18 @@ data class BrokenSourcesMigrationState(
 	val selectedSources: Set<String> = emptySet(),
 )
 
+@Immutable
 data class LibrarySourceOption(
 	val key: String,
+	val sourceKeys: Set<String>,
 	val title: String,
 	val mangaCount: Int,
 	val isUnavailable: Boolean,
 	val iconSourceKey: String,
 	val iconUrl: String?,
+)
+
+private data class SourceMetadata(
+	val installedIds: Set<Long>,
+	val repositoryIcons: Map<Long, String>,
 )

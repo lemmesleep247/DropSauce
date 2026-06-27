@@ -13,6 +13,12 @@ import org.koitharu.kotatsu.core.db.entity.MangaTagsEntity
 import org.koitharu.kotatsu.core.db.entity.MangaWithTags
 import org.koitharu.kotatsu.core.db.entity.TagEntity
 
+data class LibrarySourceUsage(
+	val source: String,
+	val sourceTitle: String?,
+	val mangaCount: Int,
+)
+
 @Dao
 abstract class MangaDao {
 
@@ -72,6 +78,38 @@ abstract class MangaDao {
 		""",
 	)
 	abstract suspend fun findExternalSourcesInLibrary(): List<String>
+
+	/**
+	 * Sources represented by manga in favourites or history. The source key is kept intact so a
+	 * bulk repair can take a stable snapshot of every matching manga, including restored Kotatsu
+	 * sources that have no Mihon counterpart.
+	 */
+	@Query(
+		"""
+		SELECT source, MAX(source_title) AS sourceTitle, COUNT(*) AS mangaCount
+		FROM manga
+		WHERE source NOT IN ('LOCAL', 'UNKNOWN')
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		GROUP BY source
+		ORDER BY sourceTitle COLLATE NOCASE, source COLLATE NOCASE
+		""",
+	)
+	abstract suspend fun findLibrarySourceUsage(): List<LibrarySourceUsage>
+
+	@Query(
+		"""
+		SELECT manga_id FROM manga
+		WHERE source IN (:sources)
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		""",
+	)
+	abstract suspend fun findLibraryMangaIdsBySources(sources: Collection<String>): List<Long>
 
 	@Query("SELECT author FROM manga WHERE author LIKE :query GROUP BY author ORDER BY COUNT(author) DESC LIMIT :limit")
 	abstract suspend fun findAuthors(query: String, limit: Int): List<String>

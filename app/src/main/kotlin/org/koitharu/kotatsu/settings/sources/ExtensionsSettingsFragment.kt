@@ -25,6 +25,7 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.explore.data.SourcesSortOrder
 import org.koitharu.kotatsu.parsers.util.names
+import org.koitharu.kotatsu.settings.SettingsActivity
 import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
 import org.koitharu.kotatsu.settings.compose.CategoryPalette
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
@@ -35,6 +36,7 @@ import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
 import org.koitharu.kotatsu.settings.compose.rememberStringPref
+import org.koitharu.kotatsu.settings.sources.migration.BrokenSourcesMigrationFragment
 
 @AndroidEntryPoint
 class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensions) {
@@ -53,6 +55,13 @@ class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensio
 					linksEnabled = linksEnabled,
 					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenCatalog = { router.openSourcesCatalog(isExternalOnly = true) },
+					onOpenBrokenSourcesMigration = {
+						(requireActivity() as SettingsActivity).openFragment(
+							BrokenSourcesMigrationFragment::class.java,
+							args = null,
+							isFromRoot = false,
+						)
+					},
 					onLinksChanged = viewModel::setLinksEnabled,
 				)
 			}
@@ -70,6 +79,7 @@ private fun ExtensionsScreen(
 	linksEnabled: Boolean,
 	onBack: () -> Unit,
 	onOpenCatalog: () -> Unit,
+	onOpenBrokenSourcesMigration: () -> Unit,
 	onLinksChanged: (Boolean) -> Unit,
 ) {
 	val ctx = LocalContext.current
@@ -102,6 +112,15 @@ private fun ExtensionsScreen(
 						
 						shape = pos.shape,
 						onClick = onOpenCatalog,
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.migrate_broken_sources),
+						subtitle = stringResource(R.string.migrate_broken_sources_summary),
+						icon = R.drawable.ic_auto_fix,
+						shape = pos.shape,
+						onClick = onOpenBrokenSourcesMigration,
 					)
 				}
 			}

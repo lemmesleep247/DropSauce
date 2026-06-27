@@ -19,6 +19,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.alternatives.domain.AutoFixUseCase
 import org.koitharu.kotatsu.alternatives.domain.AutoFixUseCase.NoAlternativesException
 import org.koitharu.kotatsu.core.ErrorReporterReceiver
+import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -44,6 +45,9 @@ class AutoFixService : CoroutineIntentService() {
 	@Inject
 	lateinit var coil: ImageLoader
 
+	@Inject
+	lateinit var database: MangaDatabase
+
 	private lateinit var notificationManager: NotificationManagerCompat
 
 	override fun onCreate() {
@@ -52,8 +56,10 @@ class AutoFixService : CoroutineIntentService() {
 	}
 
 	override suspend fun IntentJobContext.processIntent(intent: Intent) {
-		val ids = requireNotNull(intent.getLongArrayExtra(DATA_IDS))
 		startForeground(this)
+		val ids = intent.getLongArrayExtra(DATA_IDS) ?: intent.getStringArrayExtra(DATA_SOURCES)
+			?.let { database.getMangaDao().findLibraryMangaIdsBySources(it.asList()).toLongArray() }
+			?: error("No manga or sources supplied")
 		for (mangaId in ids) {
 			powerManager.withPartialWakeLock(TAG) {
 				val result = runCatchingCancellable {
@@ -186,6 +192,7 @@ class AutoFixService : CoroutineIntentService() {
 	companion object {
 
 		private const val DATA_IDS = "ids"
+		private const val DATA_SOURCES = "sources"
 		private const val TAG = "auto_fix"
 		private const val CHANNEL_ID = "auto_fix"
 		private const val FOREGROUND_NOTIFICATION_ID = 38
@@ -198,6 +205,19 @@ class AutoFixService : CoroutineIntentService() {
 		} catch (e: Exception) {
 			e.printStackTraceDebug()
 			false
+		}
+
+		fun startForSources(context: Context, sources: Collection<String>): Boolean {
+			if (sources.isEmpty()) return false
+			return try {
+				val intent = Intent(context, AutoFixService::class.java)
+					.putExtra(DATA_SOURCES, sources.toTypedArray())
+				ContextCompat.startForegroundService(context, intent)
+				true
+			} catch (e: Exception) {
+				e.printStackTraceDebug()
+				false
+			}
 		}
 	}
 }

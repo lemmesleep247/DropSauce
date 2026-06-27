@@ -711,6 +711,23 @@
     <!-- Short minutes and seconds format pattern -->
     <string name="minutes_seconds_short">%1$d m %2$d s</string>
     <string name="fix">Fix</string>
+    <string name="migrate_broken_sources">Migrate broken sources</string>
+    <string name="migrate_broken_sources_summary">Replace every affected favorite and history entry with the best working alternative</string>
+    <string name="migrate_broken_sources_description">Choose one or more sources. Every manga from those sources in favorites or history will be checked and, when broken, migrated to the best working alternative in the background.</string>
+    <string name="recommended">Recommended</string>
+    <string name="mihon_sources">Mihon sources</string>
+    <string name="select_sources_to_fix">Select sources to fix</string>
+    <string name="no_sources_to_migrate">No catalog sources found</string>
+    <string name="no_sources_to_migrate_summary">Sources will appear here when favorites or history contain manga from them.</string>
+    <string name="broken_sources_migration_started">Source migration started in the background</string>
+    <plurals name="fix_selected_sources">
+        <item quantity="one">Fix %d source</item>
+        <item quantity="other">Fix %d sources</item>
+    </plurals>
+    <plurals name="manga_count">
+        <item quantity="one">%d manga</item>
+        <item quantity="other">%d manga</item>
+    </plurals>
     <string name="missing_storage_permission">There is no permission to access manga on external storage</string>
     <string name="last_used">Last used</string>
     <string name="webtoon_gaps">Gaps in webtoon mode</string>

@@ -331,12 +331,13 @@ private fun SourceIcon(
 			.height(40.dp)
 			.clip(RoundedCornerShape(8.dp)),
 	) {
-		Image(
-			painter = fallbackPainter,
-			contentDescription = null,
-			modifier = Modifier.fillMaxSize(),
-		)
-		if (!source.isUnavailable) {
+		if (source.isUnavailable) {
+			Image(
+				painter = fallbackPainter,
+				contentDescription = null,
+				modifier = Modifier.fillMaxSize(),
+			)
+		} else {
 			val mangaSource = remember(source.iconSourceKey, source.title) {
 				MangaSource(source.iconSourceKey, source.title)
 			}
@@ -355,6 +356,8 @@ private fun SourceIcon(
 				model = request,
 				imageLoader = imageLoader,
 				contentDescription = null,
+				error = fallbackPainter,
+				fallback = fallbackPainter,
 				contentScale = ContentScale.Crop,
 				modifier = Modifier.fillMaxSize(),
 			)

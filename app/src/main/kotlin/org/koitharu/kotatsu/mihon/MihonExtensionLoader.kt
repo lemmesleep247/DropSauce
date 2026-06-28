@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.mihon.compat.KotoInjektBridge
 import org.koitharu.kotatsu.mihon.model.MihonExtensionInfo
 import org.koitharu.kotatsu.mihon.model.MihonLoadResult
+import eu.kanade.tachiyomi.util.lang.Hash
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,8 +35,16 @@ class MihonExtensionLoader @Inject constructor(
 		private const val METADATA_SOURCE_CLASS = "tachiyomi.extension.class"
 		private const val METADATA_SOURCE_FACTORY = "tachiyomi.extension.factory"
 		private const val METADATA_NSFW = "tachiyomi.extension.nsfw"
-		const val LIB_VERSION_MIN = 1.2
-		const val LIB_VERSION_MAX = 1.9
+		private const val METADATA_EXTENSION_LIB = "tachiyomix.extensionLib"
+		private const val METADATA_CONTENT_WARNING = "tachiyomix.contentWarning"
+		// Keep the accepted ABI window bounded by Mihon's source-api. Loading a hypothetical newer
+		// APK and hoping its missing host symbols are unused turns a clear incompatibility into a
+		// delayed NoSuchMethodError.
+		const val LIB_VERSION_MIN = 1.4
+		const val LIB_VERSION_MAX = 1.6
+		// Published by Keiyoushi's signed repository metadata (repo.json/index.json).
+		private const val KEIYOUSHI_SIGNING_KEY =
+			"9add655a78e96c4ec7a53ef89dccb557cb5d767489fac5e785d671a5a75d4da2"
 
 		internal fun normalizeSourceClassNames(pkgName: String, sourceClassNames: String): List<String> {
 			return sourceClassNames
@@ -52,6 +61,7 @@ class MihonExtensionLoader @Inject constructor(
 		}
 
 		internal fun readNsfwFlag(metaData: Bundle): Boolean {
+			if (metaData.getInt(METADATA_CONTENT_WARNING, 0) > 0) return true
 			if (!metaData.containsKey(METADATA_NSFW)) {
 				return false
 			}
@@ -98,7 +108,10 @@ class MihonExtensionLoader @Inject constructor(
 			@Suppress("DEPRECATION")
 			pkgManager.getPackageInfo(
 				packageName,
-				PackageManager.GET_META_DATA or PackageManager.GET_CONFIGURATIONS,
+				PackageManager.GET_META_DATA or
+					PackageManager.GET_CONFIGURATIONS or
+					PackageManager.GET_SIGNATURES or
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else 0,
 			)
 		} catch (e: PackageManager.NameNotFoundException) {
 			null
@@ -124,7 +137,7 @@ class MihonExtensionLoader @Inject constructor(
 		val appInfo = pkgInfo.applicationInfo ?: return null
 		val metaData = appInfo.metaData ?: return null
 		val versionName = pkgInfo.versionName ?: return null
-		val libVersion = parseLibVersion(versionName) ?: return null
+		val libVersion = readLibVersion(metaData, versionName) ?: return null
 		val sourceClassName = metaData.getString(METADATA_SOURCE_CLASS)
 			?: metaData.getString(METADATA_SOURCE_FACTORY)
 			?: return null
@@ -154,7 +167,7 @@ class MihonExtensionLoader @Inject constructor(
 			?: return buildLoggedError(pkgInfo.packageName, "No manifest metadata")
 		val versionName = pkgInfo.versionName
 			?: return buildLoggedError(pkgInfo.packageName, "No version name")
-		val libVersion = parseLibVersion(versionName)
+		val libVersion = readLibVersion(metaData, versionName)
 			?: return buildLoggedError(pkgInfo.packageName, "Invalid lib version: $versionName")
 		if (!isSupportedLibVersion(libVersion)) {
 			return buildLoggedError(
@@ -165,6 +178,22 @@ class MihonExtensionLoader @Inject constructor(
 		val sourceClassNames = metaData.getString(METADATA_SOURCE_CLASS)
 			?: metaData.getString(METADATA_SOURCE_FACTORY)
 			?: return buildLoggedError(pkgInfo.packageName, "No source class metadata")
+		val appName = runCatching {
+			appInfo.loadLabel(context.packageManager).toString()
+		}.getOrDefault(pkgInfo.packageName)
+		val signatures = getSignatures(pkgInfo)
+		if (signatures.isEmpty()) {
+			return buildLoggedError(pkgInfo.packageName, "Extension APK is unsigned")
+		}
+		if (KEIYOUSHI_SIGNING_KEY !in signatures) {
+			Log.w(TAG, "${pkgInfo.packageName}: extension signature is not trusted")
+			return MihonLoadResult.Untrusted(
+				pkgName = pkgInfo.packageName,
+				appName = appName,
+				versionCode = PackageInfoCompat.getLongVersionCode(pkgInfo),
+				versionName = versionName,
+			)
+		}
 		val classLoader = runCatching {
 			ChildFirstPathClassLoader(
 				appInfo.sourceDir,
@@ -187,11 +216,20 @@ class MihonExtensionLoader @Inject constructor(
 		logLoadedSources(pkgInfo.packageName, sources)
 		return MihonLoadResult.Success(
 			pkgName = pkgInfo.packageName,
-			appName = appInfo.loadLabel(context.packageManager).toString(),
+			appName = appName,
 			versionCode = PackageInfoCompat.getLongVersionCode(pkgInfo),
 			versionName = versionName,
 			libVersion = libVersion,
-			lang = extractLanguage(pkgInfo.packageName),
+			// Mihon derives an installed extension's language from the sources it actually
+			// created. SourceFactory APKs may expose several languages even though their package
+			// path contains only one segment, so package-name inference loses that information.
+			lang = sources.mapNotNull { (it as? CatalogueSource)?.lang }.toSet().let { langs ->
+				when (langs.size) {
+					0 -> ""
+					1 -> langs.first()
+					else -> "all"
+				}
+			},
 			isNsfw = readNsfwFlag(metaData),
 			sources = sources,
 		)
@@ -203,8 +241,17 @@ class MihonExtensionLoader @Inject constructor(
 				val instance = classLoader.loadClass(className).getDeclaredConstructor().newInstance()
 				when (instance) {
 					is Source -> listOf(instance)
-					is SourceFactory -> instance.createSources().toList()
-					else -> emptyList()
+					is SourceFactory -> {
+						// Cast through Any? to handle Java SourceFactory implementations whose
+						// createSources() may return a list with null elements at runtime despite
+						// the non-null Kotlin type, which would otherwise crash every source in
+						// the extension.
+						@Suppress("UNCHECKED_CAST")
+						(instance.createSources() as List<Any?>).filterNotNull().filterIsInstance<Source>()
+					}
+					// Match Mihon: malformed metadata is a load failure, not a successful
+					// extension with a silently missing source.
+					else -> error("Unknown source class type: ${instance.javaClass.name}")
 				}
 			}
 	}
@@ -247,6 +294,11 @@ class MihonExtensionLoader @Inject constructor(
 			?: versionName.split('.').take(2).joinToString(".").toDoubleOrNull()
 	}
 
+	private fun readLibVersion(metaData: Bundle, versionName: String): Double? =
+		metaData.getDouble(METADATA_EXTENSION_LIB, 0.0)
+			.takeUnless { it == 0.0 }
+			?: parseLibVersion(versionName)
+
 	private fun extractLanguage(packageName: String): String {
 		val parts = packageName.split('.')
 		val extIndex = parts.indexOfLast { it == "extension" }
@@ -257,15 +309,32 @@ class MihonExtensionLoader @Inject constructor(
 	}
 
 	@Suppress("DEPRECATION")
+	private fun getSignatures(pkgInfo: PackageInfo): List<String> {
+		val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			val signingInfo = pkgInfo.signingInfo ?: return emptyList()
+			if (signingInfo.hasMultipleSigners()) {
+				signingInfo.apkContentsSigners
+			} else {
+				signingInfo.signingCertificateHistory
+			}
+		} else {
+			pkgInfo.signatures
+		}
+		return signatures.orEmpty().map { Hash.sha256(it.toByteArray()) }
+	}
+
+	@Suppress("DEPRECATION")
 	private fun getInstalledPackages(packageManager: PackageManager): List<PackageInfo> {
+		val flags = PackageManager.GET_META_DATA or
+			PackageManager.GET_CONFIGURATIONS or
+			PackageManager.GET_SIGNATURES or
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else 0
 		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 			packageManager.getInstalledPackages(
-				PackageManager.PackageInfoFlags.of(
-					(PackageManager.GET_META_DATA or PackageManager.GET_CONFIGURATIONS).toLong(),
-				),
+				PackageManager.PackageInfoFlags.of(flags.toLong()),
 			)
 		} else {
-			packageManager.getInstalledPackages(PackageManager.GET_META_DATA or PackageManager.GET_CONFIGURATIONS)
+			packageManager.getInstalledPackages(flags)
 		}
 	}
 }

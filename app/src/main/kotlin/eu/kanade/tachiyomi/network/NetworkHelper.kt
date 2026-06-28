@@ -1,10 +1,18 @@
 package eu.kanade.tachiyomi.network
 
-import okhttp3.CookieJar
+import android.content.Context
 import okhttp3.OkHttpClient
 
-abstract class NetworkHelper {
-	abstract val client: OkHttpClient
+open class NetworkHelper protected constructor() {
+	/**
+	 * Keiyoushi's stub exposes NetworkHelper(Context). Extensions normally inject this class, but
+	 * retaining the constructor prevents linkage failure in sources that instantiate a helper.
+	 */
+	@Suppress("UNUSED_PARAMETER")
+	constructor(context: Context) : this()
+
+	open val client: OkHttpClient
+		get() = throw UnsupportedOperationException("Host NetworkHelper must provide a client")
 
 	/**
 	 * A client that bypasses Cloudflare protection, for use with CDN requests
@@ -15,12 +23,16 @@ abstract class NetworkHelper {
 	open val nonCloudflareClient: OkHttpClient
 		get() = client
 
-	/** Cookie jar shared with [client]. Used by extensions that manage session cookies. */
-	abstract val cookieJar: CookieJar
+	/**
+	 * Exact Mihon return type is important: JVM method descriptors include return types, so exposing
+	 * CookieJar here instead of AndroidCookieJar makes getCookieJar() unresolvable to extension APKs.
+	 */
+	open val cookieJar: AndroidCookieJar
+		get() = throw UnsupportedOperationException("Host NetworkHelper must provide a cookie jar")
 
 	@Deprecated("The regular client handles Cloudflare by default")
 	open val cloudflareClient: OkHttpClient
 		get() = client
 
-	abstract fun defaultUserAgentProvider(): String
+	open fun defaultUserAgentProvider(): String = ""
 }

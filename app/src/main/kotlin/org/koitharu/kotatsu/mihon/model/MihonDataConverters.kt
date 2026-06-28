@@ -2,7 +2,6 @@
 
 package org.koitharu.kotatsu.mihon.model
 
-import android.util.Log
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
@@ -14,8 +13,6 @@ import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.parsers.model.MangaState
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.RATING_UNKNOWN
-
-private const val TAG = "MihonDataConverters"
 
 // ============ SManga <-> Manga ============
 
@@ -31,15 +28,11 @@ fun SManga.toManga(
 	val safeUrl = try { url } catch (_: UninitializedPropertyAccessException) { "" }
 	val safeThumbnail = try { thumbnail_url } catch (_: UninitializedPropertyAccessException) { null }
 	val safeTitle = try { title } catch (_: UninitializedPropertyAccessException) { "Unknown" }
-	val safeGenres: List<String>? = genres.takeIf { it.isNotEmpty() }
+	val safeGenres: List<String>? = getGenres()?.takeIf { it.isNotEmpty() }
 	val safeAuthor = try { author } catch (_: UninitializedPropertyAccessException) { null }
 	val safeArtist = try { artist } catch (_: UninitializedPropertyAccessException) { null }
 	val safeDescription = try { description } catch (_: UninitializedPropertyAccessException) { null }
 	val safeStatus = try { status } catch (_: UninitializedPropertyAccessException) { SManga.UNKNOWN }
-	// extensions-lib 1.5+ metadata. Wrapped defensively in case an extension's SManga impl throws.
-	val safeAltTitles = runCatching { altTitles }.getOrNull().orEmpty()
-	val safeContentRating = runCatching { contentRating }.getOrNull()
-	val safeScore = runCatching { score }.getOrNull()
 
 	val resolvedCover = resolveUrl(baseUrl, safeThumbnail)
 	val resolvedUrl = if (publicUrl.isNotBlank()) {
@@ -52,22 +45,14 @@ fun SManga.toManga(
 	val adultGenres = setOf("adult", "hentai", "18+", "nsfw", "mature", "ecchi")
 	val isContentNsfw = source.isNsfw || safeGenres?.any { it.lowercase() in adultGenres } == true
 
-	// Prefer the source's explicit content rating (extensions-lib 1.5+) over the genre heuristic,
-	// matching Mihon. Only fall back to the heuristic when the source reports SAFE/unset.
-	val resolvedContentRating = when (safeContentRating) {
-		SManga.ContentRating.ADULT -> ContentRating.ADULT
-		SManga.ContentRating.SUGGESTIVE -> ContentRating.SUGGESTIVE
-		else -> if (isContentNsfw) ContentRating.ADULT else null
-	}
-
 	return Manga(
 		id = stableId(source.name, "manga", safeUrl),
 		title = safeTitle,
-		altTitles = safeAltTitles.mapNotNullTo(LinkedHashSet()) { it.trim().takeIf(String::isNotEmpty) },
+		altTitles = emptySet(),
 		url = safeUrl,
 		publicUrl = resolvedUrl,
-		rating = safeScore?.takeIf { it in 0..100 }?.let { it / 100f } ?: RATING_UNKNOWN,
-		contentRating = resolvedContentRating,
+		rating = RATING_UNKNOWN,
+		contentRating = if (isContentNsfw) ContentRating.ADULT else null,
 		coverUrl = resolvedCover,
 		largeCoverUrl = resolvedCover,
 		tags = safeGenres.orEmpty().mapTo(LinkedHashSet()) { genre ->
@@ -92,36 +77,10 @@ fun SManga.toManga(
 }
 
 fun Manga.toSManga(): SManga {
-	// Get baseUrl from source if available
-	val baseUrl = (source as? MihonMangaSource)?.let { mihonSource ->
-		(mihonSource.catalogueSource as? HttpSource)?.baseUrl ?: ""
-	} ?: ""
-
-	var cleanUrl = url
-
-	// Check if URL has duplicate protocol/baseUrl (e.g., "https://domain.comhttps//domain.com/path")
-	val httpIndex = cleanUrl.indexOf("http", startIndex = 1)
-	if (httpIndex > 0) {
-		cleanUrl = cleanUrl.substring(httpIndex)
-		Log.w(TAG, "Detected duplicate baseUrl, extracting: '$url' -> '$cleanUrl'")
-	}
-
-	// Fix malformed protocols (https// -> https://)
-	cleanUrl = cleanUrl.replace(Regex("^(https?)/+"), "$1://")
-
-	// If URL is absolute and starts with baseUrl, strip it to avoid duplicates in HttpSource
-	if (baseUrl.isNotBlank()) {
-		val baseHost = baseUrl.trimEnd('/')
-		if (cleanUrl.startsWith(baseHost)) {
-			val stripped = cleanUrl.substring(baseHost.length)
-			if (stripped.startsWith("/") || stripped.isEmpty()) {
-				cleanUrl = stripped
-			}
-		}
-	}
-
 	return SManga.create().apply {
-		this.url = cleanUrl
+		// Mihon persists and returns the source-owned URL unchanged. Re-normalizing it here breaks
+		// sources that intentionally use absolute URLs, non-HTTP schemes, or opaque identifiers.
+		this.url = this@toSManga.url
 		this.title = this@toSManga.title
 		this.author = this@toSManga.authors.firstOrNull()
 		this.artist = this@toSManga.authors.drop(1).firstOrNull()
@@ -136,7 +95,9 @@ fun Manga.toSManga(): SManga {
 			else -> SManga.UNKNOWN
 		}
 		this.thumbnail_url = this@toSManga.coverUrl
-		this.initialized = true
+		// Mihon only marks a source model initialized after details have actually been persisted.
+		// Search results commonly have neither description nor chapters and must still fetch details.
+		this.initialized = this@toSManga.description != null || this@toSManga.chapters != null
 	}
 }
 
@@ -152,7 +113,8 @@ fun SChapter.toMangaChapter(source: MihonMangaSource, overrideNumber: Float? = n
 		url = url,
 		scanlator = scanlator,
 		uploadDate = date_upload,
-		branch = null,
+		// Kotatsu groups alternate chapter streams by branch; Mihon's equivalent is scanlator.
+		branch = scanlator,
 		source = source,
 	)
 }
@@ -162,7 +124,7 @@ fun MangaChapter.toSChapter(): SChapter = SChapter.create().apply {
 	name = this@toSChapter.title ?: "Chapter ${this@toSChapter.number}"
 	chapter_number = this@toSChapter.number
 	date_upload = this@toSChapter.uploadDate
-	scanlator = this@toSChapter.scanlator
+	scanlator = this@toSChapter.scanlator ?: this@toSChapter.branch
 }
 
 // ============ Page <-> MangaPage ============

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import java.util.Locale
 
 fun getExternalExtensionLanguageDisplayName(langCode: String): String {
@@ -148,12 +149,18 @@ class ExternalExtensionManagerRuntime<ResultT, SuccessT, ErrorT, SourceT, Wrappe
 	private val _isReady = MutableStateFlow(false)
 	val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
 
-	private val sourceCache = mutableMapOf<Long, SourceT>()
-	private val wrappedSourceCache = mutableMapOf<Long, WrappedSourceT>()
+	// Package broadcasts refresh on an IO coroutine while repositories resolve sources from other
+	// threads. Publish complete immutable snapshots atomically so a refresh never exposes Mihon
+	// sources as briefly uninstalled (or races a mutable HashMap read).
+	@Volatile
+	private var sourceCache: Map<Long, SourceT> = emptyMap()
+	@Volatile
+	private var wrappedSourceCache: Map<Long, WrappedSourceT> = emptyMap()
 	@Volatile
 	private var isPackageObserverRegistered = false
 	@Volatile
 	private var isInitialized = false
+	private val loadMutex = Mutex()
 
 	@Synchronized
 	fun initialize(loadAction: suspend () -> Unit) {
@@ -167,7 +174,9 @@ class ExternalExtensionManagerRuntime<ResultT, SuccessT, ErrorT, SourceT, Wrappe
 		loadResults: suspend (Context) -> List<ResultT>,
 		processResults: (List<ResultT>) -> ProcessedExternalExtensions<SuccessT, ErrorT, SourceT, WrappedSourceT>,
 	) {
-		if (_isLoading.value) return
+		// Package-added/replaced broadcasts can arrive together. StateFlow is not a lock; use an
+		// atomic tryLock so two classloader scans cannot race and publish stale source instances.
+		if (!loadMutex.tryLock()) return
 		_isLoading.value = true
 		try {
 			val processed = processResults(loadResults(context))
@@ -175,15 +184,14 @@ class ExternalExtensionManagerRuntime<ResultT, SuccessT, ErrorT, SourceT, Wrappe
 			val newWrappedSourceCache = LinkedHashMap<Long, WrappedSourceT>(processed.wrappedSourceById.size)
 			newSourceCache.putAll(processed.sourceById)
 			newWrappedSourceCache.putAll(processed.wrappedSourceById)
-			sourceCache.clear()
-			wrappedSourceCache.clear()
-			sourceCache.putAll(newSourceCache)
-			wrappedSourceCache.putAll(newWrappedSourceCache)
+			sourceCache = newSourceCache
+			wrappedSourceCache = newWrappedSourceCache
 			_installedExtensions.value = processed.successful
 			_failedExtensions.value = processed.failed
 			_isReady.value = true
 		} finally {
 			_isLoading.value = false
+			loadMutex.unlock()
 		}
 	}
 

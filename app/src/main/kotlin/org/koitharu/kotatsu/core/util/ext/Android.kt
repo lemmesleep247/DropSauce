@@ -210,6 +210,13 @@ fun Context.ensureRamAtLeast(requiredSize: Long) {
 fun WebView.configureForParser(userAgentOverride: String?) = with(settings) {
 	javaScriptEnabled = true
 	domStorageEnabled = true
+	useWideViewPort = true
+	loadWithOverviewMode = true
+	cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+	setSupportMultipleWindows(true)
+	setSupportZoom(true)
+	builtInZoomControls = true
+	displayZoomControls = false
 	mediaPlaybackRequiresUserGesture = false
 	if (WebViewFeature.isFeatureSupported(WebViewFeature.MUTE_AUDIO)) {
 		WebViewCompat.setAudioMuted(this@configureForParser, true)
@@ -217,9 +224,13 @@ fun WebView.configureForParser(userAgentOverride: String?) = with(settings) {
 	@Suppress("DEPRECATION")
 	databaseEnabled = true
 	allowContentAccess = false
-	if (userAgentOverride != null) {
-		userAgentString = userAgentOverride
-	}
+	// Spoof the UA to look like a real Chrome browser. The raw Android WebView UA contains
+	// "Version/x.x" and specific device strings that sites like MangaHub detect and block.
+	// Mihon applies the same replacements in WebViewUtil.getInferredUserAgent.
+	userAgentString = userAgentOverride
+		?: (userAgentString ?: "")
+			.replace(Regex("; Android .*?\\)"), "; Android 10; K)")
+			.replace(Regex("Version/.* Chrome/"), "Chrome/")
 	val cookieManager = CookieManager.getInstance()
 	cookieManager.setAcceptCookie(true)
 	cookieManager.setAcceptThirdPartyCookies(this@configureForParser, true)

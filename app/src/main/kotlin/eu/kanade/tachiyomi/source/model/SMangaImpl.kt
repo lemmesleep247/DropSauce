@@ -2,30 +2,26 @@
 
 package eu.kanade.tachiyomi.source.model
 
+import kotlinx.serialization.json.JsonObject
+
 class SMangaImpl : SManga {
 	override lateinit var url: String
 	override lateinit var title: String
+	override var thumbnail_url: String? = null
 	override var artist: String? = null
 	override var author: String? = null
-	override var description: String? = null
-
-	@Deprecated("Use genres instead", replaceWith = ReplaceWith("genres"))
-	override var genre: String? = null
-
-	// extensions-lib 1.5+ fields. These MUST be backed by real storage here: the interface
-	// declares them with stub get()/set(_) {} defaults, so without these overrides any value a
-	// modern extension writes (e.g. `manga.contentRating = ADULT`, altTitles, score) is silently
-	// dropped. `genres` is intentionally NOT overridden — its interface default round-trips through
-	// the backing `genre` string, which is what we want.
-	override var altTitles: List<String> = emptyList()
-	override var banner: String? = null
-	override var contentRating: SManga.ContentRating = SManga.ContentRating.SAFE
-	override var score: Int? = null
-	override var readingMode: SManga.ReadingMode? = null
-	override var memo: Map<String, String> = emptyMap()
-
 	override var status: Int = 0
-	override var thumbnail_url: String? = null
+	override var description: String? = null
+	override var genre: String? = null
 	override var update_strategy: UpdateStrategy = UpdateStrategy.ALWAYS_UPDATE
 	override var initialized: Boolean = false
+	// Exact Mihon 1.6 type. A Map here changes getMemo/setMemo JVM descriptors and crashes APKs.
+	override var memo: JsonObject = JsonObject(emptyMap())
+
+	// Mihon's persistence/update layers identify source models by URL. Keep equality URL-based so
+	// distinct/update operations do not duplicate the same source item after conversion.
+	override fun equals(other: Any?): Boolean =
+		this === other || (other is SManga && runCatching { url == other.url }.getOrDefault(false))
+
+	override fun hashCode(): Int = runCatching { url.hashCode() }.getOrDefault(0)
 }

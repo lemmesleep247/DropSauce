@@ -162,6 +162,24 @@
 			android:name="org.koitharu.kotatsu.browser.BrowserActivity"
 			android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
 			android:windowSoftInputMode="adjustResize" />
+		<!--
+			Some extensions explicitly address Mihon's activity class names while completing their
+			own WebView challenge flow. Keep those binary/runtime names available, but route them to
+			DropSauce's existing screens so ordinary frontend behavior remains unchanged.
+		-->
+		<activity
+			android:name="eu.kanade.tachiyomi.ui.webview.WebViewActivity"
+			android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+			android:noHistory="true"
+			android:windowSoftInputMode="adjustResize" />
+		<activity-alias
+			android:name="eu.kanade.tachiyomi.ui.main.MainActivity"
+			android:exported="false"
+			android:targetActivity="org.koitharu.kotatsu.main.ui.MainActivity" />
+		<activity-alias
+			android:name="eu.kanade.tachiyomi.ui.reader.ReaderActivity"
+			android:exported="false"
+			android:targetActivity="org.koitharu.kotatsu.reader.ui.ReaderActivity" />
 		<activity
 			android:name="org.koitharu.kotatsu.browser.cloudflare.CloudFlareActivity"
 			android:autoRemoveFromRecents="true"

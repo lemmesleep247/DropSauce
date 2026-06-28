@@ -79,14 +79,14 @@ object MihonFilterMapper {
 
 				is Filter.TriState -> {
 					val def = (default as? Filter.TriState)?.state ?: Filter.TriState.STATE_IGNORE
-					if (filter.state != def && filter.state != Filter.TriState.STATE_IGNORE) {
+					if (filter.state != def) {
 						out += tag(
 							source = source,
 							key = "$TYPE_TRISTATE@$path=${filter.state}",
-							title = if (filter.state == Filter.TriState.STATE_EXCLUDE) {
-								"−${filter.name}"
-							} else {
-								filter.name
+							title = when (filter.state) {
+								Filter.TriState.STATE_EXCLUDE -> "−${filter.name}"
+								Filter.TriState.STATE_IGNORE -> "${filter.name} (ignored)"
+								else -> filter.name
 							},
 						)
 					}
@@ -108,23 +108,29 @@ object MihonFilterMapper {
 				is Filter.Sort -> {
 					val selection = filter.state
 					val def = (default as? Filter.Sort)?.state
-					if (selection != null && selection != def) {
-						val arrow = if (selection.ascending) ARROW_ASC else ARROW_DESC
+					if (selection != def) {
+						val encodedSelection = selection?.let {
+							"${it.index}:${if (it.ascending) "a" else "d"}"
+						} ?: "none"
+						val title = selection?.let {
+							val arrow = if (it.ascending) ARROW_ASC else ARROW_DESC
+							"${filter.name}: ${filter.values.getOrNull(it.index)} $arrow"
+						} ?: "${filter.name} (none)"
 						out += tag(
 							source = source,
-							key = "$TYPE_SORT@$path=${selection.index}:${if (selection.ascending) "a" else "d"}",
-							title = "${filter.name}: ${filter.values.getOrNull(selection.index)} $arrow",
+							key = "$TYPE_SORT@$path=$encodedSelection",
+							title = title,
 						)
 					}
 				}
 
 				is Filter.Text -> {
 					val def = (default as? Filter.Text)?.state.orEmpty()
-					if (filter.state != def && filter.state.isNotEmpty()) {
+					if (filter.state != def) {
 						out += tag(
 							source = source,
 							key = "$TYPE_TEXT@$path=${filter.state}",
-							title = "${filter.name}: ${filter.state}",
+							title = if (filter.state.isEmpty()) "${filter.name} (empty)" else "${filter.name}: ${filter.state}",
 						)
 					}
 				}
@@ -190,12 +196,22 @@ object MihonFilterMapper {
 			}
 
 			is Filter.Sort -> if (encoded.type == TYPE_SORT) {
+				if (encoded.value == "none") {
+					filter.state = null
+					return
+				}
 				val parts = encoded.value.split(':')
 				val idx = parts.getOrNull(0)?.toIntOrNull() ?: return
 				val ascending = parts.getOrNull(1) == "a"
 				if (idx in filter.values.indices) {
 					filter.state = Filter.Sort.Selection(idx, ascending)
 				}
+			}
+
+			is Filter.Text -> if (encoded.type == TYPE_TEXT) {
+				// Text filters (author/title/year/domain inputs) must survive the UI round-trip.
+				// Dropping them makes the visible filter look applied while the source receives "".
+				filter.state = encoded.value
 			}
 
 			else -> Unit

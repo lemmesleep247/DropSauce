@@ -96,7 +96,8 @@ class PageLoader @Inject constructor(
 	val loaderScope = lifecycle.lifecycleScope + InternalErrorHandler() + Dispatchers.Default
 
 	private val tasks = LongSparseArray<ProgressDeferred<Uri, Float>>()
-	private val semaphore = Semaphore(3)
+	// Mihon's HTTP reader preloads four pages; allow the same number of in-flight page loads.
+	private val semaphore = Semaphore(4)
 	private val convertLock = Mutex()
 	private val prefetchLock = Mutex()
 
@@ -277,11 +278,14 @@ class PageLoader @Inject constructor(
 					downloadSlowdownDispatcher.delay(page.source)
 				}
 				val repo = getRepository(page.source)
-				val imageHeaders = repo.getImageRequestHeaders(pageUrl, page)
 				// Use extension's getImage() when available — handles decryption/unscrambling.
 				// Falls back to direct OkHttp fetch for non-Mihon sources (getImageStream returns null).
 				val response = repo.getImageStream(pageUrl, page)
 					?: run {
+						// Only ask for raw-request headers on the fallback path. A Mihon source's
+						// getImage() already calls imageRequest(); invoking it once more just to
+						// discard its request can regenerate signatures or other stateful headers.
+						val imageHeaders = repo.getImageRequestHeaders(pageUrl, page)
 						val request = createPageRequest(pageUrl, page.source, imageHeaders)
 						imageProxyInterceptor.interceptPageRequest(request, okHttp)
 					}

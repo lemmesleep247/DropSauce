@@ -14,11 +14,10 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.Response
+import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.core.cache.MemoryContentCache
-import org.koitharu.kotatsu.core.exceptions.CloudFlareException
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
@@ -37,7 +36,6 @@ import org.koitharu.kotatsu.parsers.model.MangaListFilterOptions
 import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import tachiyomi.domain.chapter.service.ChapterRecognition
-import java.io.IOException
 import java.util.EnumSet
 
 @OptIn(InternalParsersApi::class)
@@ -48,6 +46,7 @@ class MihonMangaRepository(
 ) : CachingMangaRepository(cache), MihonFilterHost {
 
 	private val sourceSettings = SourceSettings(context, source)
+	private val sourceMetadata = MihonSourceMetadataStore(context)
 
 	companion object {
 		private const val TAG = "MihonMangaRepository"
@@ -106,12 +105,14 @@ class MihonMangaRepository(
 			it.query?.isNotBlank() == true || it.tags.isNotEmpty() || it.tagsExclude.isNotEmpty()
 		} ?: false
 
-		val mangasPage = when {
-			hasFilters -> {
-				mihonSource.getSearchManga(page, query, filter.toMihonFilterList())
+		val mangasPage = try {
+			when {
+				hasFilters -> mihonSource.getSearchManga(page, query, filter.toMihonFilterList())
+				order == SortOrder.UPDATED && source.supportsLatest -> mihonSource.getLatestUpdates(page)
+				else -> mihonSource.getPopularManga(page)
 			}
-			order == SortOrder.UPDATED && source.supportsLatest -> mihonSource.getLatestUpdates(page)
-			else -> mihonSource.getPopularManga(page)
+		} catch (e: Exception) {
+			throw translateExtensionException(e)
 		}
 
 		// Remember whether the source has more pages for the next getList() call.
@@ -143,36 +144,27 @@ class MihonMangaRepository(
 	}
 
 	private suspend fun getDetailsInner(manga: Manga): Manga {
-		val sManga = manga.toSManga()
-
-		val details = try {
-			mihonSource.getMangaDetails(sManga)
+		val sManga = manga.toSourceManga()
+		val existingChapters = manga.chapters.orEmpty().map { it.toSChapter() }
+		// Route through the extension's combined API exactly like Mihon. Modern sources can override
+		// this directly; CatalogueSource's legacy default concurrently bridges both RxJava calls.
+		// Swallowing a detail failure and returning stale data makes broken sources appear healthy,
+		// so errors now propagate through the normal resolver instead.
+		// Do not add an app-level retry around the extension call. Mihon invokes this once and lets
+		// the source's client/interceptors decide whether retrying is safe; replaying here can repeat
+		// stateful requests and adds a fixed delay to ordinary failures.
+		val update = try {
+			mihonSource.getMangaUpdate(
+				manga = sManga,
+				chapters = existingChapters,
+				fetchDetails = true,
+				fetchChapters = true,
+			)
 		} catch (e: Exception) {
-			if ((e is IOException || e.cause is IOException) && e !is CloudFlareException) {
-				delay(500)
-				try {
-					mihonSource.getMangaDetails(sManga)
-				} catch (e2: Exception) {
-					e2.printStackTrace()
-					sManga
-				}
-			} else {
-				e.printStackTrace()
-				sManga
-			}
+			throw translateExtensionException(e)
 		}
-
-		val rawChapters = try {
-			mihonSource.getChapterList(sManga)
-		} catch (e: Exception) {
-			if ((e is IOException || e.cause is IOException)
-				&& e !is CloudFlareException) {
-				delay(500)
-				mihonSource.getChapterList(sManga)
-			} else {
-				throw e
-			}
-		}
+		val details = update.manga
+		val rawChapters = update.chapters
 
 		// Deduplicate by URL — some sources accidentally return the same chapter twice.
 		val uniqueChapters = rawChapters.distinctBy { it.url }
@@ -190,24 +182,26 @@ class MihonMangaRepository(
 
 		val mangaTitle = try { sManga.title } catch (_: UninitializedPropertyAccessException) { "" }
 
-		// Mihon convention: getChapterList() returns chapters newest-first and the source order IS the
-		// canonical reading order. So reverse to oldest-first (Kotatsu's list order) but DON'T re-sort
-		// by number afterwards — sorting scrambles sources whose chapter_number is missing/duplicated
-		// (bonus chapters, multi-part, scanlator variants). For the number itself, mirror Mihon and
+		// Mihon convention: getChapterList() returns chapters newest-first and source order is
+		// canonical. Preserve it exactly; sorting or reversing scrambles missing/duplicate numbers,
+		// bonus chapters, multi-part chapters, and scanlator variants. For the number itself,
 		// derive it from the chapter name via ChapterRecognition when the extension left it unset
 		// (chapter_number < 0), instead of inventing a sequential index.
-		val chapters = uniqueChapters.asReversed()
+		val chapters = uniqueChapters
 			.map { sChapter ->
 				val number = ChapterRecognition.parseChapterNumber(
 					mangaTitle = mangaTitle,
 					chapterName = sChapter.name,
 					chapterNumber = sChapter.chapter_number.toDouble(),
-				).toFloat().coerceAtLeast(0f)
+				).toFloat()
 				sChapter.toMangaChapter(source, number)
 			}
 
 		// Fallback for missing details fields
 		details.url = sManga.url
+		// Mihon persists these source-owned fields with the manga. Kotatsu's public Manga model
+		// cannot represent them, so retain them in the private compatibility sidecar.
+		sourceMetadata.save(source.sourceId, details.url, details)
 
 		val detailsTitle = try { details.title } catch (_: UninitializedPropertyAccessException) { "" }
 		if (detailsTitle.isBlank()) {
@@ -234,16 +228,17 @@ class MihonMangaRepository(
 
 	override suspend fun getPagesImpl(chapter: MangaChapter): List<MangaPage> = withContext(Dispatchers.IO) {
 		val sChapter = chapter.toSChapter()
-		val pages = try {
+		// Match Mihon and delegate retry policy to the source's own OkHttp client.
+		val rawPages = try {
 			mihonSource.getPageList(sChapter)
 		} catch (e: Exception) {
-			if ((e is IOException || e.cause is IOException) && e !is CloudFlareException) {
-				delay(500)
-				mihonSource.getPageList(sChapter)
-			} else {
-				throw e
-			}
+			throw translateExtensionException(e)
 		}
+		// Some extensions (compiled from Java or with internal bugs) return a List<Page> that
+		// contains null elements at runtime despite the non-null Kotlin type. Filtering here
+		// prevents the "Attempt to invoke virtual method on a null object reference" NPE.
+		@Suppress("UNCHECKED_CAST")
+		val pages = (rawPages as List<Page?>).filterNotNull()
 		pages.mapIndexed { index, page ->
 			val mapped = page.toMangaPage(source, chapter.url)
 			when {
@@ -360,6 +355,46 @@ class MihonMangaRepository(
 		val index: Int,
 	)
 
+	/**
+	 * Translates extension-thrown exceptions that signal a user action is needed (e.g. a cookie
+	 * gate) into [InteractiveActionRequiredException] so the UI can offer to open the WebView.
+	 *
+	 * Pattern matched: messages like "mhub_cookie not found", "access_token not found", etc.
+	 * Unrecognised exceptions are returned unchanged.
+	 */
+	private fun translateExtensionException(e: Exception): Exception {
+		val msg = e.message ?: return e
+		val httpSource = mihonSource as? HttpSource ?: return e
+		// Cloudflare (or another WAF) returned an HTML challenge/block page instead of JSON.
+		// The kotlinx.serialization JsonDecodingException embeds the raw input in its message.
+		val msgLower = msg.lowercase()
+		if ("<!doctype html>" in msgLower || "json input: <" in msgLower) {
+			// successCookieName = null → BrowserActivity.finish() always returns RESULT_OK,
+			// so we don't need Cloudflare's specific cookie name. The embedded WebView shares
+			// the system CookieManager, so any cookie it receives is visible to OkHttp on retry.
+			return InteractiveActionRequiredException(
+				source = source,
+				url = httpSource.baseUrl,
+				successCookieUrl = null,
+				successCookieName = null,
+			)
+		}
+		// Cookie-gated sources throw plain Exception("mhub_access cookie not found") or
+		// Exception("mhub_cookie not found"). The `(?:cookie\s+)?` makes the word "cookie"
+		// optional so both forms are caught.
+		if ("not found" in msgLower && "cookie" in msgLower) {
+			val cookieName = Regex("""([\w_]+)\s+(?:cookie\s+)?not\s+found""", RegexOption.IGNORE_CASE)
+				.find(msg)?.groupValues?.get(1)
+			return InteractiveActionRequiredException(
+				source = source,
+				url = httpSource.baseUrl,
+				successCookieUrl = httpSource.baseUrl,
+				successCookieName = cookieName,
+			)
+		}
+		return e
+	}
+
 	// Filters are rendered dynamically from the source's own FilterList (see MihonFilterHost /
 	// MihonFilterSheetFragment), so the structured Kotatsu options stay empty — nothing is flattened
 	// into the genres list anymore.
@@ -388,6 +423,23 @@ class MihonMangaRepository(
 
 	override suspend fun getRelatedMangaImpl(seed: Manga): List<Manga> = withContext(Dispatchers.IO) {
 		val httpSource = mihonSource as? HttpSource
+		if (mihonSource.disableRelatedMangas) return@withContext emptyList()
+		if (mihonSource.supportsRelatedMangas) {
+			val extensionRelated = runCatching {
+				mihonSource.fetchRelatedMangaList(seed.toSourceManga())
+			}.getOrDefault(emptyList())
+			if (extensionRelated.isNotEmpty()) {
+				return@withContext extensionRelated
+					.distinctBy { it.url }
+					.map { item ->
+						item.toManga(
+							source = source,
+							publicUrl = httpSource?.getMangaUrl(item).orEmpty(),
+						)
+					}
+			}
+		}
+		if (mihonSource.disableRelatedMangasBySearch) return@withContext emptyList()
 		val tags = seed.tags
 		val page = if (tags.isNotEmpty()) {
 			val query = tags.take(3).joinToString(" ") { it.title }
@@ -416,5 +468,9 @@ class MihonMangaRepository(
 				manga.tags.count { it.title.lowercase() in seedTags }
 			}
 			.take(10)
+	}
+
+	private fun Manga.toSourceManga() = toSManga().also {
+		sourceMetadata.restore(this@MihonMangaRepository.source.sourceId, url, it)
 	}
 }

@@ -75,7 +75,9 @@ android {
 			exclude 'META-INF/NOTICE.md'
 		}
 		jniLibs {
-			useLegacyPackaging = true
+			// Modern packaging keeps 16 KB-compatible native libraries uncompressed and
+			// page-aligned. Legacy packaging made Android report aligned Mihon decoders
+			// as incompatible and left the old QuickJS binary unusable on 16 KB devices.
 			keepDebugSymbols += [
 				'**/libandroidx.graphics.path.so',
 				'**/libavif_android.so',
@@ -192,6 +194,7 @@ dependencies {
 	implementation libs.material
 	implementation libs.androidx.lifecycle.common.java8
 	implementation libs.androidx.webkit
+	implementation "androidx.browser:browser:1.8.0"
 
 	implementation libs.androidx.work.runtime
 	implementation libs.guava
@@ -224,6 +227,11 @@ dependencies {
 	implementation libs.quickJs
 	implementation libs.unifile
 	implementation libs.injekt.core
+	// Extension APKs link against Mihon's Jsoup surface; keep it explicit and version-aligned
+	// instead of accepting whichever transitive version the native parser happens to provide.
+	implementation libs.jsoup
+	// Same native decoder Mihon uses for extension-delivered JXL/HEIF and fallback AVIF images.
+	implementation libs.image.decoder
 	implementation libs.kotlinx.serialization.json
 	implementation libs.kotlinx.serialization.json.okio
 	implementation libs.kotlinx.serialization.protobuf

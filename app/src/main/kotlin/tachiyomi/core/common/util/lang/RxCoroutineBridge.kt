@@ -21,10 +21,7 @@ private suspend fun <T> Observable<T>.awaitOne(): T = suspendCancellableCoroutin
 				}
 
 				override fun onNext(t: T) {
-					if (cont.isActive) {
-						cont.resume(t)
-					}
-					unsubscribe()
+					cont.resume(t)
 				}
 
 				override fun onCompleted() {
@@ -34,8 +31,11 @@ private suspend fun <T> Observable<T>.awaitOne(): T = suspendCancellableCoroutin
 				}
 
 				override fun onError(e: Throwable) {
-					if (cont.isActive) {
-						cont.resumeWithException(e)
+					// Match Mihon's atomic resume: RxJava 1 may race a cancellation with its
+					// NoSuchElementException, and a plain isActive check is not race-safe.
+					val token = cont.tryResumeWithException(e)
+					if (token != null) {
+						cont.completeResume(token)
 					}
 				}
 			},

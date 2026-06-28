@@ -36,6 +36,7 @@ import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.image.AvifImageDecoder
 import org.koitharu.kotatsu.core.image.CbzFetcher
 import org.koitharu.kotatsu.core.image.MangaSourceHeaderInterceptor
+import org.koitharu.kotatsu.core.image.MihonFallbackImageDecoder
 import org.koitharu.kotatsu.core.image.MihonImageFetcher
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
@@ -137,6 +138,9 @@ interface AppModule {
 					}
 					add(SvgDecoder.Factory())
 					add(CbzFetcher.Factory())
+					// Extensions may negotiate JXL/HEIF after consulting AppInfo. Decode those with
+					// the same native fallback as Mihon before Coil's platform decoders run.
+					add(MihonFallbackImageDecoder.Factory())
 					add(AvifImageDecoder.Factory())
 					add(faviconFetcherFactory)
 					add(MangaPageKeyer())

@@ -84,15 +84,15 @@ class BrowserActivity : BaseBrowserActivity() {
 
 	override fun finish() {
 		if (successCookieUrl != null && successCookieName != null) {
+			// Flush before reading so cookies the WebView just set are visible.
+			CookieManager.getInstance().flush()
 			val currentValue = getCookieValue(successCookieUrl!!, successCookieName!!)
-			if (currentValue != initialCookieValue && !currentValue.isNullOrBlank()) {
-				setResult(RESULT_OK)
-			} else {
-				setResult(RESULT_CANCELED)
-			}
+			// Don't require the value to *change* — the user may have renewed a cookie that
+			// already existed but was invalid, producing the same token.  Just check it exists.
+			setResult(if (!currentValue.isNullOrBlank()) RESULT_OK else RESULT_CANCELED)
 		} else {
-            setResult(RESULT_OK)
-        }
+			setResult(RESULT_OK)
+		}
 		super.finish()
 	}
 

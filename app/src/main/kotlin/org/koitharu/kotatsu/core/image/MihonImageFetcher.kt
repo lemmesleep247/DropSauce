@@ -55,9 +55,13 @@ class MihonImageFetcher(
 		}
 		try {
 			writeToDiskCache(response, diskCacheKey)?.let { snapshot ->
+				val mimeType = response.body.contentType()?.toString()
+				// The snapshot owns the cached bytes, not the network response. Closing here
+				// releases the extension client's socket back to Mihon's shared connection pool.
+				response.close()
 				return SourceFetchResult(
 					source = snapshot.toImageSource(diskCacheKey!!),
-					mimeType = response.body.contentType()?.toString(),
+					mimeType = mimeType,
 					dataSource = DataSource.NETWORK,
 				)
 			}

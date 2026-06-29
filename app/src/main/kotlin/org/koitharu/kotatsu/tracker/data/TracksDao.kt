@@ -37,9 +37,6 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT COUNT(*) FROM tracks")
 	abstract suspend fun getTracksCount(): Int
 
-	@Query("SELECT COUNT(*) FROM tracks WHERE chapters_new > 0")
-	abstract fun observeUpdateMangaCount(): Flow<Int>
-
 	@Query("SELECT IFNULL(chapters_new, 0) FROM tracks WHERE manga_id = :mangaId")
 	abstract fun observeNewChapters(mangaId: Long): Flow<Int>
 

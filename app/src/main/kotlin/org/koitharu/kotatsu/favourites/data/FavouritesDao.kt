@@ -58,9 +58,6 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT * FROM favourites WHERE deleted_at = 0 ORDER BY created_at DESC LIMIT :limit OFFSET :offset")
 	abstract suspend fun findAllRaw(offset: Int, limit: Int): List<FavouriteManga>
 
-	@Query("SELECT DISTINCT manga_id FROM favourites WHERE deleted_at = 0 AND category_id IN (SELECT category_id FROM favourite_categories WHERE track = 1 AND deleted_at = 0)")
-	abstract suspend fun findIdsWithTrack(): LongArray
-
 	@Query("SELECT DISTINCT manga_id FROM favourites WHERE deleted_at = 0 AND category_id IN (SELECT category_id FROM favourite_categories WHERE (`track` = 1 OR download_new_chapters = 1) AND deleted_at = 0)")
 	abstract suspend fun findIdsWithTrackOrNewChaptersDownload(): LongArray
 
@@ -134,9 +131,6 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	/** All rows INCLUDING soft-deleted tombstones — used by cloud sync to propagate deletions. */
 	@Query("SELECT * FROM favourites")
 	abstract suspend fun findAllForSync(): List<FavouriteEntity>
-
-	@Query("SELECT DISTINCT category_id FROM favourites WHERE manga_id = :id AND deleted_at = 0")
-	abstract fun observeIds(id: Long): Flow<List<Long>>
 
 	@Query("SELECT favourite_categories.* FROM favourites LEFT JOIN favourite_categories ON favourite_categories.category_id = favourites.category_id WHERE favourites.manga_id = :mangaId AND favourites.deleted_at = 0")
 	abstract fun observeCategories(mangaId: Long): Flow<List<FavouriteCategoryEntity>>

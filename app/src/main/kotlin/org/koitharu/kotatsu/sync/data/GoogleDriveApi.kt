@@ -166,19 +166,6 @@ class GoogleDriveApi @Inject constructor(
 		}
 	}
 
-	/** Revokes the OAuth grant so the next sign-in re-prompts (and can pick a different account). */
-	suspend fun revokeToken(token: String) = withContext(Dispatchers.IO) {
-		val url = "https://oauth2.googleapis.com/revoke".toHttpUrl().newBuilder()
-			.addQueryParameter("token", token)
-			.build()
-		val request = Request.Builder()
-			.url(url)
-			.post(ByteArray(0).toRequestBody(FORM_MEDIA_TYPE))
-			.build()
-		runCatching { httpClient.newCall(request).execute().close() }
-		Unit
-	}
-
 	private fun Request.Builder.authorize(token: String) = header("Authorization", "Bearer $token")
 
 	private inline fun <reified T> Response.parse(): T? = use { response ->
@@ -198,6 +185,5 @@ class GoogleDriveApi @Inject constructor(
 		const val DRIVE_BASE = "https://www.googleapis.com/drive/v3"
 		const val UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3"
 		val JSON_MEDIA_TYPE = "application/json; charset=UTF-8".toMediaType()
-		val FORM_MEDIA_TYPE = "application/x-www-form-urlencoded".toMediaType()
 	}
 }

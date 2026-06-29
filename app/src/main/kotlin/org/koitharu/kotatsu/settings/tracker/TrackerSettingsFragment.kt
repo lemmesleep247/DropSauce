@@ -56,6 +56,7 @@ import org.koitharu.kotatsu.settings.compose.rememberStringSetPref
 import org.koitharu.kotatsu.tracker.ui.debug.TrackerDebugActivity
 import org.koitharu.kotatsu.tracker.work.TrackerNotificationHelper
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 class TrackerSettingsFragment : BaseComposeSettingsFragment(R.string.check_for_new_chapters) {
@@ -194,8 +195,13 @@ private fun TrackerScreen(
 	var trackSources by rememberStringSetPref(AppSettings.KEY_TRACK_SOURCES, setOf(AppSettings.TRACK_FAVOURITES))
 	var trackerNoNsfw by rememberBooleanPref(AppSettings.KEY_TRACKER_NO_NSFW, false)
 
-	val freqEntries = remember { ctx.resources.getStringArray(R.array.tracker_frequency).toList() }
 	val freqValues = remember { ctx.resources.getStringArray(R.array.values_tracker_frequency).toList() }
+	val freqEntries = remember(freqValues) {
+		ctx.resources.getStringArray(R.array.tracker_frequency).mapIndexed { index, label ->
+			val factor = freqValues.getOrNull(index)?.toFloatOrNull() ?: return@mapIndexed label
+			if (factor > 0f) "$label (${(18f / factor).roundToInt()}h)" else label
+		}
+	}
 	val sourceEntries = remember { ctx.resources.getStringArray(R.array.track_sources).toList() }
 	val sourceValues = remember { ctx.resources.getStringArray(R.array.values_track_sources).toList() }
 	val downloadEntries = remember(categories) { categories.map { it.title } }

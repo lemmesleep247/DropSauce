@@ -105,16 +105,17 @@ fun Manga.toSManga(): SManga {
 
 fun SChapter.toMangaChapter(source: MihonMangaSource, overrideNumber: Float? = null): MangaChapter {
 	val finalNumber = overrideNumber ?: (if (chapter_number >= 0f) chapter_number else 0f)
+	val normalizedScanlator = scanlator?.trim()?.takeIf { it.isNotEmpty() }
 	return MangaChapter(
-		id = stableId(source.name, "chapter", url),
+		id = mihonChapterId(source.name, url),
 		title = name.takeIf { it.isNotBlank() },
 		number = finalNumber,
 		volume = 0,
 		url = url,
-		scanlator = scanlator,
+		scanlator = normalizedScanlator,
 		uploadDate = date_upload,
 		// Kotatsu groups alternate chapter streams by branch; Mihon's equivalent is scanlator.
-		branch = scanlator,
+		branch = normalizedScanlator,
 		source = source,
 	)
 }
@@ -151,6 +152,9 @@ private fun stableId(sourceName: String, type: String, value: String): Long {
  * id offline (no network) so a swapped manga matches what the source would return when browsed.
  */
 fun mihonMangaId(sourceName: String, url: String): Long = stableId(sourceName, "manga", url)
+
+/** The canonical chapter identity used by the live Mihon adapter and backup restoration. */
+fun mihonChapterId(sourceName: String, url: String): Long = stableId(sourceName, "chapter", url)
 
 private fun resolveUrl(baseUrl: String?, value: String?): String? {
 	if (value.isNullOrBlank()) return null

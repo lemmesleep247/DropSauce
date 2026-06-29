@@ -40,9 +40,12 @@ import org.koitharu.kotatsu.favourites.data.FavouriteCategoryEntity
 import org.koitharu.kotatsu.favourites.data.FavouriteEntity
 import org.koitharu.kotatsu.history.data.HistoryEntity
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
+import org.koitharu.kotatsu.mihon.model.mihonChapterId
+import org.koitharu.kotatsu.mihon.model.mihonMangaId
 import org.koitharu.kotatsu.parsers.util.longHashCode
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
 import org.koitharu.kotatsu.stats.data.StatsEntity
+import org.koitharu.kotatsu.tracker.data.TrackEntity
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -99,6 +102,7 @@ class MihonBackupManager @Inject constructor(
     val stats: StatsEntity?,
     val bookmarks: List<BookmarkEntity>,
     val scrobblings: List<ScrobblingEntity>,
+    val track: TrackEntity?,
   )
 
   /**
@@ -259,7 +263,9 @@ class MihonBackupManager @Inject constructor(
 
         val pending = backup.backupManga.map { item ->
             val sourceName = resolveStoredSourceName(item.source, backup.backupSources)
-            val mangaId = "$sourceName:${item.url}".longHashCode()
+            // Use the same identities as the live Mihon adapter. Otherwise the first network
+            // refresh replaces every restored chapter ID, losing the reading branch/checkpoint.
+            val mangaId = mihonMangaId(sourceName, item.url)
             val tags = item.genre.mapNotNull { title ->
                 val clean = title.trim()
                 if (clean.isBlank()) {
@@ -282,7 +288,7 @@ class MihonBackupManager @Inject constructor(
             )
             val chapters = orderedBackupChapters.mapIndexed { index, chapter ->
                 ChapterEntity(
-                    chapterId = "$mangaId:${chapter.url}".longHashCode(),
+                    chapterId = mihonChapterId(sourceName, chapter.url),
                     mangaId = mangaId,
                     title = chapter.name,
                     number = chapter.chapterNumber,
@@ -290,7 +296,7 @@ class MihonBackupManager @Inject constructor(
                     url = chapter.url,
                     scanlator = chapter.scanlator,
                     uploadDate = chapter.dateUpload,
-                    branch = null,
+                    branch = chapter.scanlator?.trim()?.takeIf { it.isNotEmpty() },
                     source = sourceName,
                     index = index,
                 )
@@ -362,6 +368,23 @@ class MihonBackupManager @Inject constructor(
             } else {
                 null
             }
+            // Seed update detection from the newest chapter in the stream the user was reading.
+            // Without this, a restored manga starts with an empty track and the first refresh
+            // silently treats chapters released since the backup as an already-known baseline.
+            val preferredBranch = currentChapter?.branch
+                ?: chapters.groupBy { it.branch }.maxByOrNull { it.value.size }?.key
+            val lastTrackedChapter = chapters.lastOrNull { it.branch == preferredBranch }
+            val track = lastTrackedChapter?.let { chapter ->
+                TrackEntity(
+                    mangaId = mangaId,
+                    lastChapterId = chapter.chapterId,
+                    newChapters = 0,
+                    lastCheckTime = 0L,
+                    lastChapterDate = chapter.uploadDate,
+                    lastResult = TrackEntity.RESULT_NONE,
+                    lastError = null,
+                )
+            }
             val stats = if ((latestHistory?.readDuration ?: 0L) > 0L && history != null) {
                 StatsEntity(
                     mangaId = mangaId,
@@ -414,6 +437,7 @@ class MihonBackupManager @Inject constructor(
                     largeCoverUrl = null,
                     state = null,
                     authors = item.author,
+                    description = item.description,
                     source = sourceName,
                     sourceTitle = resolveSourceTitle(item.source, backup.backupSources),
                 ),
@@ -424,6 +448,7 @@ class MihonBackupManager @Inject constructor(
                 stats = stats,
                 bookmarks = bookmarks,
                 scrobblings = scrobblings,
+                track = track,
             )
         }
 
@@ -431,6 +456,7 @@ class MihonBackupManager @Inject constructor(
             .takeIf { it.isNotEmpty() }
             ?.let { db.getTagsDao().upsert(it.toList()) }
         pending.forEach { item -> db.getMangaDao().upsert(item.manga, item.tags) }
+        pending.forEach { item -> item.track?.let { db.getTracksDao().upsert(it) } }
         pending.forEach { item -> item.favourites.forEach { db.getFavouritesDao().upsert(it) } }
         pending.forEach { item -> db.getChaptersDao().replaceAll(item.manga.id, item.chapters) }
         pending.forEach { item -> item.history?.let { db.getHistoryDao().upsert(it) } }

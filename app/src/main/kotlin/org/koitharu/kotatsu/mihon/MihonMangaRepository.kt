@@ -182,12 +182,14 @@ class MihonMangaRepository(
 
 		val mangaTitle = try { sManga.title } catch (_: UninitializedPropertyAccessException) { "" }
 
-		// Mihon convention: getChapterList() returns chapters newest-first and source order is
-		// canonical. Preserve it exactly; sorting or reversing scrambles missing/duplicate numbers,
-		// bonus chapters, multi-part chapters, and scanlator variants. For the number itself,
+		// Mihon convention: getChapterList() returns chapters newest-first, while Kotatsu's chapter
+		// model and update tracker expect oldest-first (the newest chapter is last). Reverse the
+		// complete source list without sorting it, which preserves the source's canonical order for
+		// missing/duplicate numbers, bonus chapters, and interleaved scanlator variants.
+		// For the number itself,
 		// derive it from the chapter name via ChapterRecognition when the extension left it unset
 		// (chapter_number < 0), instead of inventing a sequential index.
-		val chapters = uniqueChapters
+		val chapters = normalizeMihonChapterOrder(uniqueChapters)
 			.map { sChapter ->
 				val number = ChapterRecognition.parseChapterNumber(
 					mangaTitle = mangaTitle,
@@ -474,3 +476,11 @@ class MihonMangaRepository(
 		sourceMetadata.restore(this@MihonMangaRepository.source.sourceId, url, it)
 	}
 }
+
+/**
+ * Mihon sources return newest-first; DropSauce/Kotatsu consumers use oldest-first.
+ *
+ * Keep this as a reversal rather than a chapter-number sort: source order is authoritative and
+ * scanlator variants commonly share the same recognized chapter number.
+ */
+internal fun <T> normalizeMihonChapterOrder(chapters: List<T>): List<T> = chapters.asReversed()

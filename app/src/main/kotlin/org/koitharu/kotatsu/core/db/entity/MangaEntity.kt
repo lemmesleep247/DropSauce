@@ -20,6 +20,7 @@ data class MangaEntity(
 	@ColumnInfo(name = "large_cover_url") val largeCoverUrl: String?,
 	@ColumnInfo(name = "state") val state: String?,
 	@ColumnInfo(name = "author") val authors: String?,
+	@ColumnInfo(name = "description") val description: String?,
 	@ColumnInfo(name = "source") val source: String,
 	@ColumnInfo(name = "source_title") val sourceTitle: String?,
 )

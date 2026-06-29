@@ -22,7 +22,6 @@ import org.koitharu.kotatsu.core.db.entity.toMangaChapters
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.MangaSource as ResolveMangaSource
-import org.koitharu.kotatsu.core.model.isExternalSource
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.os.AppShortcutManager
@@ -132,7 +131,10 @@ class MangaDataRepository @Inject constructor(
 	suspend fun resolveIntent(intent: MangaIntent, withChapters: Boolean): Manga? = when {
 		intent.manga != null -> {
 			val direct = intent.manga.copy(source = ResolveMangaSource(intent.manga.source.name))
-			val resolved = if (direct.source.isExternalSource()) {
+			// List/history/favourite items are intentionally lightweight. Prefer the full database
+			// snapshot for every remote manga, not just dynamically loaded extension sources, so the
+			// detail screen can render its previously fetched metadata and chapters immediately.
+			val resolved = if (!direct.isLocal) {
 				findMangaById(direct.id, withChapters)?.let { stored ->
 					stored.copy(source = ResolveMangaSource(stored.source.name))
 				} ?: direct
@@ -246,6 +248,11 @@ class MangaDataRepository @Inject constructor(
 		}
 		if (override.contentRating != null && contentRating == override.contentRating) {
 			result = result.copy(contentRating = ContentRating(existing.contentRating))
+		}
+		// Lightweight list cards do not carry a description. Never let storing one erase the
+		// complete detail snapshot that was fetched from the source.
+		if (description == null && chapters == null && existing.description != null) {
+			result = result.copy(description = existing.description)
 		}
 		return result
 	}

@@ -252,6 +252,13 @@ class DetailsViewModel @Inject constructor(
 		detailsLoadUseCase.invoke(intent, force)
 			.withErrorHandling()
 			.collect {
+				val current = mangaDetails.value
+				// Once useful content is on screen, incomplete refresh emissions must not replace
+				// it. They can otherwise temporarily change tags, chapter counts, and other fields
+				// while local/source enrichment is still running.
+				if (!it.isLoaded && current.hasRenderableSnapshot()) {
+					return@collect
+				}
 				if (it.allChapters.isNotEmpty()) {
 					val manga = it.toManga()
 					val hist = historyRepository.getOne(manga)
@@ -289,6 +296,10 @@ class DetailsViewModel @Inject constructor(
 		}
 		return scrobbler
 	}
+}
+
+private fun MangaDetails?.hasRenderableSnapshot(): Boolean {
+	return this != null && (isLoaded || description != null || allChapters.isNotEmpty())
 }
 
 internal fun resolveSelectedBranch(

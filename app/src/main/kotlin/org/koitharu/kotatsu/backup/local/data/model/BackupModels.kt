@@ -76,6 +76,7 @@ class MangaBackup(
 	@SerialName("large_cover_url") val largeCoverUrl: String? = null,
 	@SerialName("state") val state: String? = null,
 	@SerialName("author") val authors: String? = null,
+	@SerialName("description") val description: String? = null,
 	@SerialName("source") val source: String,
 	@SerialName("source_title") val sourceTitle: String? = null,
 	@SerialName("tags") val tags: Set<TagBackup> = emptySet(),
@@ -94,6 +95,7 @@ class MangaBackup(
 		largeCoverUrl = entity.manga.largeCoverUrl,
 		state = entity.manga.state,
 		authors = entity.manga.authors,
+		description = entity.manga.description,
 		source = entity.manga.source,
 		sourceTitle = entity.manga.sourceTitle,
 		tags = entity.tags.map(::TagBackup).toSet(),
@@ -112,6 +114,7 @@ class MangaBackup(
 		largeCoverUrl = largeCoverUrl,
 		state = state,
 		authors = authors,
+		description = description,
 		source = source,
 		sourceTitle = sourceTitle,
 	)

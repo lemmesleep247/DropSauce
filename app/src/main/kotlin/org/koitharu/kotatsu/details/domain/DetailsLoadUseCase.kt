@@ -55,18 +55,13 @@ class DetailsLoadUseCase @Inject constructor(
 			"Cannot resolve intent $intent"
 		}
 		val override = mangaDataRepository.getOverride(manga.id)
-		// Pre-fetch local manga before the first emit so that the chapters map in ChaptersLoader
-		// is populated with LocalMangaSource entries from the start. Without this, the reader
-		// receives a remote-sourced chapter list first and loads pages from the network even
-		// when the chapter is already downloaded. The localMangaIndex cache makes subsequent
-		// calls inside loadRemote() free.
-		val initialLocalManga = if (!manga.isLocal) {
-			localMangaRepository.findSavedManga(manga, withDetails = true)
-		} else null
+		// The database is the screen's stale-while-revalidate cache. Do not put local-storage
+		// discovery or source work in front of this emission: finding a downloaded copy can require
+		// a filesystem scan, which previously made an already-known manga look like a cold load.
 		emit(
 			MangaDetails(
 				manga = manga,
-				localManga = initialLocalManga,
+				localManga = null,
 				override = override,
 				description = manga.description?.parseAsHtml(withImages = false),
 				isLoaded = false,
@@ -119,10 +114,10 @@ class DetailsLoadUseCase @Inject constructor(
 				description = (remoteDetails ?: localDetails).description?.parseAsHtml(withImages = true),
 				isLoaded = true,
 			)
-			emit(mangaDetails)
 			if (remoteDetails != null) {
 				mangaDataRepository.storeManga(remoteDetails, replaceExisting = true, stripAppliedOverride = false)
 			}
+			emit(mangaDetails)
 		}
 	}
 
@@ -136,7 +131,7 @@ class DetailsLoadUseCase @Inject constructor(
 	private suspend fun FlowCollector<MangaDetails>.loadRemote(
 		manga: Manga,
 		override: MangaOverride?,
-		force: Boolean
+		force: Boolean,
 	) = coroutineScope {
 		val remoteDeferred = async {
 			getDetails(manga, force)
@@ -177,8 +172,11 @@ class DetailsLoadUseCase @Inject constructor(
 				?: localManga?.manga?.description)?.parseAsHtml(withImages = true),
 			isLoaded = true,
 		)
-		emit(mangaDetails)
+		// Commit the refreshed snapshot before exposing it as complete. Otherwise a process restart
+		// immediately after the UI updates can cancel this coroutine between emit() and the write,
+		// making the successfully loaded details disappear on the next open.
 		mangaDataRepository.storeManga(remoteDetails, replaceExisting = true, stripAppliedOverride = false)
+		emit(mangaDetails)
 	}
 
 	private suspend fun getDetails(seed: Manga, force: Boolean) = runCatchingCancellable {
@@ -210,7 +208,13 @@ class DetailsLoadUseCase @Inject constructor(
 		}
 		val repository = mangaRepositoryFactory.create(resolvedSeed.source)
 		return if (repository is CachingMangaRepository) {
-			repository.getDetails(resolvedSeed, if (force) CachePolicy.WRITE_ONLY else CachePolicy.ENABLED)
+			// Reuse a result already refreshed during this app session. A process restart clears the
+			// memory cache, so the first open still revalidates in the background; an explicit
+			// pull-to-refresh always bypasses it.
+			repository.getDetails(
+				resolvedSeed,
+				if (force) CachePolicy.WRITE_ONLY else CachePolicy.ENABLED,
+			)
 		} else {
 			repository.getDetails(resolvedSeed)
 		}

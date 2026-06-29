@@ -2,7 +2,10 @@ package org.koitharu.kotatsu.settings.sources.catalog
 
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.koitharu.kotatsu.mihon.model.MihonExtensionInfo
 
 class ExternalExtensionRepoRepositoryTest {
 
@@ -54,4 +57,35 @@ class ExternalExtensionRepoRepositoryTest {
 			resolved,
 		)
 	}
+
+	@Test
+	fun `newer extension version code is an update`() {
+		assertTrue(repoEntry(versionCode = 11, versionName = "1.4.1").isNewerThan(installed()))
+		assertFalse(repoEntry(versionCode = 10, versionName = "1.4.1").isNewerThan(installed()))
+	}
+
+	@Test
+	fun `newer source api version is an update even with same extension version code`() {
+		assertTrue(repoEntry(versionCode = 10, versionName = "1.5.0").isNewerThan(installed()))
+	}
+
+	private fun repoEntry(versionCode: Long, versionName: String) = ExternalExtensionRepoEntry(
+		name = "Example",
+		packageName = "example.extension",
+		apkName = "example.apk",
+		versionCode = versionCode,
+		versionName = versionName,
+	)
+
+	private fun installed() = MihonExtensionInfo(
+		pkgName = "example.extension",
+		appName = "Example",
+		versionCode = 10,
+		versionName = "1.4.1",
+		libVersion = 1.4,
+		lang = "en",
+		isNsfw = false,
+		sourceClassName = "ExampleSource",
+		apkPath = "/example.apk",
+	)
 }

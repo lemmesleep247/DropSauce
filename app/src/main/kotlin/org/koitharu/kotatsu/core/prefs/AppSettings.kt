@@ -382,6 +382,17 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			putStringSet(KEY_PENDING_EXTENSION_DOWNLOADS, value.mapToSet { it.toString() })
 		}
 
+	var isShizukuInstallerEnabled: Boolean
+		get() = prefs.getBoolean(KEY_SHIZUKU_INSTALLER, false)
+		set(value) = prefs.edit {
+			putBoolean(KEY_SHIZUKU_INSTALLER, value)
+			if (!value) putBoolean(KEY_AUTO_UPDATE_EXTENSIONS, false)
+		}
+
+	var isAutoUpdateExtensionsEnabled: Boolean
+		get() = prefs.getBoolean(KEY_AUTO_UPDATE_EXTENSIONS, false)
+		set(value) = prefs.edit { putBoolean(KEY_AUTO_UPDATE_EXTENSIONS, value) }
+
 	val searchSuggestionTypes: Set<SearchSuggestionType>
 		get() = prefs.getStringSet(KEY_SEARCH_SUGGESTION_TYPES, null)?.let { stringSet ->
 			stringSet.mapNotNullTo(EnumSet.noneOf(SearchSuggestionType::class.java)) { x ->
@@ -992,6 +1003,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_COLLAPSE_DESCRIPTION = "description_collapse"
 		const val KEY_MANGA_LIST_BADGES = "manga_list_badges"
 		const val KEY_PENDING_EXTENSION_DOWNLOADS = "pending_extension_downloads"
+		const val KEY_SHIZUKU_INSTALLER = "shizuku_installer"
+		const val KEY_AUTO_UPDATE_EXTENSIONS = "auto_update_extensions"
 		const val KEY_TAGS_WARNINGS = "tags_warnings"
 		const val KEY_DISCORD_RPC = "discord_rpc"
 		const val KEY_DISCORD_RPC_SKIP_NSFW = "discord_rpc_skip_nsfw"

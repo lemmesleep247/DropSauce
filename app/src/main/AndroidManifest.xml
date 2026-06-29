@@ -3,6 +3,10 @@
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools">
 
+	<!-- Shizuku 13.1.5's APIs used here remain Android 6 compatible; its published AAR
+	     conservatively declares API 24 even though Shizuku itself supports API 23. -->
+	<uses-sdk tools:overrideLibrary="rikka.shizuku.api,rikka.shizuku.provider" />
+
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission
@@ -29,6 +33,7 @@
 		tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
 
 	<queries>
+		<package android:name="moe.shizuku.privileged.api" />
 		<intent>
 			<action android:name="android.intent.action.PROCESS_TEXT" />
 			<data android:mimeType="text/plain" />
@@ -55,6 +60,13 @@
 		android:theme="@style/Theme.Kotatsu"
 		tools:ignore="UnusedAttribute,RemoveWorkManagerInitializer">
 
+		<provider
+			android:name="rikka.shizuku.ShizukuProvider"
+			android:authorities="${applicationId}.shizuku"
+			android:enabled="true"
+			android:exported="true"
+			android:multiprocess="false"
+			android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
 		<activity
 			android:name="org.koitharu.kotatsu.main.ui.MainActivity"

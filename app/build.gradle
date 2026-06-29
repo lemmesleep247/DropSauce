@@ -66,6 +66,7 @@ android {
 		viewBinding = true
 		buildConfig = true
 		compose = true
+		aidl = true
 	}
 	packaging {
 		resources {
@@ -235,6 +236,8 @@ dependencies {
 	implementation libs.kotlinx.serialization.json
 	implementation libs.kotlinx.serialization.json.okio
 	implementation libs.kotlinx.serialization.protobuf
+	implementation libs.shizuku.api
+	implementation libs.shizuku.provider
 	// xmlutil — required by extensions that parse XML-based manga sites
 	implementation libs.xmlutil.core
 	implementation libs.xmlutil.serialization

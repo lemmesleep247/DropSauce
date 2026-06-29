@@ -24,7 +24,6 @@ import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.mihon.MihonExtensionLoader
-import org.koitharu.kotatsu.mihon.model.MihonExtensionInfo
 import org.koitharu.kotatsu.parsers.model.ContentType
 import java.util.Comparator
 import java.util.EnumSet
@@ -454,16 +453,6 @@ class SourcesCatalogViewModel @Inject constructor(
 				)
 			}
 		}
-	}
-
-	/**
-	 * Mihon treats an extension-library ABI bump as an update even when the extension's own
-	 * version code did not increase. Missing this leaves an installed APK compiled against an
-	 * older host contract while the repository already provides the compatible replacement.
-	 */
-	private fun ExternalExtensionRepoEntry.isNewerThan(local: MihonExtensionInfo): Boolean {
-		val availableLibVersion = versionName.split('.').take(2).joinToString(".").toDoubleOrNull() ?: 0.0
-		return versionCode > local.versionCode || availableLibVersion > local.libVersion
 	}
 
 	private suspend fun getAvailableEntries(repoUrl: String, forceRefresh: Boolean): List<ExternalExtensionRepoEntry> {

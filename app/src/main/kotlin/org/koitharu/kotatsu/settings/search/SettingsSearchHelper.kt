@@ -130,6 +130,10 @@ class SettingsSearchHelper @Inject constructor(
 		}
 
 		section(R.string.extensions, ExtensionsSettingsFragment::class.java) { sectionCrumbs ->
+			group(sectionCrumbs, ctx.getString(R.string.auto_update)) { crumbs ->
+				addItem(AppSettings.KEY_SHIZUKU_INSTALLER, R.string.shizuku_title, R.string.shizuku_summary, crumbs, ExtensionsSettingsFragment::class.java)
+				addItem(AppSettings.KEY_AUTO_UPDATE_EXTENSIONS, R.string.ext_auto_update_title, R.string.ext_auto_update_summary, crumbs, ExtensionsSettingsFragment::class.java)
+			}
 			group(sectionCrumbs, "Catalog") { crumbs ->
 				addItem("sources_catalog", R.string.manage_extensions, R.string.manage_extensions_summary, crumbs, ExtensionsSettingsFragment::class.java)
 				addItem("migrate_broken_sources", R.string.migrate_broken_sources, R.string.migrate_broken_sources_summary, crumbs, ExtensionsSettingsFragment::class.java)

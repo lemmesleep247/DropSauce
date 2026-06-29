@@ -7,6 +7,7 @@ import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.backup.local.ui.periodical.PeriodicalBackupWorker
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.processLifecycleScope
+import org.koitharu.kotatsu.extensions.install.ExtensionUpdateWorker
 import org.koitharu.kotatsu.suggestions.ui.SuggestionsWorker
 import org.koitharu.kotatsu.sync.data.SyncSettings
 import org.koitharu.kotatsu.sync.work.SyncWorker
@@ -23,6 +24,7 @@ class WorkScheduleManager @Inject constructor(
 	private val trackerScheduler: TrackWorker.Scheduler,
 	private val backupScheduler: PeriodicalBackupWorker.Scheduler,
 	private val syncScheduler: SyncWorker.Scheduler,
+	private val extensionUpdateScheduler: ExtensionUpdateWorker.Scheduler,
 ) : SharedPreferences.OnSharedPreferenceChangeListener {
 
 	override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
@@ -49,6 +51,17 @@ class WorkScheduleManager @Inject constructor(
 				isEnabled = settings.isPeriodicalBackupEnabled && settings.periodicalBackupDirectory != null,
 				force = key != AppSettings.KEY_BACKUP_PERIODICAL_ENABLED,
 			)
+
+			AppSettings.KEY_AUTO_UPDATE_EXTENSIONS,
+			AppSettings.KEY_SHIZUKU_INSTALLER -> {
+				val enabled = settings.isAutoUpdateExtensionsEnabled && settings.isShizukuInstallerEnabled
+				updateWorker(extensionUpdateScheduler, enabled, force = false)
+				if (enabled) {
+					processLifecycleScope.launch(Dispatchers.Default) {
+						extensionUpdateScheduler.startNow()
+					}
+				}
+			}
 		}
 	}
 
@@ -69,6 +82,12 @@ class WorkScheduleManager @Inject constructor(
 				isEnabled = syncSettings.isSignedIn && syncSettings.intervalMinutes > 0,
 				force = false,
 			)
+			val extensionUpdatesEnabled =
+				settings.isAutoUpdateExtensionsEnabled && settings.isShizukuInstallerEnabled
+			updateWorkerImpl(extensionUpdateScheduler, extensionUpdatesEnabled, force = false)
+			if (extensionUpdatesEnabled) {
+				extensionUpdateScheduler.startNow()
+			}
 			if (syncSettings.isSignedIn && syncSettings.isSyncOnStart) {
 				SyncWorker.enqueueManual(workManager)
 			}

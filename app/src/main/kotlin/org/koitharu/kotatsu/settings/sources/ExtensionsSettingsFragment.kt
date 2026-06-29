@@ -1,9 +1,11 @@
 package org.koitharu.kotatsu.settings.sources
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +26,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.explore.data.SourcesSortOrder
+import org.koitharu.kotatsu.extensions.install.ShizukuExtensionInstaller
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.settings.SettingsActivity
 import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
@@ -37,11 +40,32 @@ import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
 import org.koitharu.kotatsu.settings.compose.rememberStringPref
 import org.koitharu.kotatsu.settings.sources.migration.BrokenSourcesMigrationFragment
+import rikka.shizuku.Shizuku
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensions) {
 
+	@Inject
+	lateinit var settings: AppSettings
+
+	@Inject
+	lateinit var shizukuInstaller: ShizukuExtensionInstaller
+
 	private val viewModel by viewModels<SourcesSettingsViewModel>()
+	private val shizukuPermissionListener = object : Shizuku.OnRequestPermissionResultListener {
+		override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
+			if (requestCode != SHIZUKU_PERMISSION_REQUEST_CODE) return
+			runCatching { Shizuku.removeRequestPermissionResultListener(this) }
+			if (grantResult == PackageManager.PERMISSION_GRANTED) {
+				settings.isShizukuInstallerEnabled = true
+			} else {
+				settings.isShizukuInstallerEnabled = false
+				Toast.makeText(requireContext(), R.string.shizuku_permission_denied, Toast.LENGTH_LONG).show()
+			}
+		}
+	}
+
 	override fun onCreateView(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
@@ -63,6 +87,7 @@ class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensio
 						)
 					},
 					onLinksChanged = viewModel::setLinksEnabled,
+					onShizukuChanged = ::setShizukuEnabled,
 				)
 			}
 		}
@@ -72,6 +97,59 @@ class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensio
 		super.onViewCreated(view, savedInstanceState)
 	}
 
+	override fun onDestroy() {
+		runCatching { Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener) }
+		super.onDestroy()
+	}
+
+	override fun onResume() {
+		super.onResume()
+		if (!settings.isShizukuInstallerEnabled) return
+		if (!shizukuInstaller.isInstalled) {
+			settings.isShizukuInstallerEnabled = false
+			return
+		}
+		val binderReady = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+		if (
+			binderReady &&
+			runCatching {
+				Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED
+			}.getOrDefault(true)
+		) {
+			settings.isShizukuInstallerEnabled = false
+		}
+	}
+
+	private fun setShizukuEnabled(enabled: Boolean) {
+		if (!enabled) {
+			settings.isShizukuInstallerEnabled = false
+			return
+		}
+		when {
+			!shizukuInstaller.isInstalled -> {
+				Toast.makeText(requireContext(), R.string.shizuku_not_installed, Toast.LENGTH_LONG).show()
+			}
+			!runCatching { Shizuku.pingBinder() }.getOrDefault(false) -> {
+				Toast.makeText(requireContext(), R.string.shizuku_not_running, Toast.LENGTH_LONG).show()
+			}
+			runCatching {
+				Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+			}.getOrDefault(false) -> {
+				settings.isShizukuInstallerEnabled = true
+			}
+			else -> runCatching {
+				Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+				Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
+			}.onFailure {
+				Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+				Toast.makeText(requireContext(), R.string.shizuku_permission_denied, Toast.LENGTH_LONG).show()
+			}
+		}
+	}
+
+	private companion object {
+		const val SHIZUKU_PERMISSION_REQUEST_CODE = 14045
+	}
 }
 
 @Composable
@@ -81,6 +159,7 @@ private fun ExtensionsScreen(
 	onOpenCatalog: () -> Unit,
 	onOpenBrokenSourcesMigration: () -> Unit,
 	onLinksChanged: (Boolean) -> Unit,
+	onShizukuChanged: (Boolean) -> Unit,
 ) {
 	val ctx = LocalContext.current
 	val colors = CategoryPalette.forKey("extensions")
@@ -100,6 +179,8 @@ private fun ExtensionsScreen(
 	var noNsfw by rememberBooleanPref(AppSettings.KEY_DISABLE_NSFW, false)
 	var tagsWarnings by rememberBooleanPref(AppSettings.KEY_TAGS_WARNINGS, true)
 	var incognitoNsfw by rememberStringPref(AppSettings.KEY_INCOGNITO_NSFW, "ASK")
+	val shizukuEnabled by rememberBooleanPref(AppSettings.KEY_SHIZUKU_INSTALLER, false)
+	var autoUpdateExtensions by rememberBooleanPref(AppSettings.KEY_AUTO_UPDATE_EXTENSIONS, false)
 
 	SettingsScaffold(title = stringResource(R.string.extensions), onBack = onBack) {
 		item {
@@ -203,6 +284,32 @@ private fun ExtensionsScreen(
 						icon = R.drawable.ic_open_external,
 						
 						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.auto_update)) {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.shizuku_title),
+						subtitle = stringResource(R.string.shizuku_summary),
+						checked = shizukuEnabled,
+						onCheckedChange = onShizukuChanged,
+						icon = R.drawable.ic_auth_key_large,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.ext_auto_update_title),
+						subtitle = stringResource(R.string.ext_auto_update_summary),
+						checked = autoUpdateExtensions,
+						onCheckedChange = { autoUpdateExtensions = it },
+						icon = R.drawable.ic_updated,
+						shape = pos.shape,
+						enabled = shizukuEnabled,
 					)
 				}
 			}

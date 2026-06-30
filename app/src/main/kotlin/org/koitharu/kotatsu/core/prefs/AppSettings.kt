@@ -112,6 +112,23 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val onboardingInstallTime: Long
 		get() = runCatching { onboardingInstallIdFile.lastModified() }.getOrDefault(0L)
 
+	val dismissedFeedItems: Set<String>
+		get() = prefs.getStringSet(KEY_DISMISSED_FEED_ITEMS, emptySet()).orEmpty()
+
+	fun dismissFeedItems(mangaIds: Collection<Long>) = synchronized(prefs) {
+		prefs.edit {
+			putStringSet(KEY_DISMISSED_FEED_ITEMS, mangaIds.mapToSet { it.toString() })
+		}
+	}
+
+	fun restoreFeedItem(mangaId: Long) = synchronized(prefs) {
+		val dismissed = dismissedFeedItems
+		val key = mangaId.toString()
+		if (key in dismissed) {
+			prefs.edit { putStringSet(KEY_DISMISSED_FEED_ITEMS, dismissed - key) }
+		}
+	}
+
 	var mainNavItems: List<NavItem>
 		get() {
 			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
@@ -889,6 +906,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_THUMBS_CACHE_CLEAR = "thumbs_cache_clear"
 		const val KEY_SEARCH_HISTORY_CLEAR = "search_history_clear"
 		const val KEY_UPDATES_FEED_CLEAR = "updates_feed_clear"
+		const val KEY_DISMISSED_FEED_ITEMS = "dismissed_feed_items"
 		const val KEY_GRID_SIZE = "grid_size"
 		const val KEY_GRID_SIZE_PAGES = "grid_size_pages"
 		const val KEY_LOCAL_STORAGE = "local_storage"

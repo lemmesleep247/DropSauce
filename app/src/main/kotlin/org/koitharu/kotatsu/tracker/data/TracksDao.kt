@@ -64,7 +64,6 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 		filterOptions: Set<ListFilterOption>,
 	): Flow<List<MangaWithTrack>> = observeMangaImpl(
 		MangaQueryBuilder("tracks", this)
-			.where("EXISTS(SELECT * FROM favourites WHERE favourites.manga_id = tracks.manga_id AND favourites.deleted_at = 0)")
 			.filters(filterOptions)
 			.limit(limit)
 			.orderBy("last_chapter_date DESC")

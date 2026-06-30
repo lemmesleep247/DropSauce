@@ -64,8 +64,13 @@ class FeedViewModel @Inject constructor(
 	@Suppress("USELESS_CAST")
 	val content = combine(
 		quickFilter.appliedOptions,
-		combine(limit, quickFilter.appliedOptions.combineWithSettings(), ::Pair)
-			.flatMapLatest { repository.observeAllTracks(it.first, it.second) }
+		combine(
+			combine(limit, quickFilter.appliedOptions.combineWithSettings(), ::Pair)
+				.flatMapLatest { repository.observeAllTracks(it.first, it.second) },
+			settings.observeAsFlow(AppSettings.KEY_DISMISSED_FEED_ITEMS) { dismissedFeedItems },
+		) { tracks, dismissedItems ->
+			tracks.filterNot { it.manga.id.toString() in dismissedItems }
+		}
 			.mapLatest { tracks ->
 				val result = ArrayList<TrackingLogItem>(tracks.size)
 				for (track in tracks) {
@@ -116,6 +121,9 @@ class FeedViewModel @Inject constructor(
 
 	fun clearFeed(clearCounters: Boolean) {
 		launchLoadingJob(Dispatchers.Default) {
+			settings.dismissFeedItems(
+				repository.getTracks(0, Int.MAX_VALUE).map { it.manga.id },
+			)
 			repository.clearLogs()
 			if (clearCounters) {
 				repository.clearCounters()

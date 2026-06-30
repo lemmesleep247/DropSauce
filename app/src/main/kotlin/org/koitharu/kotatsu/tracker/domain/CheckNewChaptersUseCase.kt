@@ -6,16 +6,18 @@ import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
+import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.MultiMutex
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toInstantOrNull
 import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.local.data.LocalMangaRepository
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
-import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.tracker.domain.model.MangaTracking
 import org.koitharu.kotatsu.tracker.domain.model.MangaUpdates
 import java.time.Instant
@@ -29,6 +31,7 @@ class CheckNewChaptersUseCase @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val localMangaRepository: LocalMangaRepository,
 	private val settings: AppSettings,
+	private val mangaDataRepository: MangaDataRepository,
 ) {
 
 	private val mutex = MultiMutex<Long>()
@@ -75,8 +78,19 @@ class CheckNewChaptersUseCase @Inject constructor(
 	}
 
 	private suspend fun invokeImpl(track: MangaTracking): MangaUpdates = runCatchingCancellable {
+		val cachedChapters = mangaDataRepository.findMangaById(track.manga.id, withChapters = true)
+			?.chapters
+			.orEmpty()
 		val details = getFullManga(track.manga)
-		compare(track, details, getBranch(details, track.lastChapterId))
+		val branch = getBranch(details, track.lastChapterId)
+		compare(
+			track = track,
+			manga = details,
+			branch = branch,
+			cachedChapterIds = cachedChapters.asSequence()
+				.filter { it.branch == branch }
+				.mapTo(HashSet()) { it.id },
+		)
 	}.getOrElse { error ->
 		MangaUpdates.Failure(
 			manga = track.manga,
@@ -119,17 +133,18 @@ class CheckNewChaptersUseCase @Inject constructor(
 		}
 	}
 
-	private fun compare(track: MangaTracking, manga: Manga, branch: String?): MangaUpdates.Success {
+	private fun compare(
+		track: MangaTracking,
+		manga: Manga,
+		branch: String?,
+		cachedChapterIds: Set<Long>,
+	): MangaUpdates.Success {
 		val chapters = requireNotNull(manga.getChapters(branch))
 		val installTime = settings.onboardingInstallTime
 		val lastCheckTime = track.lastCheck?.toEpochMilli() ?: installTime
 
 		if (track.isEmpty()) {
-			val newChapters = if (lastCheckTime > 0L) {
-				chapters.filter { x -> x.uploadDate > lastCheckTime }
-			} else {
-				emptyList()
-			}
+			val newChapters = chapters.findFallbackChapters(cachedChapterIds, lastCheckTime)
 			return MangaUpdates.Success(
 				manga = manga,
 				branch = branch,
@@ -152,11 +167,7 @@ class CheckNewChaptersUseCase @Inject constructor(
 			}
 
 			newChapters.size == chapters.size -> {
-				val fallbackChapters = if (lastCheckTime > 0L) {
-					chapters.filter { x -> x.uploadDate > lastCheckTime }
-				} else {
-					emptyList()
-				}
+				val fallbackChapters = chapters.findFallbackChapters(cachedChapterIds, lastCheckTime)
 				MangaUpdates.Success(manga, branch, fallbackChapters, isValid = fallbackChapters.isNotEmpty())
 			}
 
@@ -165,4 +176,45 @@ class CheckNewChaptersUseCase @Inject constructor(
 			}
 		}
 	}
+}
+
+private fun List<MangaChapter>.findFallbackChapters(
+	cachedChapterIds: Set<Long>,
+	lastCheckTime: Long,
+): List<MangaChapter> {
+	val fallbackIds = findFallbackChapterIds(
+		currentChapters = map { ChapterFingerprint(it.id, it.uploadDate) },
+		cachedChapterIds = cachedChapterIds,
+		lastCheckTime = lastCheckTime,
+	)
+	return filter { it.id in fallbackIds }
+}
+
+internal data class ChapterFingerprint(
+	val id: Long,
+	val uploadDate: Long,
+)
+
+internal fun findFallbackChapterIds(
+	currentChapters: List<ChapterFingerprint>,
+	cachedChapterIds: Set<Long>,
+	lastCheckTime: Long,
+): Set<Long> {
+	val datesAreAmbiguous = currentChapters.any { it.uploadDate <= 0L } ||
+		(currentChapters.size > 1 && currentChapters.all { it.uploadDate == currentChapters.first().uploadDate })
+	val cacheHasOverlap = cachedChapterIds.isNotEmpty() &&
+		currentChapters.any { it.id in cachedChapterIds }
+	if (datesAreAmbiguous && cacheHasOverlap) {
+		return currentChapters
+			.asSequence()
+			.filterNot { it.id in cachedChapterIds }
+			.mapTo(HashSet()) { it.id }
+	}
+	if (lastCheckTime <= 0L) {
+		return emptySet()
+	}
+	return currentChapters
+		.asSequence()
+		.filter { it.uploadDate > lastCheckTime }
+		.mapTo(HashSet()) { it.id }
 }

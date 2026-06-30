@@ -285,6 +285,8 @@
     <string name="sync_wifi_only">Sync only over Wi-Fi</string>
     <string name="sync_on_start">Sync on app start</string>
     <string name="sync_on_start_summary">Run a sync each time the app is opened</string>
+    <string name="sync_disable_deletion">Don’t sync data deletion for safety purposes</string>
+    <string name="sync_disable_deletion_summary">Keep favorite and history deletions on this device only</string>
     <string name="sync_what">What to sync</string>
     <string name="sync_delete_data">Delete all sync data</string>
     <string name="sync_delete_data_summary">Remove the backup stored on your Google Drive</string>
@@ -866,7 +868,8 @@
     <string name="shizuku_not_installed">Shizuku is not installed. Install it, start it, then try again.</string>
     <string name="shizuku_not_running">Shizuku is not running. Start the Shizuku app first.</string>
     <string name="shizuku_permission_denied">Shizuku permission was denied. Allow DropSauce in Shizuku and try again.</string>
-    <string name="shizuku_install_failed">Silent installation failed. Opening the Android installer instead.</string>
+    <string name="shizuku_install_failed">Silent installation failed. %1$s</string>
+    <string name="shizuku_invalid_package">The downloaded extension APK is invalid or has an unexpected package name.</string>
     <string name="ext_auto_update_title">Auto-update extensions (Beta)</string>
     <string name="ext_auto_update_summary">Install extension updates silently as soon as they are detected, with a daily background check.</string>
     <string name="email">Email</string>

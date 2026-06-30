@@ -6,6 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.koitharu.kotatsu.mihon.model.MihonExtensionInfo
+import org.koitharu.kotatsu.mihon.model.MihonLoadResult
 
 class ExternalExtensionRepoRepositoryTest {
 
@@ -67,6 +68,22 @@ class ExternalExtensionRepoRepositoryTest {
 	@Test
 	fun `newer source api version is an update even with same extension version code`() {
 		assertTrue(repoEntry(versionCode = 10, versionName = "1.5.0").isNewerThan(installed()))
+	}
+
+	@Test
+	fun `loaded extension update detection uses the same version rules`() {
+		val loaded = MihonLoadResult.Success(
+			pkgName = "example.extension",
+			appName = "Example",
+			versionCode = 10,
+			versionName = "1.4.1",
+			libVersion = 1.4,
+			lang = "en",
+			isNsfw = false,
+			sources = emptyList(),
+		)
+		assertTrue(repoEntry(versionCode = 10, versionName = "1.5.0").isNewerThan(loaded))
+		assertFalse(repoEntry(versionCode = 10, versionName = "1.4.1").isNewerThan(loaded))
 	}
 
 	private fun repoEntry(versionCode: Long, versionName: String) = ExternalExtensionRepoEntry(

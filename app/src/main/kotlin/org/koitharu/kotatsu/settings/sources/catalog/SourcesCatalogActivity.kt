@@ -232,7 +232,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			ContextCompat.RECEIVER_EXPORTED,
 		)
 		checkPendingInstallerDownloads()
-		if (!canUseShizukuInstaller()) {
+		if (!settings.isShizukuInstallerEnabled) {
 			ensureInstallPermissionAccess()
 		}
 		handleAddRepoDeepLink(intent)
@@ -251,7 +251,6 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	override fun onDestroy() {
 		viewBinding.appbar.removeOnOffsetChangedListener(appBarOffsetListener)
 		unregisterReceiver(extensionDownloadReceiver)
-		clearOldApks()
 		super.onDestroy()
 	}
 
@@ -516,7 +515,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	}
 
 	private fun processInstallQueue() {
-		if (!canUseShizukuInstaller() && !canInstallPackages()) {
+		if (!settings.isShizukuInstallerEnabled && !canInstallPackages()) {
 			requestInstallPackagesPermission()
 			return
 		}
@@ -551,36 +550,43 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	private fun installDownloadedApk(downloadId: Long) {
 		val pendingDownload = downloadRequestsById.remove(downloadId)
 		val apkFile = getDownloadedApkFile(downloadId, pendingDownload?.fileName)
+		val expectedPackage = pendingDownload?.packageName ?: apkFile?.let(::getArchivePackageName)
 		if (
-			canUseShizukuInstaller() &&
-			pendingDownload != null &&
+			settings.isShizukuInstallerEnabled &&
+			expectedPackage != null &&
 			apkFile?.isFile == true
 		) {
-			activeInstallerPackage = pendingDownload.packageName
+			activeInstallerPackage = expectedPackage
 			activeInstallerDownloadId = downloadId
 			isInstallerActive = true
 			lifecycleScope.launch {
-				when (shizukuInstaller.install(apkFile, pendingDownload.packageName)) {
+				when (val result = shizukuInstaller.install(apkFile, expectedPackage)) {
 					ShizukuExtensionInstaller.InstallResult.Success -> {
 						finishActiveInstaller(refresh = true)
 						processDownloadedInstallerQueue()
 					}
 					ShizukuExtensionInstaller.InstallResult.Unavailable -> {
-						isInstallerActive = false
-						downloadRequestsById[downloadId] = pendingDownload
-						activeInstallerPackage = null
-						activeInstallerDownloadId = 0L
 						Toast.makeText(
 							this@SourcesCatalogActivity,
-							R.string.shizuku_install_failed,
+							R.string.shizuku_not_running,
 							Toast.LENGTH_LONG,
 						).show()
-						installDownloadedApkWithSystem(downloadId)
+						finishActiveInstaller(refresh = false)
+						processDownloadedInstallerQueue()
 					}
-					else -> {
+					ShizukuExtensionInstaller.InstallResult.InvalidPackage -> {
 						Toast.makeText(
 							this@SourcesCatalogActivity,
-							R.string.error,
+							R.string.shizuku_invalid_package,
+							Toast.LENGTH_LONG,
+						).show()
+						finishActiveInstaller(refresh = false)
+						processDownloadedInstallerQueue()
+					}
+					is ShizukuExtensionInstaller.InstallResult.Failure -> {
+						Toast.makeText(
+							this@SourcesCatalogActivity,
+							getString(R.string.shizuku_install_failed, result.message.orEmpty()),
 							Toast.LENGTH_LONG,
 						).show()
 						finishActiveInstaller(refresh = false)
@@ -588,6 +594,13 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 					}
 				}
 			}
+			return
+		}
+		if (settings.isShizukuInstallerEnabled) {
+			Toast.makeText(this, R.string.shizuku_invalid_package, Toast.LENGTH_LONG).show()
+			viewModel.clearExtensionInProgress(expectedPackage ?: pendingDownload?.packageName)
+			removeDownloadedApk(downloadId)
+			processDownloadedInstallerQueue()
 			return
 		}
 		pendingDownload?.let { downloadRequestsById[downloadId] = it }
@@ -671,6 +684,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 				null
 			}
 		}
+	}
+
+	private fun getArchivePackageName(apkFile: File): String? {
+		return packageManager.getPackageArchiveInfo(apkFile.absolutePath, 0)?.packageName
 	}
 
 	@Suppress("DEPRECATION")
@@ -781,10 +798,6 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		return packageManager.canRequestPackageInstalls()
 	}
 
-	private fun canUseShizukuInstaller(): Boolean {
-		return settings.isShizukuInstallerEnabled && shizukuInstaller.isReady
-	}
-
 	private fun requestInstallPackagesPermission() {
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
 			return
@@ -825,7 +838,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		try {
 			val destDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
 			destDir?.listFiles()?.forEach { file ->
-				if (file.name.endsWith(".apk")) {
+				if (
+					file.name.endsWith(".apk") &&
+					System.currentTimeMillis() - file.lastModified() > STALE_APK_AGE_MS
+				) {
 					file.delete()
 				}
 			}
@@ -838,6 +854,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		val packageName: String,
 		val fileName: String,
 	)
+
+	private companion object {
+		const val STALE_APK_AGE_MS = 24L * 60L * 60L * 1000L
+	}
 
 	private class ExtensionDownloadReceiver(
 		private val onComplete: (Long) -> Unit,

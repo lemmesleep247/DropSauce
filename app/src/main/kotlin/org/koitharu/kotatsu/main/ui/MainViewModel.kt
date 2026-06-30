@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.exceptions.EmptyHistoryException
@@ -19,11 +20,13 @@ import org.koitharu.kotatsu.core.prefs.observeAsStateFlow
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
+import org.koitharu.kotatsu.extensions.install.ExtensionUpdateWorker
 import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.main.domain.ReadingResumeEnabledUseCase
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.settings.sources.catalog.ExternalExtensionRepoRepository
+import org.koitharu.kotatsu.settings.sources.catalog.isNewerThan
 import org.koitharu.kotatsu.tracker.domain.TrackingRepository
 import javax.inject.Inject
 
@@ -37,6 +40,7 @@ class MainViewModel @Inject constructor(
 	readingResumeEnabledUseCase: ReadingResumeEnabledUseCase,
 	private val mihonExtensionManager: MihonExtensionManager,
 	private val externalRepoRepository: ExternalExtensionRepoRepository,
+	private val extensionUpdateScheduler: ExtensionUpdateWorker.Scheduler,
 ) : BaseViewModel() {
 
 	val hasExtensionUpdates: StateFlow<Boolean> = combine(
@@ -49,10 +53,18 @@ class MainViewModel @Inject constructor(
 			val installedByPkg = installed.associateBy { it.pkgName }
 			available.any { entry ->
 				val local = installedByPkg[entry.packageName] ?: return@any false
-				entry.versionCode > local.versionCode
+				entry.isNewerThan(local)
 			}
 		} catch (_: Exception) {
 			false
+		}
+	}.onEach { hasUpdates ->
+		if (
+			hasUpdates &&
+			settings.isShizukuInstallerEnabled &&
+			settings.isAutoUpdateExtensionsEnabled
+		) {
+			extensionUpdateScheduler.startNow()
 		}
 	}.flowOn(Dispatchers.IO)
 		.stateIn(

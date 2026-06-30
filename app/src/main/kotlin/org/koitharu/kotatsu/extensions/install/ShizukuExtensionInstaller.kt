@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.extensions.install
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -11,6 +12,7 @@ import android.content.pm.PackageManager
 import android.content.res.AssetFileDescriptor
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
+import android.os.Process
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +22,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.koitharu.kotatsu.BuildConfig
-import org.koitharu.kotatsu.extensions.install.shizuku.ACTION_SHIZUKU_INSTALL_RESULT
 import org.koitharu.kotatsu.extensions.install.shizuku.IShizukuInstallerService
 import org.koitharu.kotatsu.extensions.install.shizuku.ShizukuInstallerService
 import rikka.shizuku.Shizuku
@@ -48,10 +49,35 @@ class ShizukuExtensionInstaller @Inject constructor(
 				Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
 		}.getOrDefault(false)
 
+	suspend fun awaitReady(): Boolean {
+		if (isReady) return true
+		return runCatching {
+			withTimeout(BINDER_READY_TIMEOUT_MS) {
+				suspendCancellableCoroutine { continuation ->
+					val listener = object : Shizuku.OnBinderReceivedListener {
+						override fun onBinderReceived() {
+							Shizuku.removeBinderReceivedListener(this)
+							if (continuation.isActive) {
+								continuation.resume(isReady)
+							}
+						}
+					}
+					continuation.invokeOnCancellation {
+						Shizuku.removeBinderReceivedListener(listener)
+					}
+					Shizuku.addBinderReceivedListenerSticky(listener)
+				}
+			}
+		}.getOrDefault(false)
+	}
+
 	suspend fun install(apk: File, expectedPackage: String): InstallResult = installMutex.withLock {
 		withContext(Dispatchers.IO) {
-			if (!isReady) {
+			if (!awaitReady()) {
 				return@withContext InstallResult.Unavailable
+			}
+			if (!apk.isFile || apk.length() <= 0L) {
+				return@withContext InstallResult.InvalidPackage
 			}
 			val actualPackage = context.packageManager.getPackageArchiveInfo(apk.absolutePath, 0)?.packageName
 			if (actualPackage == null || actualPackage != expectedPackage) {
@@ -81,11 +107,19 @@ class ShizukuExtensionInstaller @Inject constructor(
 				}
 				awaitInstallResult {
 					ParcelFileDescriptor.open(apk, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
-						AssetFileDescriptor(descriptor, 0, apk.length()).use(bound::install)
+						AssetFileDescriptor(descriptor, 0, apk.length()).use { asset ->
+							bound.install(
+								asset,
+								Process.myUserHandle().hashCode(),
+								expectedPackage,
+								context.packageName,
+								it,
+							)
+						}
 					}
 				}
 			} catch (e: Exception) {
-				InstallResult.Failure(e.message)
+				InstallResult.Failure(status = null, message = e.message)
 			} finally {
 				connection?.let { callback ->
 					runCatching {
@@ -98,7 +132,8 @@ class ShizukuExtensionInstaller @Inject constructor(
 		}
 	}
 
-	private suspend fun awaitInstallResult(start: () -> Unit): InstallResult = withTimeout(INSTALL_TIMEOUT_MS) {
+	private suspend fun awaitInstallResult(start: (android.content.IntentSender) -> Unit): InstallResult =
+		withTimeout(INSTALL_TIMEOUT_MS) {
 		suspendCancellableCoroutine { continuation ->
 			val receiver = object : BroadcastReceiver() {
 				override fun onReceive(context: Context?, intent: Intent) {
@@ -113,7 +148,7 @@ class ShizukuExtensionInstaller @Inject constructor(
 						if (status == PackageInstaller.STATUS_SUCCESS) {
 							InstallResult.Success
 						} else {
-							InstallResult.Failure(message)
+							InstallResult.Failure(status, message)
 						},
 					)
 				}
@@ -128,10 +163,18 @@ class ShizukuExtensionInstaller @Inject constructor(
 				runCatching { context.unregisterReceiver(receiver) }
 			}
 			try {
-				start()
+				val statusIntent = PendingIntent.getBroadcast(
+					context,
+					INSTALL_REQUEST_CODE,
+					Intent(ACTION_SHIZUKU_INSTALL_RESULT).setPackage(context.packageName),
+					PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+				)
+				start(statusIntent.intentSender)
 			} catch (e: Exception) {
 				runCatching { context.unregisterReceiver(receiver) }
-				if (continuation.isActive) continuation.resume(InstallResult.Failure(e.message))
+				if (continuation.isActive) {
+					continuation.resume(InstallResult.Failure(status = null, message = e.message))
+				}
 			}
 		}
 	}
@@ -148,12 +191,15 @@ class ShizukuExtensionInstaller @Inject constructor(
 		data object Success : InstallResult
 		data object Unavailable : InstallResult
 		data object InvalidPackage : InstallResult
-		data class Failure(val message: String?) : InstallResult
+		data class Failure(val status: Int?, val message: String?) : InstallResult
 	}
 
 	private companion object {
 		const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
 		const val USER_SERVICE_TAG = "extension_installer"
+		const val INSTALL_REQUEST_CODE = 14046
+		const val ACTION_SHIZUKU_INSTALL_RESULT = "${BuildConfig.APPLICATION_ID}.SHIZUKU_INSTALL_RESULT"
+		const val BINDER_READY_TIMEOUT_MS = 5_000L
 		const val BIND_TIMEOUT_MS = 15_000L
 		const val INSTALL_TIMEOUT_MS = 180_000L
 	}

@@ -1,6 +1,8 @@
 package org.koitharu.kotatsu.extensions.install
 
 import android.content.Context
+import android.content.pm.PackageInstaller
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -49,8 +51,8 @@ class ExtensionUpdateWorker @AssistedInject constructor(
 		if (!settings.isAutoUpdateExtensionsEnabled || !settings.isShizukuInstallerEnabled) {
 			return@withContext Result.success()
 		}
-		if (!shizukuInstaller.isReady) {
-			return@withContext Result.success()
+		if (!shizukuInstaller.awaitReady()) {
+			return@withContext Result.retry()
 		}
 		val repoUrl = settings.externalExtensionsRepoUrl ?: return@withContext Result.success()
 
@@ -66,24 +68,50 @@ class ExtensionUpdateWorker @AssistedInject constructor(
 
 			val downloadDir = File(applicationContext.cacheDir, "extension_updates").apply { mkdirs() }
 			var installedAny = false
+			var retryNeeded = false
+			var permanentFailure = false
 			for (entry in updates) {
-				if (isStopped || !shizukuInstaller.isReady) break
+				if (isStopped) break
 				val apk = File(downloadDir, "${entry.packageName}-${entry.versionCode}.apk")
 				try {
 					download(repoRepository.resolveApkUrl(repoUrl, entry.apkName), apk)
-					when (shizukuInstaller.install(apk, entry.packageName)) {
+					when (val installResult = shizukuInstaller.install(apk, entry.packageName)) {
 						ShizukuExtensionInstaller.InstallResult.Success -> installedAny = true
-						else -> Unit
+						ShizukuExtensionInstaller.InstallResult.Unavailable -> {
+							retryNeeded = true
+							break
+						}
+						ShizukuExtensionInstaller.InstallResult.InvalidPackage -> {
+							permanentFailure = true
+							Log.e(TAG, "Downloaded APK has the wrong package for ${entry.packageName}")
+						}
+						is ShizukuExtensionInstaller.InstallResult.Failure -> {
+							Log.e(TAG, "Failed to update ${entry.packageName}: ${installResult.message}")
+							if (
+								installResult.status == null ||
+								installResult.status == PackageInstaller.STATUS_FAILURE_TIMEOUT
+							) {
+								retryNeeded = true
+							} else {
+								permanentFailure = true
+							}
+						}
 					}
 				} finally {
 					apk.delete()
 				}
 			}
 			if (installedAny) extensionManager.loadExtensions()
-			Result.success()
+			when {
+				isStopped -> Result.retry()
+				retryNeeded -> Result.retry()
+				permanentFailure && !installedAny -> Result.failure()
+				else -> Result.success()
+			}
 		} catch (_: IOException) {
 			Result.retry()
-		} catch (_: Exception) {
+		} catch (e: Exception) {
+			Log.e(TAG, "Extension auto-update failed", e)
 			Result.failure()
 		}
 	}
@@ -118,7 +146,7 @@ class ExtensionUpdateWorker @AssistedInject constructor(
 
 		override suspend fun schedule() {
 			val request = PeriodicWorkRequestBuilder<ExtensionUpdateWorker>(1, TimeUnit.DAYS)
-				.setConstraints(constraints())
+				.setConstraints(periodicConstraints())
 				.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
 				.build()
 			workManager.enqueueUniquePeriodicWork(
@@ -139,8 +167,8 @@ class ExtensionUpdateWorker @AssistedInject constructor(
 
 		suspend fun startNow() {
 			val request = OneTimeWorkRequestBuilder<ExtensionUpdateWorker>()
-				.setConstraints(constraints())
-				.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
+				.setConstraints(immediateConstraints())
+				.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
 				.build()
 			workManager.enqueueUniqueWork(
 				IMMEDIATE_WORK_NAME,
@@ -149,13 +177,18 @@ class ExtensionUpdateWorker @AssistedInject constructor(
 			).await()
 		}
 
-		private fun constraints() = Constraints.Builder()
+		private fun immediateConstraints() = Constraints.Builder()
+			.setRequiredNetworkType(NetworkType.CONNECTED)
+			.build()
+
+		private fun periodicConstraints() = Constraints.Builder()
 			.setRequiredNetworkType(NetworkType.CONNECTED)
 			.setRequiresBatteryNotLow(true)
 			.build()
 	}
 
 	private companion object {
+		const val TAG = "ExtensionUpdateWorker"
 		const val PERIODIC_WORK_NAME = "extension_auto_updates"
 		const val IMMEDIATE_WORK_NAME = "extension_auto_updates_now"
 		const val MAX_APK_BYTES = 100L * 1024L * 1024L

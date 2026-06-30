@@ -52,3 +52,28 @@ fun Resources.formatDurationShort(millis: Long): String? {
 }
 
 fun LocalDate.toMillis(): Long = atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+fun <T> List<T>.groupByDateBucket(
+	instantOf: (T) -> Instant?,
+	showMonths: Boolean = false,
+): List<Pair<DateTimeAgo?, List<T>>> {
+	if (isEmpty()) {
+		return emptyList()
+	}
+	val grouped = LinkedHashMap<DateTimeAgo?, MutableList<T>>()
+	val latestInstantByGroup = HashMap<DateTimeAgo?, Instant>()
+	for (item in this) {
+		val instant = instantOf(item)
+		val group = instant?.let { calculateTimeAgo(it, showMonths) }
+		grouped.getOrPut(group) { ArrayList() }.add(item)
+		if (instant != null) {
+			val previous = latestInstantByGroup[group]
+			if (previous == null || instant > previous) {
+				latestInstantByGroup[group] = instant
+			}
+		}
+	}
+	return grouped.entries
+		.sortedByDescending { latestInstantByGroup[it.key] ?: Instant.MIN }
+		.map { it.key to it.value }
+}

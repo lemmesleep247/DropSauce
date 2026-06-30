@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
@@ -21,6 +22,7 @@ import org.koitharu.kotatsu.core.ui.model.DateTimeAgo
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.calculateTimeAgo
+import org.koitharu.kotatsu.core.util.ext.groupByDateBucket
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.domain.MangaListMapper
@@ -61,7 +63,19 @@ class FeedViewModel @Inject constructor(
 	val content = combine(
 		quickFilter.appliedOptions,
 		combine(limit, quickFilter.appliedOptions.combineWithSettings(), ::Pair)
-			.flatMapLatest { repository.observeTrackingLog(it.first, it.second) },
+			.flatMapLatest { repository.observeAllTracks(it.first, it.second) }
+			.mapLatest { tracks ->
+				tracks.map { track ->
+					TrackingLogItem(
+						id = -track.manga.id,
+						manga = track.manga,
+						chapters = emptyList(),
+						createdAt = track.lastChapterDate ?: track.lastCheck ?: java.time.Instant.EPOCH,
+						isNew = track.newChapters > 0,
+						count = track.newChapters,
+					)
+				}
+			},
 	) { filters, list ->
 		val result = ArrayList<ListModel>((list.size * 1.4).toInt().coerceAtLeast(3))
 		quickFilter.filterItem(filters)?.let(result::add)
@@ -110,23 +124,24 @@ class FeedViewModel @Inject constructor(
 	@OptIn(DelicateCoroutinesApi::class)
 	fun onItemClick(item: FeedItem) {
 		launchJob(Dispatchers.Default, CoroutineStart.ATOMIC) {
-			repository.markAsRead(item.id)
+			if (item.id > 0L) {
+				repository.markAsRead(item.id)
+			}
 		}
 	}
 
 	private suspend fun List<TrackingLogItem>.mapListTo(destination: MutableList<ListModel>) {
-		var prevDate: DateTimeAgo? = null
-		for (item in this) {
-			val date = calculateTimeAgo(item.createdAt)
-			if (prevDate != date) {
-				destination += if (date != null) {
-					ListHeader(date)
-				} else {
-					ListHeader(R.string.unknown)
-				}
+		val feedItems = map { mangaListMapper.toFeedItem(it) }
+		val bucketedItems = zip(feedItems).groupByDateBucket(instantOf = { it.first.createdAt })
+		for ((date, items) in bucketedItems) {
+			destination += if (date != null) {
+				ListHeader(date)
+			} else {
+				ListHeader(R.string.unknown)
 			}
-			prevDate = date
-			destination += mangaListMapper.toFeedItem(item)
+			for ((_, feedItem) in items) {
+				destination += feedItem
+			}
 		}
 	}
 

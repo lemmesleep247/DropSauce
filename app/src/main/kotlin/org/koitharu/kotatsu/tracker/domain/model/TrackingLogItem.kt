@@ -9,4 +9,5 @@ data class TrackingLogItem(
 	val chapters: List<String>,
 	val createdAt: Instant,
 	val isNew: Boolean,
+	val count: Int = chapters.size,
 )

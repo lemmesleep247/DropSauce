@@ -92,6 +92,20 @@ class TrackingRepository @Inject constructor(
 			.onStart { gcIfNotCalled() }
 	}
 
+	fun observeAllTracks(limit: Int, filterOptions: Set<ListFilterOption>): Flow<List<MangaTracking>> {
+		return db.getTracksDao().observeAllTracks(limit, filterOptions)
+			.mapItems {
+				MangaTracking(
+					manga = it.manga.toManga(it.tags.toMangaTags(), null),
+					lastChapterId = it.track.lastChapterId,
+					lastCheck = it.track.lastCheckTime.toInstantOrNull(),
+					lastChapterDate = it.track.lastChapterDate.toInstantOrNull(),
+					newChapters = it.track.newChapters,
+				)
+			}.distinctUntilChanged()
+			.onStart { gcIfNotCalled() }
+	}
+
 	suspend fun getLogsCount() = db.getTrackLogsDao().count()
 
 	suspend fun clearLogs() = db.getTrackLogsDao().clear()

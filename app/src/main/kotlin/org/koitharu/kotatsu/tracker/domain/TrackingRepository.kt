@@ -181,6 +181,11 @@ class TrackingRepository @Inject constructor(
 				}
 			}
 		}
+		// A feed event can have arrived from another device even when this device does not have the
+		// manga in local history/favorites. Keep its track row until that feed event is cleared/trimmed.
+		for (mangaId in db.getTrackLogsDao().findMangaIds()) {
+			ids.remove(mangaId)
+		}
 		// remove unused
 		for (mangaId in ids) {
 			dao.delete(mangaId)

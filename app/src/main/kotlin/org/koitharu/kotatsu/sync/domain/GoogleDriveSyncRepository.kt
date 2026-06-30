@@ -1,13 +1,17 @@
 package org.koitharu.kotatsu.sync.domain
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.core.content.edit
 import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -19,6 +23,11 @@ import org.koitharu.kotatsu.backup.local.data.model.SourceSettingsBackup
 import org.koitharu.kotatsu.backup.local.data.model.StatsBackup
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.entity.MangaWithTags
+import org.koitharu.kotatsu.core.util.MimeTypes
+import org.koitharu.kotatsu.core.util.ext.isFileUri
+import org.koitharu.kotatsu.core.util.ext.toFileOrNull
+import org.koitharu.kotatsu.core.util.ext.toMimeTypeOrNull
+import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.sync.data.model.SyncTrack
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -31,9 +40,12 @@ import org.koitharu.kotatsu.sync.data.model.SyncCategory
 import org.koitharu.kotatsu.sync.data.model.SyncConfig
 import org.koitharu.kotatsu.sync.data.model.SyncContent
 import org.koitharu.kotatsu.sync.data.model.SyncFavourite
+import org.koitharu.kotatsu.sync.data.model.SyncFeedEntry
 import org.koitharu.kotatsu.sync.data.model.SyncHistory
 import org.koitharu.kotatsu.sync.data.model.SyncMangaPrefs
 import org.koitharu.kotatsu.sync.data.model.SyncSnapshot
+import java.io.File
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -160,7 +172,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 			Log.i(
 				TAG,
 				"merged: fav=${merged.favourites.size} hist=${merged.history.size} cat=${merged.categories.size} " +
-					"cfgRev=${merged.config?.revision} remoteCfgWon=${configResult.remoteWon}",
+					"feed=${merged.feed.size} cfgRev=${merged.config?.revision} remoteCfgWon=${configResult.remoteWon}",
 			)
 			applyToDatabase(merged, configResult.remoteWon, enabled)
 
@@ -264,6 +276,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 			bookmarks = snapshot.bookmarks,
 			scrobblings = snapshot.scrobblings,
 			tracks = snapshot.tracks,
+			feed = snapshot.feed,
 			stats = snapshot.stats,
 			config = snapshot.config,
 		),
@@ -292,12 +305,18 @@ class GoogleDriveSyncRepository @Inject constructor(
 			bookmarks = snapshot.bookmarks,
 			scrobblings = snapshot.scrobblings,
 			tracks = snapshot.tracks,
+			feed = snapshot.feed,
 			stats = snapshot.stats,
 			config = snapshot.config,
 		)
 	}
 
 	private suspend fun gcOldTombstones(now: Long) {
+		if (syncSettings.isDeletionSyncDisabled) {
+			// These rows are the local-only "hidden" markers that stop a cloud pull from restoring an
+			// item the user deliberately deleted on this device.
+			return
+		}
 		val cutoff = now - TOMBSTONE_TTL_MS
 		runCatchingCancellable {
 			database.getFavouritesDao().gc(cutoff)
@@ -322,19 +341,32 @@ class GoogleDriveSyncRepository @Inject constructor(
 		val enabled = SyncContent.fromKeys(syncSettings.enabledContent)
 		val favEnabled = SyncContent.FAVOURITES in enabled
 		val histEnabled = SyncContent.HISTORY in enabled
+		val propagateDeletions = !syncSettings.isDeletionSyncDisabled
 
 		val categories = if (favEnabled) {
-			SyncMerger.mergeCategories(localCategories(), remote?.categories.orEmpty())
+			SyncMerger.mergeCategories(
+				localCategories(),
+				remote?.categories.orEmpty(),
+				propagateDeletions,
+			)
 		} else {
 			remote?.categories.orEmpty()
 		}
 		val favourites = if (favEnabled) {
-			SyncMerger.mergeFavourites(localFavourites(), remote?.favourites.orEmpty())
+			SyncMerger.mergeFavourites(
+				localFavourites(),
+				remote?.favourites.orEmpty(),
+				propagateDeletions,
+			)
 		} else {
 			remote?.favourites.orEmpty()
 		}
 		val history = if (histEnabled) {
-			SyncMerger.mergeHistory(localHistory(), remote?.history.orEmpty())
+			SyncMerger.mergeHistory(
+				localHistory(),
+				remote?.history.orEmpty(),
+				propagateDeletions,
+			)
 		} else {
 			remote?.history.orEmpty()
 		}
@@ -353,6 +385,11 @@ class GoogleDriveSyncRepository @Inject constructor(
 		} else {
 			remote?.tracks.orEmpty()
 		}
+		val feed = if (SyncContent.FEED in enabled) {
+			SyncMerger.mergeFeed(localFeed(), remote?.feed.orEmpty())
+		} else {
+			remote?.feed.orEmpty()
+		}
 		val stats = if (SyncContent.STATS in enabled) {
 			SyncMerger.mergeStats(localStats(), remote?.stats.orEmpty())
 		} else {
@@ -367,6 +404,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 			bookmarks = bookmarks,
 			scrobblings = scrobblings,
 			tracks = tracks,
+			feed = feed,
 			stats = stats,
 			config = config,
 		)
@@ -467,21 +505,48 @@ class GoogleDriveSyncRepository @Inject constructor(
 		enabled: Set<SyncContent>,
 	) {
 		if (SyncContent.FAVOURITES in enabled) {
+			val locallyDeletedCategories = if (syncSettings.isDeletionSyncDisabled) {
+				database.getFavouriteCategoriesDao().findAllForSync()
+					.filterTo(HashSet()) { it.deletedAt != 0L }
+					.mapTo(HashSet()) { it.categoryId }
+			} else {
+				emptySet()
+			}
+			val locallyDeletedFavourites = if (syncSettings.isDeletionSyncDisabled) {
+				database.getFavouritesDao().findAllForSync()
+					.filter { it.deletedAt != 0L }
+					.mapTo(HashSet()) { it.mangaId to it.categoryId }
+			} else {
+				emptySet()
+			}
 			database.withTransaction {
 				for (category in merged.categories) {
-					database.getFavouriteCategoriesDao().upsert(category.toEntity())
+					if (category.categoryId !in locallyDeletedCategories) {
+						database.getFavouriteCategoriesDao().upsert(category.toEntity())
+					}
 				}
 				for (favourite in merged.favourites) {
-					upsertManga(favourite.manga)
-					database.getFavouritesDao().upsert(favourite.toEntity())
+					if ((favourite.mangaId to favourite.categoryId) !in locallyDeletedFavourites) {
+						upsertManga(favourite.manga)
+						database.getFavouritesDao().upsert(favourite.toEntity())
+					}
 				}
 			}
 		}
 		if (SyncContent.HISTORY in enabled) {
+			val locallyDeletedHistory = if (syncSettings.isDeletionSyncDisabled) {
+				database.getHistoryDao().findAllForSync()
+					.filterTo(HashSet()) { it.deletedAt != 0L }
+					.mapTo(HashSet()) { it.mangaId }
+			} else {
+				emptySet()
+			}
 			database.withTransaction {
 				for (entry in merged.history) {
-					upsertManga(entry.manga)
-					database.getHistoryDao().upsertForSync(entry.toEntity())
+					if (entry.mangaId !in locallyDeletedHistory) {
+						upsertManga(entry.manga)
+						database.getHistoryDao().upsertForSync(entry.toEntity())
+					}
 				}
 			}
 		}
@@ -506,6 +571,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 					}
 				}
 			}
+			applyFeed(merged.feed)
 		}
 		if (SyncContent.TRACKING in enabled) {
 			for (entry in merged.scrobblings) {
@@ -535,7 +601,38 @@ class GoogleDriveSyncRepository @Inject constructor(
 		}
 		if (SyncContent.CUSTOM_COVERS in enabled) {
 			for (pref in config.mangaPrefs) {
-				database.getPreferencesDao().upsert(pref.toEntity())
+				val currentCover = database.getPreferencesDao().find(pref.mangaId)?.coverUrlOverride
+				val resolvedCover = when {
+					pref.coverData != null -> materializeCover(pref, currentCover) ?: currentCover
+					pref.coverUrlOverride.isPortableCoverUrl() -> pref.coverUrlOverride
+					// Schema-1 snapshots only contain the source device's local file URI. Do not
+					// replace a working local cover with that unusable path.
+					else -> currentCover
+				}
+				database.getPreferencesDao().upsert(pref.toEntity(resolvedCover))
+			}
+		}
+	}
+
+	private suspend fun applyFeed(feed: List<SyncFeedEntry>) {
+		val dao = database.getTrackLogsDao()
+		val localByIdentity = dao.findAllForSync().groupBy { entity ->
+			SyncMerger.feedIdentity(entity.mangaId, entity.chapters)
+		}.toMutableMap()
+		for (entry in feed) {
+			runCatchingCancellable {
+				database.withTransaction {
+					upsertManga(entry.manga)
+					val identity = SyncMerger.feedIdentity(entry)
+					val matches = localByIdentity.remove(identity).orEmpty()
+					val keepId = matches.minOfOrNull { it.id } ?: 0L
+					dao.insert(entry.toEntity(keepId))
+					for (duplicate in matches) {
+						if (duplicate.id != keepId) {
+							dao.delete(duplicate.id)
+						}
+					}
+				}
 			}
 		}
 	}
@@ -627,6 +724,19 @@ class GoogleDriveSyncRepository @Inject constructor(
 		}
 	}
 
+	private suspend fun localFeed(): List<SyncFeedEntry> {
+		val mangaCache = HashMap<Long, MangaBackup>()
+		return database.getTrackLogsDao().findAllForSync().mapNotNull { entity ->
+			val manga = mangaCache.getOrPut(entity.mangaId) {
+				database.getMangaDao().find(entity.mangaId)?.toBackup() ?: run {
+					Log.w(TAG, "sync: skipping feed entry(id=${entity.id}) — manga row missing")
+					return@mapNotNull null
+				}
+			}
+			SyncFeedEntry(entity, manga)
+		}
+	}
+
 	private fun MangaWithTags.toBackup(): MangaBackup = MangaBackup(this)
 
 	private fun dumpAppSettings(): Map<String, BackupPrimitive> {
@@ -653,7 +763,91 @@ class GoogleDriveSyncRepository @Inject constructor(
 	}
 
 	private suspend fun dumpMangaPrefs(): List<SyncMangaPrefs> =
-		database.getPreferencesDao().getOverrides().sortedBy { it.mangaId }.map(::SyncMangaPrefs)
+		database.getPreferencesDao().getOverrides().sortedBy { it.mangaId }.map { entity ->
+			val cover = readCustomCover(entity.coverUrlOverride)
+			SyncMangaPrefs(
+				entity = entity,
+				coverData = cover?.data,
+				coverFileExtension = cover?.extension,
+			)
+		}
+
+	private class EncodedCover(val data: String, val extension: String?)
+
+	private suspend fun readCustomCover(url: String?): EncodedCover? {
+		val uri = url?.toUriOrNull() ?: return null
+		if (!uri.isFileUri() && uri.scheme != "content") {
+			return null
+		}
+		return withContext(Dispatchers.IO) {
+			runCatching {
+				val bytes = if (uri.isFileUri()) {
+					uri.toFileOrNull()?.takeIf(File::isFile)?.readBytes()
+				} else {
+					context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+				} ?: return@runCatching null
+				val extension = uri.lastPathSegment
+					?.substringAfterLast('.', "")
+					?.takeIf { it.isSafeFileExtension() }
+					?: context.contentResolver.getType(uri)
+						?.toMimeTypeOrNull()
+						?.let(MimeTypes::getExtension)
+				EncodedCover(
+					data = Base64.encodeToString(bytes, Base64.NO_WRAP),
+					extension = extension,
+				)
+			}.onFailure {
+				Log.w(TAG, "sync: failed to read custom cover '$url'", it)
+			}.getOrNull()
+		}
+	}
+
+	private suspend fun materializeCover(pref: SyncMangaPrefs, previousUrl: String?): String? =
+		withContext(Dispatchers.IO) {
+			runCatching {
+				val bytes = Base64.decode(pref.coverData, Base64.DEFAULT)
+				val directory = context.getExternalFilesDir(COVERS_DIR) ?: return@runCatching null
+				if (!directory.exists() && !directory.mkdirs()) {
+					return@runCatching null
+				}
+				val digest = MessageDigest.getInstance("SHA-256")
+					.digest(bytes)
+					.take(12)
+					.joinToString("") { "%02x".format(it) }
+				val extension = pref.coverFileExtension
+					?.takeIf { it.isSafeFileExtension() }
+					?.let { ".$it" }
+					.orEmpty()
+				val destination = File(directory, "sync_${pref.mangaId}_$digest$extension")
+				if (!destination.isFile || !destination.readBytes().contentEquals(bytes)) {
+					destination.writeBytes(bytes)
+				}
+				deleteReplacedSyncedCover(previousUrl, destination)
+				destination.toUri().toString()
+			}.onFailure {
+				Log.w(TAG, "sync: failed to restore custom cover for manga ${pref.mangaId}", it)
+			}.getOrNull()
+		}
+
+	private fun deleteReplacedSyncedCover(previousUrl: String?, replacement: File) {
+		val previous = previousUrl?.toUriOrNull()?.toFileOrNull() ?: return
+		val coverDirectory = replacement.parentFile?.canonicalFile ?: return
+		val oldFile = runCatching { previous.canonicalFile }.getOrNull() ?: return
+		if (oldFile != replacement.canonicalFile &&
+			oldFile.parentFile == coverDirectory &&
+			oldFile.name.startsWith(SYNCED_COVER_PREFIX)
+		) {
+			oldFile.delete()
+		}
+	}
+
+	private fun String?.isPortableCoverUrl(): Boolean {
+		val uri = this?.toUriOrNull() ?: return true
+		return !uri.isFileUri() && uri.scheme != "content"
+	}
+
+	private fun String.isSafeFileExtension(): Boolean =
+		length in 1..10 && all { it.isLetterOrDigit() }
 
 	private fun Map<String, *>.mapNotNullValuesToBackup(): Map<String, BackupPrimitive> {
 		val out = LinkedHashMap<String, BackupPrimitive>(size)
@@ -696,9 +890,15 @@ class GoogleDriveSyncRepository @Inject constructor(
 		/** Max times to re-merge when another device writes the file mid-sync, before a best-effort write. */
 		const val MAX_CONFLICT_RETRIES = 3
 
+		const val COVERS_DIR = "covers"
+		const val SYNCED_COVER_PREFIX = "sync_"
+
 		val EXCLUDED_SETTINGS_KEYS = setOf(
 			AppSettings.KEY_APP_PASSWORD,
 			AppSettings.KEY_APP_PASSWORD_NUMERIC,
+			AppSettings.KEY_PROTECT_APP,
+			AppSettings.KEY_PROTECT_APP_TIMEOUT,
+			AppSettings.KEY_PROTECT_APP_BIOMETRIC,
 			AppSettings.KEY_PROXY_PASSWORD,
 			AppSettings.KEY_PROXY_LOGIN,
 			AppSettings.KEY_INCOGNITO_MODE,

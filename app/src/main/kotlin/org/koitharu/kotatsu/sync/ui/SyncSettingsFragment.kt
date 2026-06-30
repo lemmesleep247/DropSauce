@@ -100,6 +100,7 @@ class SyncSettingsFragment : BaseComposeSettingsFragment(R.string.google_drive_s
 					onIntervalChange = viewModel::setInterval,
 					onWifiOnlyChange = viewModel::setWifiOnly,
 					onSyncOnStartChange = viewModel::setSyncOnStart,
+					onDeletionSyncDisabledChange = viewModel::setDeletionSyncDisabled,
 					onContentChange = viewModel::setEnabledContent,
 					onToggleEmailHidden = viewModel::setEmailHidden,
 					onDeleteData = viewModel::deleteAllData,
@@ -148,6 +149,7 @@ private fun SyncScreen(
 	onIntervalChange: (Int) -> Unit,
 	onWifiOnlyChange: (Boolean) -> Unit,
 	onSyncOnStartChange: (Boolean) -> Unit,
+	onDeletionSyncDisabledChange: (Boolean) -> Unit,
 	onContentChange: (Set<String>) -> Unit,
 	onToggleEmailHidden: (Boolean) -> Unit,
 	onDeleteData: () -> Unit,
@@ -264,6 +266,16 @@ private fun SyncScreen(
 							checked = state.isSyncOnStart,
 							onCheckedChange = onSyncOnStartChange,
 							icon = R.drawable.ic_play,
+							shape = pos.shape,
+						)
+					}
+					item { pos ->
+						SwitchSettingsItem(
+							title = stringResource(R.string.sync_disable_deletion),
+							subtitle = stringResource(R.string.sync_disable_deletion_summary),
+							checked = state.isDeletionSyncDisabled,
+							onCheckedChange = onDeletionSyncDisabledChange,
+							icon = R.drawable.ic_lock,
 							shape = pos.shape,
 						)
 					}

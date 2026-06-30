@@ -36,8 +36,18 @@ abstract class TrackLogsDao : MangaQueryBuilder.ConditionCallback {
 	@Query("UPDATE track_logs SET unread = 0 WHERE id = :id")
 	abstract suspend fun markAsRead(id: Long)
 
+	/** All visible feed rows, used by cloud sync. */
+	@Query("SELECT * FROM track_logs")
+	abstract suspend fun findAllForSync(): List<TrackLogEntity>
+
+	@Query("SELECT DISTINCT manga_id FROM track_logs")
+	abstract suspend fun findMangaIds(): LongArray
+
 	@Insert(onConflict = OnConflictStrategy.REPLACE)
 	abstract suspend fun insert(entity: TrackLogEntity): Long
+
+	@Query("DELETE FROM track_logs WHERE id = :id")
+	abstract suspend fun delete(id: Long)
 
 	@Query("DELETE FROM track_logs WHERE manga_id NOT IN (SELECT manga_id FROM tracks)")
 	abstract suspend fun gc()

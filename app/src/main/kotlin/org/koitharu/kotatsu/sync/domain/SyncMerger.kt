@@ -6,6 +6,7 @@ import org.koitharu.kotatsu.backup.local.data.model.StatsBackup
 import org.koitharu.kotatsu.sync.data.model.SyncCategory
 import org.koitharu.kotatsu.sync.data.model.SyncConfig
 import org.koitharu.kotatsu.sync.data.model.SyncFavourite
+import org.koitharu.kotatsu.sync.data.model.SyncFeedEntry
 import org.koitharu.kotatsu.sync.data.model.SyncHistory
 import org.koitharu.kotatsu.sync.data.model.SyncSnapshot
 import org.koitharu.kotatsu.sync.data.model.SyncTrack
@@ -18,27 +19,86 @@ import org.koitharu.kotatsu.sync.data.model.SyncTrack
  */
 object SyncMerger {
 
-	fun mergeCategories(local: List<SyncCategory>, remote: List<SyncCategory>): List<SyncCategory> =
-		mergeBy(local, remote, key = { it.categoryId }, timestamp = { maxOf(it.createdAt, it.deletedAt) })
+	fun mergeCategories(
+		local: List<SyncCategory>,
+		remote: List<SyncCategory>,
+		propagateDeletions: Boolean = true,
+	): List<SyncCategory> = mergeBy(
+		local = local.filterDeleted(propagateDeletions) { it.deletedAt },
+		remote = remote.filterDeleted(propagateDeletions) { it.deletedAt },
+		key = { it.categoryId },
+		timestamp = { maxOf(it.createdAt, it.deletedAt) },
+	)
 
-	fun mergeFavourites(local: List<SyncFavourite>, remote: List<SyncFavourite>): List<SyncFavourite> =
+	fun mergeFavourites(
+		local: List<SyncFavourite>,
+		remote: List<SyncFavourite>,
+		propagateDeletions: Boolean = true,
+	): List<SyncFavourite> =
 		mergeBy(
-			local,
-			remote,
+			local.filterDeleted(propagateDeletions) { it.deletedAt },
+			remote.filterDeleted(propagateDeletions) { it.deletedAt },
 			key = { it.mangaId to it.categoryId },
 			timestamp = { maxOf(it.createdAt, it.deletedAt) },
 		)
 
-	fun mergeHistory(local: List<SyncHistory>, remote: List<SyncHistory>): List<SyncHistory> =
+	fun mergeHistory(
+		local: List<SyncHistory>,
+		remote: List<SyncHistory>,
+		propagateDeletions: Boolean = true,
+	): List<SyncHistory> =
 		mergeBy(
-			local,
-			remote,
+			local.filterDeleted(propagateDeletions) { it.deletedAt },
+			remote.filterDeleted(propagateDeletions) { it.deletedAt },
 			key = { it.mangaId },
 			timestamp = { maxOf(it.updatedAt, it.createdAt, it.deletedAt) },
 		)
 
 	fun mergeTracks(local: List<SyncTrack>, remote: List<SyncTrack>): List<SyncTrack> =
 		mergeBy(local, remote, key = { it.mangaId }, timestamp = { it.lastCheckTime })
+
+	/**
+	 * Feed ids are local-only. Events are instead identified by manga plus their normalized chapter
+	 * titles, so the same update detected independently on two devices still becomes one row.
+	 */
+	fun mergeFeed(local: List<SyncFeedEntry>, remote: List<SyncFeedEntry>): List<SyncFeedEntry> {
+		val merged = LinkedHashMap<String, SyncFeedEntry>(local.size + remote.size)
+		for (item in local + remote) {
+			val key = feedIdentity(item)
+			val existing = merged[key]
+			merged[key] = if (existing == null) {
+				item
+			} else {
+				SyncFeedEntry(
+					mangaId = existing.mangaId,
+					chapters = existing.chapters,
+					createdAt = listOf(existing.createdAt, item.createdAt)
+						.filter { it > 0L }
+						.minOrNull() ?: 0L,
+					// A read on either device converges to read on every device.
+					isUnread = existing.isUnread && item.isUnread,
+					manga = if (item.createdAt > existing.createdAt) item.manga else existing.manga,
+				)
+			}
+		}
+		return merged.values.toList()
+	}
+
+	fun feedIdentity(item: SyncFeedEntry): String = feedIdentity(item.mangaId, item.chapters)
+
+	fun feedIdentity(mangaId: Long, chapters: String): String = buildString {
+		append(mangaId)
+		append(':')
+		append(
+			chapters.lineSequence()
+				.map(String::trim)
+				.filter(String::isNotEmpty)
+				.map(String::lowercase)
+				.distinct()
+				.sorted()
+				.joinToString("\n"),
+		)
+	}
 
 	fun mergeStats(local: List<StatsBackup>, remote: List<StatsBackup>): List<StatsBackup> =
 		mergeBy(local, remote, key = { it.mangaId to it.startedAt }, timestamp = { it.startedAt })
@@ -105,6 +165,7 @@ object SyncMerger {
 			bookmarks = mergeBookmarks(a.bookmarks, b.bookmarks),
 			scrobblings = mergeScrobblings(a.scrobblings, b.scrobblings),
 			tracks = mergeTracks(a.tracks, b.tracks),
+			feed = mergeFeed(a.feed, b.feed),
 			stats = mergeStats(a.stats, b.stats),
 			config = config,
 		)
@@ -129,4 +190,9 @@ object SyncMerger {
 		}
 		return merged.values.toList()
 	}
+
+	private inline fun <T> List<T>.filterDeleted(
+		propagateDeletions: Boolean,
+		deletedAt: (T) -> Long,
+	): List<T> = if (propagateDeletions) this else filter { deletedAt(it) == 0L }
 }

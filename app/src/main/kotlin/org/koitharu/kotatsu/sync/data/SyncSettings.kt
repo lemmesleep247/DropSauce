@@ -59,6 +59,14 @@ class SyncSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_SYNC_ON_START, true)
 		set(value) = prefs.edit { putBoolean(KEY_SYNC_ON_START, value) }
 
+	/**
+	 * Keeps favorite/history deletions local instead of uploading them to other devices.
+	 * Enabled by default so an accidental deletion cannot fan out through sync.
+	 */
+	var isDeletionSyncDisabled: Boolean
+		get() = prefs.getBoolean(KEY_DISABLE_DELETION_SYNC, true)
+		set(value) = prefs.edit { putBoolean(KEY_DISABLE_DELETION_SYNC, value) }
+
 	var enabledContent: Set<String>
 		get() = prefs.getStringSet(KEY_CONTENT, null) ?: SyncContent.DEFAULT
 		set(value) = prefs.edit { putStringSet(KEY_CONTENT, value) }
@@ -102,6 +110,7 @@ class SyncSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_INTERVAL = "interval"
 		const val KEY_WIFI_ONLY = "wifi_only"
 		const val KEY_SYNC_ON_START = "sync_on_start"
+		const val KEY_DISABLE_DELETION_SYNC = "disable_deletion_sync"
 		const val KEY_CONTENT = "content"
 		private const val KEY_LAST_SYNC = "last_sync"
 		private const val KEY_LAST_ERROR = "last_error"

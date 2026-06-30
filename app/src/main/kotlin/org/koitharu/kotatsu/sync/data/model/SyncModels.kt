@@ -13,6 +13,7 @@ import org.koitharu.kotatsu.favourites.data.FavouriteCategoryEntity
 import org.koitharu.kotatsu.favourites.data.FavouriteEntity
 import org.koitharu.kotatsu.history.data.HistoryEntity
 import org.koitharu.kotatsu.tracker.data.TrackEntity
+import org.koitharu.kotatsu.tracker.data.TrackLogEntity
 
 /**
  * The full payload uploaded to / downloaded from Google Drive's appDataFolder. It always contains
@@ -31,14 +32,46 @@ class SyncSnapshot(
 	@SerialName("bookmarks") val bookmarks: List<BookmarkBackup> = emptyList(),
 	@SerialName("scrobblings") val scrobblings: List<ScrobblingBackup> = emptyList(),
 	@SerialName("tracks") val tracks: List<SyncTrack> = emptyList(),
+	@SerialName("feed") val feed: List<SyncFeedEntry> = emptyList(),
 	@SerialName("stats") val stats: List<StatsBackup> = emptyList(),
 	@SerialName("config") val config: SyncConfig? = null,
 ) {
 
 	companion object {
 
-		const val SCHEMA_VERSION = 1
+		const val SCHEMA_VERSION = 2
 	}
+}
+
+/**
+ * A visible entry in the new-chapters feed. Local database ids are deliberately not synced because
+ * they are auto-generated independently on every device. [mangaId] plus the normalized [chapters]
+ * list is the stable cross-device identity used by the merger.
+ */
+@Serializable
+class SyncFeedEntry(
+	@SerialName("manga_id") val mangaId: Long,
+	@SerialName("chapters") val chapters: String,
+	@SerialName("created_at") val createdAt: Long,
+	@SerialName("unread") val isUnread: Boolean,
+	@SerialName("manga") val manga: MangaBackup,
+) {
+
+	constructor(entity: TrackLogEntity, manga: MangaBackup) : this(
+		mangaId = entity.mangaId,
+		chapters = entity.chapters,
+		createdAt = entity.createdAt,
+		isUnread = entity.isUnread,
+		manga = manga,
+	)
+
+	fun toEntity(id: Long = 0L) = TrackLogEntity(
+		id = id,
+		mangaId = mangaId,
+		chapters = chapters,
+		createdAt = createdAt,
+		isUnread = isUnread,
+	)
 }
 
 @Serializable
@@ -209,10 +242,16 @@ class SyncMangaPrefs(
 	@SerialName("cf_book") val cfBookEffect: Boolean,
 	@SerialName("title_override") val titleOverride: String? = null,
 	@SerialName("cover_override") val coverUrlOverride: String? = null,
+	@SerialName("cover_data") val coverData: String? = null,
+	@SerialName("cover_extension") val coverFileExtension: String? = null,
 	@SerialName("content_rating_override") val contentRatingOverride: String? = null,
 ) {
 
-	constructor(entity: MangaPrefsEntity) : this(
+	constructor(
+		entity: MangaPrefsEntity,
+		coverData: String? = null,
+		coverFileExtension: String? = null,
+	) : this(
 		mangaId = entity.mangaId,
 		mode = entity.mode,
 		cfBrightness = entity.cfBrightness,
@@ -221,11 +260,13 @@ class SyncMangaPrefs(
 		cfGrayscale = entity.cfGrayscale,
 		cfBookEffect = entity.cfBookEffect,
 		titleOverride = entity.titleOverride,
-		coverUrlOverride = entity.coverUrlOverride,
+		coverUrlOverride = entity.coverUrlOverride.takeIf { coverData == null },
+		coverData = coverData,
+		coverFileExtension = coverFileExtension,
 		contentRatingOverride = entity.contentRatingOverride,
 	)
 
-	fun toEntity() = MangaPrefsEntity(
+	fun toEntity(resolvedCoverUrl: String? = coverUrlOverride) = MangaPrefsEntity(
 		mangaId = mangaId,
 		mode = mode,
 		cfBrightness = cfBrightness,
@@ -234,7 +275,7 @@ class SyncMangaPrefs(
 		cfGrayscale = cfGrayscale,
 		cfBookEffect = cfBookEffect,
 		titleOverride = titleOverride,
-		coverUrlOverride = coverUrlOverride,
+		coverUrlOverride = resolvedCoverUrl,
 		contentRatingOverride = contentRatingOverride,
 	)
 }

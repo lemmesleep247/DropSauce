@@ -28,6 +28,7 @@ data class SyncUiState(
 	val intervalMinutes: Int = 0,
 	val isWifiOnly: Boolean = false,
 	val isSyncOnStart: Boolean = false,
+	val isDeletionSyncDisabled: Boolean = true,
 	val enabledContent: Set<String> = SyncContent.DEFAULT,
 	val lastSyncTimestamp: Long = 0L,
 	val lastError: String? = null,
@@ -119,6 +120,11 @@ class SyncSettingsViewModel @Inject constructor(
 		refresh()
 	}
 
+	fun setDeletionSyncDisabled(value: Boolean) {
+		syncSettings.isDeletionSyncDisabled = value
+		refresh()
+	}
+
 	fun setEmailHidden(value: Boolean) {
 		syncSettings.isEmailHidden = value
 		refresh()
@@ -153,6 +159,7 @@ class SyncSettingsViewModel @Inject constructor(
 		intervalMinutes = syncSettings.intervalMinutes,
 		isWifiOnly = syncSettings.isWifiOnly,
 		isSyncOnStart = syncSettings.isSyncOnStart,
+		isDeletionSyncDisabled = syncSettings.isDeletionSyncDisabled,
 		enabledContent = syncSettings.enabledContent,
 		lastSyncTimestamp = syncSettings.lastSyncTimestamp,
 		lastError = syncSettings.lastSyncError,

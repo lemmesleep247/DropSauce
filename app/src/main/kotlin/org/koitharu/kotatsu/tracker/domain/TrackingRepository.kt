@@ -92,6 +92,20 @@ class TrackingRepository @Inject constructor(
 			.onStart { gcIfNotCalled() }
 	}
 
+	fun observeAllTracks(limit: Int, filterOptions: Set<ListFilterOption>): Flow<List<MangaTracking>> {
+		return db.getTracksDao().observeAllTracks(limit, filterOptions)
+			.mapItems {
+				MangaTracking(
+					manga = it.manga.toManga(it.tags.toMangaTags(), null),
+					lastChapterId = it.track.lastChapterId,
+					lastCheck = it.track.lastCheckTime.toInstantOrNull(),
+					lastChapterDate = it.track.lastChapterDate.toInstantOrNull(),
+					newChapters = it.track.newChapters,
+				)
+			}.distinctUntilChanged()
+			.onStart { gcIfNotCalled() }
+	}
+
 	suspend fun getLogsCount() = db.getTrackLogsDao().count()
 
 	suspend fun clearLogs() = db.getTrackLogsDao().clear()
@@ -109,11 +123,15 @@ class TrackingRepository @Inject constructor(
 	}
 
 	suspend fun saveUpdates(updates: MangaUpdates) {
+		val hasNewChapters = updates is MangaUpdates.Success &&
+			updates.isValid &&
+			updates.newChapters.isNotEmpty()
 		db.withTransaction {
 			val track = getOrCreateTrack(updates.manga.id).mergeWith(updates)
 			db.getTracksDao().upsert(track)
-			if (updates is MangaUpdates.Success && updates.isValid && updates.newChapters.isNotEmpty()) {
+			if (hasNewChapters) {
 				progressUpdateUseCase(updates.manga)
+				check(updates is MangaUpdates.Success)
 				val logEntity = TrackLogEntity(
 					mangaId = updates.manga.id,
 					chapters = updates.newChapters.joinToString("\n") { x -> x.title.orEmpty() },
@@ -122,6 +140,9 @@ class TrackingRepository @Inject constructor(
 				)
 				db.getTrackLogsDao().insert(logEntity)
 			}
+		}
+		if (hasNewChapters) {
+			settings.restoreFeedItem(updates.manga.id)
 		}
 	}
 

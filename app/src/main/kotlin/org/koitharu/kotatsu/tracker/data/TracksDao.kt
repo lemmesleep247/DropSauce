@@ -56,6 +56,17 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 			.build(),
 	)
 
+	fun observeAllTracks(
+		limit: Int,
+		filterOptions: Set<ListFilterOption>,
+	): Flow<List<MangaWithTrack>> = observeMangaImpl(
+		MangaQueryBuilder("tracks", this)
+			.filters(filterOptions)
+			.limit(limit)
+			.orderBy("last_chapter_date DESC")
+			.build(),
+	)
+
 	@Query("DELETE FROM tracks")
 	abstract suspend fun clear()
 

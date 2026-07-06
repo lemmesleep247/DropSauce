@@ -24,11 +24,19 @@ fun feedItemAD(
 	bind {
 		binding.imageViewCover.setImageAsync(item.imageUrl, item.manga.source)
 		binding.textViewTitle.text = item.title
-		binding.textViewSummary.text = context.resources.getQuantityStringSafe(
-			R.plurals.new_chapters,
-			item.count,
-			item.count,
-		)
+		binding.textViewSummary.text = if (item.showTotal) {
+			context.resources.getQuantityStringSafe(
+				R.plurals.total_chapters,
+				item.count,
+				item.count,
+			)
+		} else {
+			context.resources.getQuantityStringSafe(
+				R.plurals.new_chapters,
+				item.count,
+				item.count,
+			)
+		}
 		binding.textViewSummary.drawableStart = if (item.isNew) {
 			indicatorNew
 		} else {

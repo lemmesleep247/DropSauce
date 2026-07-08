@@ -37,6 +37,9 @@ abstract class MangaDao {
 	@Query("SELECT source_title FROM manga WHERE manga_id = :id")
 	abstract suspend fun findSourceTitle(id: Long): String?
 
+	@Query("SELECT details_updated_at FROM manga WHERE manga_id = :id")
+	abstract suspend fun getDetailsUpdatedAt(id: Long): Long?
+
 	@Transaction
 	@Query("SELECT * FROM manga WHERE source = :source")
 	abstract suspend fun findAllBySource(source: String): List<MangaWithTags>

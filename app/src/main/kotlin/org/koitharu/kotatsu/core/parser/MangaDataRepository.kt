@@ -152,8 +152,13 @@ class MangaDataRepository @Inject constructor(
 		manga: Manga,
 		replaceExisting: Boolean,
 		stripAppliedOverride: Boolean = true,
+		detailsFetched: Boolean = false,
 	) = db.withTransaction {
-		storeMangaLocked(manga, replaceExisting, stripAppliedOverride)
+		storeMangaLocked(manga, replaceExisting, stripAppliedOverride, detailsFetched)
+	}
+
+	suspend fun getDetailsUpdatedAt(mangaId: Long): Long {
+		return db.getMangaDao().getDetailsUpdatedAt(mangaId) ?: 0L
 	}
 
 	suspend fun gcChaptersCache() {
@@ -206,6 +211,7 @@ class MangaDataRepository @Inject constructor(
 		manga: Manga,
 		replaceExisting: Boolean,
 		stripAppliedOverride: Boolean = true,
+		detailsFetched: Boolean = false,
 	) {
 		val mangaDao = db.getMangaDao()
 		val existing = mangaDao.find(manga.id)?.manga
@@ -224,7 +230,10 @@ class MangaDataRepository @Inject constructor(
 		val sourceManga = manga.withoutAppliedOverride(existing, override)
 		val tags = sourceManga.tags.toEntities()
 		db.getTagsDao().upsert(tags)
-		mangaDao.upsert(sourceManga.toEntity(), tags)
+		val entity = sourceManga.toEntity().copy(
+			detailsUpdatedAt = if (detailsFetched) System.currentTimeMillis() else existing?.detailsUpdatedAt ?: 0L,
+		)
+		mangaDao.upsert(entity, tags)
 		if (!sourceManga.isLocal) {
 			sourceManga.chapters?.let { chapters ->
 				db.getChaptersDao().replaceAll(sourceManga.id, chapters.withIndex().toEntities(sourceManga.id))

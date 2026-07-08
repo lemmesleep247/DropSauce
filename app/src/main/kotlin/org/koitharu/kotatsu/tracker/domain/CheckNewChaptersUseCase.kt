@@ -126,11 +126,14 @@ class CheckNewChaptersUseCase @Inject constructor(
 
 	private suspend fun fetchDetails(manga: Manga): Manga {
 		val repo = mangaRepositoryFactory.create(manga.source)
-		return if (repo is CachingMangaRepository) {
+		val details = if (repo is CachingMangaRepository) {
 			repo.getDetails(manga, CachePolicy.WRITE_ONLY)
 		} else {
 			repo.getDetails(manga)
 		}
+		// Persist so opening the manga later shows cached details instead of a cold load
+		mangaDataRepository.storeManga(details, replaceExisting = true, stripAppliedOverride = false, detailsFetched = true)
+		return details
 	}
 
 	private fun compare(

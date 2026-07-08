@@ -115,7 +115,12 @@ class DetailsLoadUseCase @Inject constructor(
 				isLoaded = true,
 			)
 			if (remoteDetails != null) {
-				mangaDataRepository.storeManga(remoteDetails, replaceExisting = true, stripAppliedOverride = false)
+				mangaDataRepository.storeManga(
+					remoteDetails,
+					replaceExisting = true,
+					stripAppliedOverride = false,
+					detailsFetched = true,
+				)
 			}
 			emit(mangaDetails)
 		}
@@ -133,6 +138,22 @@ class DetailsLoadUseCase @Inject constructor(
 		override: MangaOverride?,
 		force: Boolean,
 	) = coroutineScope {
+		// Skip the background refresh entirely if details were fetched recently enough
+		// (either by opening this screen or by the new-chapters tracker) — the DB copy is fresh.
+		if (!force && !manga.chapters.isNullOrEmpty() &&
+			System.currentTimeMillis() - mangaDataRepository.getDetailsUpdatedAt(manga.id) < DETAILS_FRESHNESS_MS
+		) {
+			emit(
+				MangaDetails(
+					manga = manga,
+					localManga = localMangaRepository.findSavedManga(manga, withDetails = true),
+					override = override,
+					description = manga.description?.parseAsHtml(withImages = true),
+					isLoaded = true,
+				),
+			)
+			return@coroutineScope
+		}
 		val remoteDeferred = async {
 			getDetails(manga, force)
 		}
@@ -175,7 +196,12 @@ class DetailsLoadUseCase @Inject constructor(
 		// Commit the refreshed snapshot before exposing it as complete. Otherwise a process restart
 		// immediately after the UI updates can cancel this coroutine between emit() and the write,
 		// making the successfully loaded details disappear on the next open.
-		mangaDataRepository.storeManga(remoteDetails, replaceExisting = true, stripAppliedOverride = false)
+		mangaDataRepository.storeManga(
+			remoteDetails,
+			replaceExisting = true,
+			stripAppliedOverride = false,
+			detailsFetched = true,
+		)
 		emit(mangaDetails)
 	}
 
@@ -229,6 +255,11 @@ class DetailsLoadUseCase @Inject constructor(
 			parseAsHtml()
 		}.filterSpans().sanitize()
 	}.trim().nullIfEmpty()
+
+	private companion object {
+		// Don't auto-refresh details more often than this; pull-to-refresh always bypasses
+		val DETAILS_FRESHNESS_MS = java.util.concurrent.TimeUnit.HOURS.toMillis(12)
+	}
 
 	private fun Spanned.filterSpans(): Spanned {
 		val spannable = SpannableString.valueOf(this)

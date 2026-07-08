@@ -16,6 +16,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,7 +57,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -62,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
 import android.content.res.Configuration
@@ -144,7 +150,10 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 ReaderConfigContent()
             }
         }
-        binding.composeView.post { expandToContent() }
+        // Expand synchronously, before the enter animation starts — a post{} here caused a second
+        // settle (the sheet visibly lifted off and dropped back) because the expanded offset was
+        // computed one frame after the animation had already begun.
+        expandToContent()
     }
 
     private fun expandToContent() {
@@ -210,11 +219,18 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 
         val callback = remember { findParentCallback(Callback::class.java) }
 
+        // Capture the nav bar inset once: the reader toggles system bars while the sheet is open,
+        // and a live navigationBarsPadding() resize makes the shown sheet jump.
+        val navBarPadding = remember {
+            dialog?.window?.decorView?.let { decor ->
+                ViewCompat.getRootWindowInsets(decor)
+                    ?.getInsets(WindowInsetsCompat.Type.navigationBars())?.bottom
+            } ?: 0
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 12.dp),
+                .padding(bottom = 12.dp + with(LocalDensity.current) { navBarPadding.toDp() }),
         ) {
             Column(
                 modifier = Modifier
@@ -223,11 +239,21 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 // 1. Swipeable Pager Content
+                // No animateContentSize here: the sheet is fit-to-contents, so animating the body
+                // height re-settles the whole sheet while it is opening.
+                // The pager is pinned to the Read Mode page's height so swiping to the (otherwise
+                // shorter) Tools page never resizes the sheet; the tools grid stretches to fill it.
+                val density = LocalDensity.current
+                var pagerHeightPx by remember { mutableIntStateOf(0) }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .animateContentSize(
-                            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+                        .then(
+                            if (pagerHeightPx > 0) {
+                                Modifier.height(with(density) { pagerHeightPx.toDp() })
+                            } else {
+                                Modifier
+                            },
                         ),
                 ) {
                     HorizontalPager(
@@ -240,7 +266,8 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .verticalScroll(rememberScrollState()),
+                                        .verticalScroll(rememberScrollState())
+                                        .onSizeChanged { pagerHeightPx = it.height },
                                     verticalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
                                     ReadModeSection(
@@ -281,8 +308,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             1 -> { // Info & Tools Page
                                 Column(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .verticalScroll(rememberScrollState())
+                                        .fillMaxSize()
                                         .padding(horizontal = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
@@ -330,6 +356,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                             router.openReaderSettings()
                                             dismissAllowingStateLoss()
                                         },
+                                        modifier = Modifier.weight(1f),
                                     )
 
                                     Spacer(modifier = Modifier.height(84.dp))
@@ -745,6 +772,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         onColorFilterClick: () -> Unit,
         onBookmarkClick: () -> Unit,
         onSettingsClick: () -> Unit,
+        modifier: Modifier = Modifier,
     ) {
         // Determine rotation values
         val rotationTitle = if (isAutoRotationEnabled) {
@@ -758,51 +786,66 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             R.drawable.ic_screen_rotation
         }
         val isRotationChecked = isAutoRotationEnabled && isOrientationLocked
+        // Rows share the page height equally so this page matches the Read Mode page exactly.
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // Row 1: Save Page, Rotation (Pills)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ToolPillCard(
                     icon = R.drawable.ic_save,
                     label = stringResource(R.string.save_page),
                     onClick = onSaveClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 )
                 ToolPillCard(
                     icon = rotationIcon,
                     label = stringResource(rotationTitle),
                     onClick = onOrientationClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 )
             }
 
             // Row 2: Scroll Timer, Color correction (Squares)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ToolGridCard(
                     icon = R.drawable.ic_timer,
                     label = stringResource(R.string.automatic_scroll),
                     onClick = onScrollTimerClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 )
                 ToolGridCard(
                     icon = R.drawable.ic_appearance,
                     label = stringResource(R.string.color_correction),
                     onClick = onColorFilterClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 )
             }
 
             // Row 3: Settings Card (Wide) | Bookmark Button (Round)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ToolWideCard(
@@ -810,16 +853,20 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     title = stringResource(R.string.settings),
                     subtitle = "Advanced reader options",
                     onClick = onSettingsClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 )
                 ToolGridCard(
                     icon = if (isBookmarkAdded) R.drawable.ic_bookmark_checked else R.drawable.ic_bookmark,
                     label = null,
                     checked = isBookmarkAdded,
                     onClick = onBookmarkClick,
-                    modifier = Modifier.size(96.dp),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .aspectRatio(1f),
                     shape = CircleShape,
-                    iconSize = 36.dp,
+                    iconSize = 42.dp,
                 )
             }
         }
@@ -857,7 +904,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             shape = RoundedCornerShape(24.dp),
             color = containerColor,
             contentColor = contentColor,
-            modifier = modifier.height(96.dp),
+            modifier = modifier.heightIn(min = 96.dp),
         ) {
             Row(
                 modifier = Modifier
@@ -868,7 +915,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 Icon(
                     painter = painterResource(icon),
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(32.dp),
                     tint = iconColor,
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -907,7 +954,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         onClick: () -> Unit,
         modifier: Modifier = Modifier,
         shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(24.dp),
-        iconSize: androidx.compose.ui.unit.Dp = 28.dp,
+        iconSize: androidx.compose.ui.unit.Dp = 32.dp,
     ) {
         val containerColor = if (checked) {
             MaterialTheme.colorScheme.primaryContainer
@@ -932,7 +979,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             shape = shape,
             color = containerColor,
             contentColor = contentColor,
-            modifier = modifier.height(96.dp),
+            modifier = modifier.heightIn(min = 96.dp),
         ) {
             Column(
                 modifier = Modifier
@@ -974,7 +1021,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             shape = RoundedCornerShape(48.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            modifier = modifier.height(96.dp),
+            modifier = modifier.heightIn(min = 96.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -990,7 +1037,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     Icon(
                         painter = painterResource(icon),
                         contentDescription = label,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(4.dp))

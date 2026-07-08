@@ -36,11 +36,12 @@
 
 		<ImageView
 			android:id="@+id/imageView_pin"
-			android:layout_width="22dp"
-			android:layout_height="22dp"
+			android:layout_width="26dp"
+			android:layout_height="26dp"
 			android:layout_margin="@dimen/card_indicator_offset"
 			android:background="@drawable/bg_pin_badge"
 			android:padding="4dp"
+			app:tint="@android:color/white"
 			android:src="@drawable/ic_pin_small"
 			android:visibility="gone"
 			app:layout_constraintEnd_toEndOf="@id/imageView_cover"

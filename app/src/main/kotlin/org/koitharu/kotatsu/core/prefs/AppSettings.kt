@@ -709,6 +709,17 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getEnumValue(KEY_FAVORITES_ORDER, ListSortOrder.NEWEST)
 		set(value) = prefs.edit { putEnumValue(KEY_FAVORITES_ORDER, value) }
 
+	// comma-joined in pin order, oldest pin first
+	fun getPinnedFavourites(categoryId: Long): List<Long> =
+		prefs.getString(KEY_FAVORITES_PINNED + categoryId, null)
+			?.split(',')
+			?.mapNotNull { it.toLongOrNull() }
+			.orEmpty()
+
+	fun setPinnedFavourites(categoryId: Long, ids: List<Long>) {
+		prefs.edit { putString(KEY_FAVORITES_PINNED + categoryId, ids.joinToString(",")) }
+	}
+
 	val isRelatedMangaEnabled: Boolean
 		get() = prefs.getBoolean(KEY_RELATED_MANGA, true)
 
@@ -1000,6 +1011,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_LOCAL_LIST_ORDER = "local_order"
 		const val KEY_HISTORY_ORDER = "history_order"
 		const val KEY_FAVORITES_ORDER = "fav_order"
+		const val KEY_FAVORITES_PINNED = "fav_pinned_order_"
 		const val KEY_WEBTOON_GAPS = "webtoon_gaps"
 		const val KEY_WEBTOON_ZOOM = "webtoon_zoom"
 		const val KEY_WEBTOON_ZOOM_OUT = "webtoon_zoom_out"

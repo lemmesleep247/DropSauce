@@ -6,14 +6,18 @@ import org.koitharu.kotatsu.list.ui.ListModelDiffCallback
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
+import org.koitharu.kotatsu.tracker.domain.model.TrackingLogItem
 
 data class FeedItem(
 	val id: Long,
 	private val override: MangaOverride?,
 	val manga: Manga,
-	val count: Int,
+	val chapters: List<TrackingLogItem.Chapter>,
 	val isNew: Boolean,
 ) : ListModel {
+
+	val count: Int
+		get() = chapters.size
 
 	val imageUrl: String?
 		get() = override?.coverUrl.ifNullOrEmpty { manga.coverUrl }

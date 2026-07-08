@@ -54,8 +54,11 @@ class ActionModeDelegate(
 			// "split top bar" that flickered on selection. We keep the status bar transparent and let
 			// the bar paint the whole area in the window background, matching every other top bar.
 			val actionModeColor = backgroundColorResolver(window)
+			// Ignore visibility: with the "hide status bar" setting the rest of the UI still lays out
+			// with the status-bar height (see BaseActivity.setContentView), so the bar must too —
+			// otherwise it collapses to y=0 and AppCompat's status guard paints over it.
 			val statusBarHeight = ViewCompat.getRootWindowInsets(window.decorView)
-				?.getInsets(WindowInsetsCompat.Type.statusBars())?.top ?: 0
+				?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars())?.top ?: 0
 			window.decorView.findViewById<ActionBarContextView?>(androidx.appcompat.R.id.action_mode_bar)?.apply {
 				applyEdgeToEdgeActionMode(color = actionModeColor, statusBarHeight = statusBarHeight)
 				keepActionModeEdgeToEdge(mode, color = actionModeColor, statusBarHeight = statusBarHeight)

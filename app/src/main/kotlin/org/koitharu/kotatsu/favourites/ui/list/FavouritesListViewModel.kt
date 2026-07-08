@@ -35,6 +35,10 @@ import org.koitharu.kotatsu.list.domain.QuickFilterListener
 import org.koitharu.kotatsu.list.ui.MangaListViewModel
 import org.koitharu.kotatsu.list.ui.model.EmptyState
 import org.koitharu.kotatsu.list.ui.model.ListModel
+import org.koitharu.kotatsu.list.ui.model.MangaCompactListModel
+import org.koitharu.kotatsu.list.ui.model.MangaDetailedListModel
+import org.koitharu.kotatsu.list.ui.model.MangaGridModel
+import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.list.ui.model.toErrorState
 import org.koitharu.kotatsu.parsers.model.Manga
@@ -53,7 +57,7 @@ class FavouritesListViewModel @Inject constructor(
 	private val mangaListMapper: MangaListMapper,
 	private val markAsReadUseCase: MarkAsReadUseCase,
 	quickFilterFactory: FavoritesListQuickFilter.Factory,
-	settings: AppSettings,
+	private val settings: AppSettings,
 	mangaDataRepository: MangaDataRepository,
 	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>,
 ) : MangaListViewModel(settings, mangaDataRepository, localStorageChanges), QuickFilterListener {
@@ -77,13 +81,24 @@ class FavouritesListViewModel @Inject constructor(
 			.map { it?.order }
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, null)
 
+	val pinnedIds: StateFlow<List<Long>> = settings.observeAsFlow(
+		AppSettings.KEY_FAVORITES_PINNED + categoryId,
+	) {
+		getPinnedFavourites(categoryId)
+	}.stateIn(
+		viewModelScope + Dispatchers.Default,
+		SharingStarted.Eagerly,
+		settings.getPinnedFavourites(categoryId),
+	)
+
 	override val content = combine(
 		observeFavorites(),
 		quickFilter.appliedOptions,
 		observeListModeWithTriggers(),
 		refreshTrigger,
-	) { list, filters, mode, _ ->
-		list.mapList(mode, filters)
+		pinnedIds,
+	) { list, filters, mode, _, pinned ->
+		list.mapList(mode, filters, pinned.takeIfDefaultState(filters))
 	}.distinctUntilChanged().onEach {
 		isPaginationReady.set(true)
 	}.catch {
@@ -139,7 +154,11 @@ class FavouritesListViewModel @Inject constructor(
 		}
 	}
 
-	private suspend fun List<Manga>.mapList(mode: ListMode, filters: Set<ListFilterOption>): List<ListModel> {
+	private suspend fun List<Manga>.mapList(
+		mode: ListMode,
+		filters: Set<ListFilterOption>,
+		pinned: List<Long>,
+	): List<ListModel> {
 		if (isEmpty()) {
 			return if (filters.isEmpty()) {
 				listOf(getEmptyState(hasFilters = false))
@@ -150,7 +169,32 @@ class FavouritesListViewModel @Inject constructor(
 		val result = ArrayList<ListModel>(size + 1)
 		quickFilter.filterItem(filters)?.let(result::add)
 		mangaListMapper.toListModelList(result, this, mode, MangaListMapper.NO_FAVORITE)
+		if (pinned.isNotEmpty()) {
+			val pinnedSet = pinned.toSet()
+			for (i in result.indices) {
+				val model = result[i]
+				if (model !is MangaListModel || model.manga.id !in pinnedSet) {
+					continue
+				}
+				result[i] = when (model) {
+					is MangaGridModel -> model.copy(isPinned = true)
+					is MangaDetailedListModel -> model.copy(isPinned = true)
+					is MangaCompactListModel -> model.copy(isPinned = true)
+					else -> model
+				}
+			}
+		}
 		return result
+	}
+
+	fun setPinned(ids: Set<Long>, isPinned: Boolean) {
+		val current = settings.getPinnedFavourites(categoryId)
+		val updated = if (isPinned) {
+			current + (ids - current.toSet()) // append new pins, keep pin order
+		} else {
+			current - ids
+		}
+		settings.setPinnedFavourites(categoryId, updated)
 	}
 
 	private fun observeFavorites() = if (categoryId == NO_ID) {
@@ -158,15 +202,24 @@ class FavouritesListViewModel @Inject constructor(
 			sortOrder.filterNotNull(),
 			quickFilter.appliedOptions.combineWithSettings(),
 			limit,
-		) { order, filters, limit ->
+			pinnedIds,
+		) { order, filters, limit, pinned ->
 			isPaginationReady.set(false)
-			repository.observeAll(order, filters, limit)
+			repository.observeAll(order, filters, limit, pinned.takeIfDefaultState(filters))
 		}.flattenLatest()
 	} else {
-		combine(quickFilter.appliedOptions.combineWithSettings(), limit) { filters, limit ->
-			repository.observeAll(categoryId, filters, limit)
+		combine(
+			quickFilter.appliedOptions.combineWithSettings(),
+			limit,
+			pinnedIds,
+		) { filters, limit, pinned ->
+			repository.observeAll(categoryId, filters, limit, pinned.takeIfDefaultState(filters))
 		}.flattenLatest()
 	}
+
+	// Pins apply only in the default (unfiltered) state; the global SFW option is a setting, not a user filter
+	private fun List<Long>.takeIfDefaultState(filters: Set<ListFilterOption>): List<Long> =
+		if (filters.all { it == ListFilterOption.SFW }) this else emptyList()
 
 	private fun getEmptyState(hasFilters: Boolean) = if (hasFilters) {
 		EmptyState(

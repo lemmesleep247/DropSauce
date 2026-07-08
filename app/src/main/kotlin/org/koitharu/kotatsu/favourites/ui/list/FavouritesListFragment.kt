@@ -63,8 +63,28 @@ class FavouritesListFragment : MangaListFragment(), PopupMenu.OnMenuItemClickLis
 		return super.onCreateActionMode(controller, menuInflater, menu)
 	}
 
+	override fun onPrepareActionMode(controller: ListSelectionController, mode: ActionMode?, menu: Menu): Boolean {
+		val pinned = viewModel.pinnedIds.value
+		val ids = selectedItemsIds
+		menu.findItem(R.id.action_pin)?.isVisible = ids.isNotEmpty() && ids.none { it in pinned }
+		menu.findItem(R.id.action_unpin)?.isVisible = ids.isNotEmpty() && ids.all { it in pinned }
+		return super.onPrepareActionMode(controller, mode, menu)
+	}
+
 	override fun onActionItemClicked(controller: ListSelectionController, mode: ActionMode?, item: MenuItem): Boolean {
 		return when (item.itemId) {
+			R.id.action_pin -> {
+				viewModel.setPinned(selectedItemsIds, true)
+				mode?.finish()
+				true
+			}
+
+			R.id.action_unpin -> {
+				viewModel.setPinned(selectedItemsIds, false)
+				mode?.finish()
+				true
+			}
+
 			R.id.action_remove -> {
 				viewModel.removeFromFavourites(selectedItemsIds)
 				mode?.finish()

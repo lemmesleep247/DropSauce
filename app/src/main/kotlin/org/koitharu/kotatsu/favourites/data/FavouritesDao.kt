@@ -51,8 +51,9 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	fun observeAll(
 		order: ListSortOrder,
 		filterOptions: Set<ListFilterOption>,
-		limit: Int
-	): Flow<List<FavouriteManga>> = observeAll(0L, order, filterOptions, limit)
+		limit: Int,
+		pinned: List<Long> = emptyList(),
+	): Flow<List<FavouriteManga>> = observeAll(0L, order, filterOptions, limit, pinned)
 
 	@Transaction
 	@Query("SELECT * FROM favourites WHERE deleted_at = 0 ORDER BY created_at DESC LIMIT :limit OFFSET :offset")
@@ -75,7 +76,8 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 		categoryId: Long,
 		order: ListSortOrder,
 		filterOptions: Set<ListFilterOption>,
-		limit: Int
+		limit: Int,
+		pinned: List<Long> = emptyList(),
 	): Flow<List<FavouriteManga>> = observeAllImpl(
 		MangaQueryBuilder(TABLE_FAVOURITES, this)
 			.join("LEFT JOIN manga ON favourites.manga_id = manga.manga_id")
@@ -89,7 +91,7 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 			)
 			.filters(filterOptions)
 			.groupBy("favourites.manga_id")
-			.orderBy(getOrderBy(order))
+			.orderBy(getOrderBy(order, pinned))
 			.limit(limit)
 			.build(),
 	)
@@ -226,6 +228,20 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 
 	@Query("UPDATE favourites SET deleted_at = :deletedAt WHERE category_id = :categoryId AND deleted_at = 0")
 	protected abstract suspend fun setDeletedAtAll(categoryId: Long, deletedAt: Long)
+
+	private fun getOrderBy(sortOrder: ListSortOrder, pinned: List<Long>): String {
+		val orderBy = getOrderBy(sortOrder)
+		if (pinned.isEmpty()) {
+			return orderBy
+		}
+		// pinned items first, in pin order, regardless of the selected sort
+		val case = buildString {
+			append("CASE favourites.manga_id")
+			pinned.forEachIndexed { i, id -> append(" WHEN $id THEN $i") }
+			append(" ELSE ${pinned.size} END")
+		}
+		return "$case, $orderBy"
+	}
 
 	private fun getOrderBy(sortOrder: ListSortOrder) = when (sortOrder) {
 		ListSortOrder.RATING -> "manga.rating DESC"

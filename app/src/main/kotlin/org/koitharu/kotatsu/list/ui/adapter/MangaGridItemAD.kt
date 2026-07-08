@@ -72,9 +72,11 @@ fun mangaGridItemAD(
 		binding.viewScrim.isVisible = isTitleOverCover
 		binding.textViewTitle.isVisible = !item.isTitleHidden && !isTitleOverCover
 		binding.progressView.setProgress(item.progress, PAYLOAD_PROGRESS_CHANGED in payloads)
+		binding.imageViewPin.isVisible = item.isPinned
 		// Pill goes top-right when the title is inside the cover, bottom-right when it's below it.
-		binding.progressView.updateLayoutParams<FrameLayout.LayoutParams> {
-			gravity = Gravity.END or if (isTitleOverCover) Gravity.TOP else Gravity.BOTTOM
+		// A pin badge always sits top-right, dragging the pill up with it.
+		binding.layoutIndicators.updateLayoutParams<FrameLayout.LayoutParams> {
+			gravity = Gravity.END or if (isTitleOverCover || item.isPinned) Gravity.TOP else Gravity.BOTTOM
 		}
 		with(binding.iconsView) {
 			clearIcons()

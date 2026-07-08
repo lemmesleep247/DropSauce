@@ -14,6 +14,7 @@ import android.view.WindowManager
 import androidx.activity.viewModels
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -432,8 +433,13 @@ class ReaderActivity :
             rightMargin = systemBars.right
             leftMargin = systemBars.left
         }
+        // The info bar must hug the real top edge: BaseActivity inflates the top inset with the
+        // hidden status bar's height (so toolbars keep their place), but this bar replaces the
+        // status bar, so pad it with the actual visible inset only.
         viewBinding.infoBar.updatePadding(
-            top = systemBars.top,
+            top = ViewCompat.getRootWindowInsets(v)
+                ?.getInsets(WindowInsetsCompat.Type.systemBars())?.top
+                ?: systemBars.top,
         )
         val innerInsets = Insets.of(
             systemBars.left,

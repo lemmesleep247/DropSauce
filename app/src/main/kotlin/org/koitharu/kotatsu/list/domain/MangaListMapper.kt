@@ -81,7 +81,7 @@ class MangaListMapper @Inject constructor(
 	suspend fun toFeedItem(logItem: TrackingLogItem) = FeedItem(
 		id = logItem.id,
 		override = dataRepository.getOverride(logItem.manga.id),
-		count = logItem.chapters.size,
+		chapters = logItem.chapters,
 		manga = logItem.manga,
 		isNew = logItem.isNew,
 	)

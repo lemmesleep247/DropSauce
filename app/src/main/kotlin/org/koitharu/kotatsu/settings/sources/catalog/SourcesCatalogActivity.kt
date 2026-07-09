@@ -115,6 +115,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			} else {
 				viewModel.clearExtensionInProgress(downloadRequestsById.remove(downloadId)?.packageName)
 				removeDownloadedApk(downloadId)
+				Toast.makeText(this, R.string.extension_download_failed, Toast.LENGTH_LONG).show()
 			}
 			settings.pendingExtensionDownloads = pendingInstallerDownloads
 			processDownloadedInstallerQueue()
@@ -744,6 +745,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		val pendingSnapshot = pendingInstallerDownloads.toLongArray()
 		val query = DownloadManager.Query().setFilterById(*pendingSnapshot)
 		val cursor = downloadManager.query(query) ?: return
+		var anyFailed = false
 		cursor.use {
 			val idColumn = it.getColumnIndex(DownloadManager.COLUMN_ID)
 			val statusColumn = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
@@ -758,10 +760,14 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 				} else if (status == DownloadManager.STATUS_FAILED) {
 					viewModel.clearExtensionInProgress(downloadRequestsById.remove(id)?.packageName)
 					removeDownloadedApk(id)
+					anyFailed = true
 				} else {
 					pendingInstallerDownloads += id
 				}
 			}
+		}
+		if (anyFailed) {
+			Toast.makeText(this, R.string.extension_download_failed, Toast.LENGTH_LONG).show()
 		}
 		settings.pendingExtensionDownloads = pendingInstallerDownloads
 		processDownloadedInstallerQueue()

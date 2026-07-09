@@ -438,6 +438,7 @@
     <string name="scrobbling_empty_hint">To track reading progress, select Menu -> Track on the manga details screen.</string>
     <string name="services">Services</string>
     <string name="download_started">Download started</string>
+    <string name="extension_download_failed">Extension download failed. Check your connection and try again.</string>
     <string name="got_it">Got it</string>
     <string name="user_agent">UserAgent header</string>
     <string name="settings_apply_restart_required">Please restart the application to apply these changes</string>

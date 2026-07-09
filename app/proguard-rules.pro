@@ -33,6 +33,15 @@
 -keep class org.koitharu.kotatsu.**Fragment { *; }
 
 # ============================================================
+# Shizuku user service
+# Instantiated via Class.newInstance() by Shizuku's ServiceStarter
+# in a separate process; the app never references its constructor
+# or methods directly, so R8 would otherwise strip them and the
+# service process dies with InstantiationException.
+# ============================================================
+-keep class org.koitharu.kotatsu.extensions.install.shizuku.** { *; }
+
+# ============================================================
 # Mihon Extension Support
 # Extensions are separate APKs loaded at runtime via
 # ChildFirstPathClassLoader. They depend on these host classes.

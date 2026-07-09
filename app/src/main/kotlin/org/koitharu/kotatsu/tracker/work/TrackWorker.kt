@@ -361,6 +361,10 @@ class TrackWorker @AssistedInject constructor(
 			workManager.enqueue(request)
 		}
 
+		fun stopNow() {
+			workManager.cancelAllWorkByTag(TAG_ONESHOT)
+		}
+
 		fun observeIsRunning(): Flow<Boolean> {
 			val query = WorkQuery.Builder.fromTags(listOf(TAG, TAG_ONESHOT)).build()
 			return workManager.getWorkInfosFlow(query)

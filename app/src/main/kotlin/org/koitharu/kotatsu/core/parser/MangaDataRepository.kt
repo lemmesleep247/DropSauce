@@ -78,6 +78,18 @@ class MangaDataRepository @Inject constructor(
 		return db.getPreferencesDao().find(mangaId)?.getColorFilterOrNull()
 	}
 
+	suspend fun isScanlatorsMerged(mangaId: Long): Boolean {
+		return db.getPreferencesDao().find(mangaId)?.mergeScanlators == true
+	}
+
+	suspend fun setScanlatorsMerged(manga: Manga, isMerged: Boolean) {
+		db.withTransaction {
+			storeMangaLocked(manga, replaceExisting = false)
+			val entity = db.getPreferencesDao().find(manga.id) ?: newEntity(manga.id)
+			db.getPreferencesDao().upsert(entity.copy(mergeScanlators = isMerged))
+		}
+	}
+
 	suspend fun getOverride(mangaId: Long): MangaOverride? {
 		return db.getPreferencesDao().find(mangaId)?.getOverrideOrNull()
 	}
@@ -323,5 +335,6 @@ class MangaDataRepository @Inject constructor(
 		titleOverride = null,
 		coverUrlOverride = null,
 		contentRatingOverride = null,
+		mergeScanlators = false,
 	)
 }

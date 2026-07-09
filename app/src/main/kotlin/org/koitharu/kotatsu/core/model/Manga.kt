@@ -108,6 +108,28 @@ fun Manga.getPreferredBranch(history: MangaHistory?): String? {
 	return groups.maxByOrNull { it.value.size }?.key
 }
 
+/**
+ * Merge all branches (scanlators/translations) into a single one, Mihon-style:
+ * the manga behaves as a single entity with one combined chapter list.
+ */
+fun Manga.withMergedBranches(): Manga {
+	val merged = chapters?.mergedBranches() ?: return this
+	return if (merged === chapters) this else copy(chapters = merged)
+}
+
+fun List<MangaChapter>.mergedBranches(): List<MangaChapter> {
+	if (isEmpty() || all { it.branch == null }) {
+		return this
+	}
+	val merged = map { it.copy(branch = null) }
+	// sort only when every chapter carries a number; otherwise keep the concatenated order
+	return if (merged.all { it.number > 0f }) {
+		merged.sortedWith(compareBy({ it.volume }, { it.number }))
+	} else {
+		merged
+	}
+}
+
 val Manga.isLocal: Boolean
 	get() = source == LocalMangaSource
 

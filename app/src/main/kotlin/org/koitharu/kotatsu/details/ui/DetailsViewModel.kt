@@ -85,6 +85,7 @@ class DetailsViewModel @Inject constructor(
 	downloadScheduler = downloadScheduler,
 	deleteLocalMangaUseCase = deleteLocalMangaUseCase,
 	localStorageChanges = localStorageChanges,
+	mangaDataRepository = mangaDataRepository,
 ) {
 
 	private val intent = MangaIntent(savedStateHandle)
@@ -215,7 +216,7 @@ class DetailsViewModel @Inject constructor(
 			.launchIn(viewModelScope + Dispatchers.Default)
 	}
 
-	fun reload() {
+	override fun reload() {
 		loadingJob.cancel()
 		loadingJob = doLoad(force = true)
 	}

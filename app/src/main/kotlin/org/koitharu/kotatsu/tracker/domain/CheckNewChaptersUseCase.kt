@@ -5,6 +5,7 @@ import coil3.request.CachePolicy
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
+import org.koitharu.kotatsu.core.model.withMergedBranches
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -52,7 +53,9 @@ class CheckNewChaptersUseCase @Inject constructor(
 	suspend operator fun invoke(manga: Manga, currentChapterId: Long) = mutex.withLock(manga.id) {
 		runCatchingCancellable {
 			repository.updateTracks()
-			val details = getFullManga(manga)
+			val details = getFullManga(manga).let {
+				if (mangaDataRepository.isScanlatorsMerged(manga.id)) it.withMergedBranches() else it
+			}
 			val track = repository.getTrackOrNull(manga) ?: return@withLock
 			val branch = checkNotNull(details.chapters?.findById(currentChapterId)).branch
 			val chapters = details.getChapters(branch)
@@ -78,17 +81,18 @@ class CheckNewChaptersUseCase @Inject constructor(
 	}
 
 	private suspend fun invokeImpl(track: MangaTracking): MangaUpdates = runCatchingCancellable {
+		val isMerged = mangaDataRepository.isScanlatorsMerged(track.manga.id)
 		val cachedChapters = mangaDataRepository.findMangaById(track.manga.id, withChapters = true)
 			?.chapters
 			.orEmpty()
-		val details = getFullManga(track.manga)
-		val branch = getBranch(details, track.lastChapterId)
+		val details = getFullManga(track.manga).let { if (isMerged) it.withMergedBranches() else it }
+		val branch = if (isMerged) null else getBranch(details, track.lastChapterId)
 		compare(
 			track = track,
 			manga = details,
 			branch = branch,
 			cachedChapterIds = cachedChapters.asSequence()
-				.filter { it.branch == branch }
+				.filter { isMerged || it.branch == branch }
 				.mapTo(HashSet()) { it.id },
 		)
 	}.getOrElse { error ->

@@ -8,6 +8,7 @@ import android.text.style.RelativeSizeSpan
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -285,6 +286,14 @@ class ChipsView @JvmOverloads constructor(
 				val chipSize = defaultChipMinHeight
 				val iconSize = resources.getDimension(materialR.dimen.m3_chip_icon_size)
 				val horizontalPadding = (chipSize - iconSize) / 2f
+				// fixed square width: minWidth alone lets a recycled chip keep a wider intrinsic
+				// width from its previous text state, rendering wide with the icon pinned left
+				layoutParams?.let { lp ->
+					if (lp.width != chipSize.toInt()) {
+						lp.width = chipSize.toInt()
+						layoutParams = lp
+					}
+				}
 				minimumWidth = chipSize.toInt()
 				minWidth = chipSize.toInt()
 				minimumHeight = chipSize.toInt()
@@ -298,6 +307,12 @@ class ChipsView @JvmOverloads constructor(
 				textStartPadding = 0f
 				textEndPadding = 0f
 			} else {
+				layoutParams?.let { lp ->
+					if (lp.width != ViewGroup.LayoutParams.WRAP_CONTENT) {
+						lp.width = ViewGroup.LayoutParams.WRAP_CONTENT
+						layoutParams = lp
+					}
+				}
 				minimumWidth = defaultMinimumWidth
 				minWidth = defaultMinWidth
 				minimumHeight = defaultMinimumHeight

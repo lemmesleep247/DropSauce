@@ -25,9 +25,19 @@ class FeedMenuProvider(
 		menuInflater.inflate(R.menu.opt_feed, menu)
 	}
 
+	override fun onPrepareMenu(menu: Menu) {
+		menu.findItem(R.id.action_update)?.setTitle(
+			if (viewModel.isRunning.value) R.string.stop_update else R.string.update,
+		)
+	}
+
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
 		R.id.action_update -> {
-			viewModel.update()
+			if (viewModel.isRunning.value) {
+				viewModel.stopUpdate()
+			} else {
+				viewModel.update()
+			}
 			true
 		}
 

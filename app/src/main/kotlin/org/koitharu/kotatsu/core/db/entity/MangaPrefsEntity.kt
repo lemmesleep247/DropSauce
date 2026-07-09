@@ -30,4 +30,5 @@ data class MangaPrefsEntity(
 	@ColumnInfo(name = "title_override") val titleOverride: String?,
 	@ColumnInfo(name = "cover_override") val coverUrlOverride: String?,
 	@ColumnInfo(name = "content_rating_override") val contentRatingOverride: String?,
+	@ColumnInfo(name = "merge_scanlators", defaultValue = "0") val mergeScanlators: Boolean = false,
 )

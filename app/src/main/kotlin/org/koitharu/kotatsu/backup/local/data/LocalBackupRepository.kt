@@ -21,6 +21,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeToSequence
 import kotlinx.serialization.json.encodeToStream
 import kotlinx.serialization.serializer
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.backup.local.data.model.BackupIndex
 import org.koitharu.kotatsu.backup.local.data.model.BackupPrimitive
 import org.koitharu.kotatsu.backup.local.data.model.BookmarkBackup
@@ -195,8 +196,14 @@ class LocalBackupRepository @Inject constructor(
 						getHistoryDao().upsert(it.toEntity())
 					}
 
-					BackupSection.CATEGORIES -> input.readJsonArray<CategoryBackup>(serializer()).restoreToDb {
-						getFavouriteCategoriesDao().upsert(it.toEntity())
+					BackupSection.CATEGORIES -> {
+						val restoredIds = HashSet<Long>()
+						val res = input.readJsonArray<CategoryBackup>(serializer()).restoreToDb {
+							getFavouriteCategoriesDao().upsert(it.toEntity())
+							restoredIds.add(it.categoryId.toLong())
+						}
+						removeOrphanReadLaterCategory(restoredIds)
+						res
 					}
 
 					BackupSection.FAVOURITES -> input.readJsonArray<FavouriteBackup>(serializer()).restoreToDb {
@@ -417,6 +424,22 @@ class LocalBackupRepository @Inject constructor(
 					database.upsertMangaBackup(item.manga)
 					database.getPreferencesDao().upsert(prefs.toEntity(resolvedCover))
 				}
+			}
+		}
+	}
+
+	// The built-in "Read later" category is pre-populated on DB creation, so a plain upsert-restore
+	// resurrects it even when the backup was made without it. If the backup doesn't contain it and
+	// the user hasn't put anything into it, drop it so the restored state matches the backup.
+	private suspend fun removeOrphanReadLaterCategory(restoredIds: Set<Long>) {
+		runCatchingCancellable {
+			val readLaterTitle = context.getString(R.string.read_later)
+			val dao = database.getFavouriteCategoriesDao()
+			val orphan = dao.findAll().firstOrNull {
+				it.title == readLaterTitle && it.categoryId.toLong() !in restoredIds
+			} ?: return
+			if (database.getFavouritesDao().findAll(orphan.categoryId.toLong()).isEmpty()) {
+				dao.delete(orphan.categoryId.toLong())
 			}
 		}
 	}

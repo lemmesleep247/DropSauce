@@ -245,6 +245,7 @@ class SyncMangaPrefs(
 	@SerialName("cover_data") val coverData: String? = null,
 	@SerialName("cover_extension") val coverFileExtension: String? = null,
 	@SerialName("content_rating_override") val contentRatingOverride: String? = null,
+	@SerialName("merge_scanlators") val mergeScanlators: Boolean = false,
 ) {
 
 	constructor(
@@ -264,6 +265,7 @@ class SyncMangaPrefs(
 		coverData = coverData,
 		coverFileExtension = coverFileExtension,
 		contentRatingOverride = entity.contentRatingOverride,
+		mergeScanlators = entity.mergeScanlators,
 	)
 
 	fun toEntity(resolvedCoverUrl: String? = coverUrlOverride) = MangaPrefsEntity(
@@ -277,6 +279,7 @@ class SyncMangaPrefs(
 		titleOverride = titleOverride,
 		coverUrlOverride = resolvedCoverUrl,
 		contentRatingOverride = contentRatingOverride,
+		mergeScanlators = mergeScanlators,
 	)
 }
 

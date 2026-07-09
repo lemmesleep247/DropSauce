@@ -13,7 +13,6 @@ import coil3.ImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
-import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseFragment
 import org.koitharu.kotatsu.core.ui.list.PaginationScrollListener
@@ -33,7 +32,6 @@ import org.koitharu.kotatsu.list.ui.model.ListHeader
 import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaTag
-import org.koitharu.kotatsu.reader.ui.ReaderState
 import org.koitharu.kotatsu.tracker.ui.feed.adapter.FeedAdapter
 import javax.inject.Inject
 
@@ -65,19 +63,10 @@ class FeedFragment :
 			feedClickListener = { item, _ ->
 				router.openDetails(item.toMangaWithOverride())
 			},
-			chapterClickListener = { item, chapter ->
-				val chapterId = chapter.id
-				if (chapterId != null) {
-					router.openReader(
-						ReaderIntent.Builder(requireContext())
-							.manga(item.toMangaWithOverride())
-							.state(ReaderState(chapterId = chapterId, page = 0, scroll = 0))
-							.build(),
-					)
-				} else {
-					// legacy feed rows have no chapter ids stored
-					router.openDetails(item.toMangaWithOverride())
-				}
+			readClickListener = { item ->
+				// resume from the last-read position: without an explicit state
+				// the reader restores it from history
+				router.openReader(item.toMangaWithOverride())
 			},
 		)
 		with(binding.recyclerView) {
@@ -134,6 +123,7 @@ class FeedFragment :
 
 	private fun onIsTrackerRunningChanged(isRunning: Boolean) {
 		requireViewBinding().swipeRefreshLayout.isRefreshing = isRunning
+		requireActivity().invalidateMenu()
 	}
 
 	override fun onScrolledToEnd() {

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -21,6 +23,7 @@ import kotlinx.coroutines.plus
 import okio.FileNotFoundException
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.core.model.toChipModel
+import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsStateFlow
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -57,6 +60,7 @@ abstract class ChaptersPagesViewModel(
 	private val downloadScheduler: DownloadWorker.Scheduler,
 	private val deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
 	private val localStorageChanges: SharedFlow<LocalManga?>,
+	private val mangaDataRepository: MangaDataRepository,
 ) : BaseViewModel() {
 
 	val mangaDetails = MutableStateFlow<MangaDetails?>(null)
@@ -167,10 +171,28 @@ abstract class ChaptersPagesViewModel(
 		}
 	}
 
+	val isScanlatorsMerged = MutableStateFlow(false)
+
 	init {
 		launchJob(Dispatchers.Default) {
 			localStorageChanges
 				.collect { onDownloadComplete(it) }
+		}
+		launchJob(Dispatchers.Default) {
+			val id = mangaDetails.filterNotNull().first().id
+			isScanlatorsMerged.value = mangaDataRepository.isScanlatorsMerged(id)
+		}
+	}
+
+	abstract fun reload()
+
+	fun setScanlatorsMerged(isMerged: Boolean) {
+		launchJob(Dispatchers.Default) {
+			val manga = mangaDetails.requireValue().sourceManga
+			mangaDataRepository.setScanlatorsMerged(manga, isMerged)
+			isScanlatorsMerged.value = isMerged
+			selectedBranch.value = null
+			reload()
 		}
 	}
 

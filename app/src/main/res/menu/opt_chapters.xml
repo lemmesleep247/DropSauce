@@ -26,6 +26,13 @@
 		app:showAsAction="never" />
 
 	<item
+		android:id="@+id/action_merge_scanlators"
+		android:checkable="true"
+		android:icon="@drawable/ic_language"
+		android:title="@string/merge_scanlators"
+		app:showAsAction="never" />
+
+	<item
 		android:id="@+id/action_grid_view"
 		android:checkable="true"
 		android:icon="@drawable/ic_grid"

@@ -125,6 +125,8 @@
     <string name="updates_feed_cleared">Cleared</string>
     <string name="rotate_screen">Rotate screen</string>
     <string name="update">Update</string>
+    <string name="stop_update">Stop update</string>
+    <string name="merge_scanlators">Merge scanlators</string>
     <string name="update_all">Update all</string>
     <string name="install">Install</string>
     <string name="uninstall">Uninstall</string>

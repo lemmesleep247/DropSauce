@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.core.model.ids
 import org.koitharu.kotatsu.core.model.isLocal
+import org.koitharu.kotatsu.core.model.mergedBranches
+import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.history.data.HistoryRepository
@@ -24,6 +26,7 @@ class DeleteReadChaptersUseCase @Inject constructor(
 	private val localMangaRepository: LocalMangaRepository,
 	private val historyRepository: HistoryRepository,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
+	private val mangaDataRepository: MangaDataRepository,
 ) {
 
 	suspend operator fun invoke(manga: Manga): Int {
@@ -67,7 +70,9 @@ class DeleteReadChaptersUseCase @Inject constructor(
 
 	private suspend fun getDeletionTask(manga: LocalManga): DeletionTask? {
 		val history = historyRepository.getOne(manga.manga) ?: return null
-		val chapters = getAllChapters(manga)
+		val chapters = getAllChapters(manga).let {
+			if (mangaDataRepository.isScanlatorsMerged(manga.manga.id)) it.mergedBranches() else it
+		}
 		if (chapters.isEmpty()) {
 			return null
 		}
@@ -75,7 +80,9 @@ class DeleteReadChaptersUseCase @Inject constructor(
 		val branchChapters = chapters.filter { x -> x.branch == branch }
 		val currentIndex = branchChapters.indexOfFirst { it.id == history.chapterId }
 		val filteredChapters = if (currentIndex >= 0) {
-			branchChapters.take(currentIndex + 1)
+			// keep the current chapter and the one before it as a safety margin,
+			// delete only what lies 2+ chapters behind the reading position
+			branchChapters.take((currentIndex - 1).coerceAtLeast(0))
 		} else {
 			emptyList()
 		}

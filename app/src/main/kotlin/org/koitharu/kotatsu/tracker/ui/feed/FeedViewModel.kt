@@ -103,6 +103,10 @@ class FeedViewModel @Inject constructor(
 		scheduler.startNow()
 	}
 
+	fun stopUpdate() {
+		scheduler.stopNow()
+	}
+
 	private suspend fun List<TrackingLogItem>.mapListTo(destination: MutableList<ListModel>) {
 		val feedItems = map { mangaListMapper.toFeedItem(it) }
 		val bucketedItems = zip(feedItems).groupByDateBucket(instantOf = { it.first.createdAt })

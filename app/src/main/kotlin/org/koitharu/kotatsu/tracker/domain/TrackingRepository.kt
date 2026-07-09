@@ -148,13 +148,13 @@ class TrackingRepository @Inject constructor(
 	}
 
 	suspend fun clearUpdates(ids: Collection<Long>) {
-		when {
-			ids.isEmpty() -> return
-			ids.size == 1 -> db.getTracksDao().clearCounter(ids.single())
-			else -> db.withTransaction {
-				for (id in ids) {
-					db.getTracksDao().clearCounter(id)
-				}
+		if (ids.isEmpty()) {
+			return
+		}
+		db.withTransaction {
+			for (id in ids) {
+				db.getTracksDao().clearCounter(id)
+				db.getTrackLogsDao().markAsRead(id)
 			}
 		}
 	}
@@ -169,7 +169,13 @@ class TrackingRepository @Inject constructor(
 			lastResult = TrackEntity.RESULT_EXTERNAL_MODIFICATION,
 			lastError = null,
 		)
-		db.getTracksDao().upsert(entity)
+		db.withTransaction {
+			db.getTracksDao().upsert(entity)
+			if (tracking.newChapters == 0) {
+				// user has caught up — clear the feed's unread dots for this manga
+				db.getTrackLogsDao().markAsRead(tracking.manga.id)
+			}
+		}
 	}
 
 	suspend fun getCategoriesCount(): IntArray {

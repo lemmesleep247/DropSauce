@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runInterruptible
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.isExternalSource
@@ -71,6 +72,14 @@ class DetailsLoadUseCase @Inject constructor(
 			loadLocal(manga, override, force)
 		} else {
 			loadRemote(manga, override, force)
+		}
+	}.map { details ->
+		// per-manga "merge scanlators": collapse all branches into one so the whole app
+		// (chapter list, reader, page picker) treats the manga as a single entity
+		if (mangaDataRepository.isScanlatorsMerged(details.id)) {
+			details.withMergedBranches()
+		} else {
+			details
 		}
 	}.distinctUntilChanged()
 		.flowOn(Dispatchers.Default)

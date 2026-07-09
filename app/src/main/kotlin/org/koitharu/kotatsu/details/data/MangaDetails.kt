@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.details.data
 
 import org.koitharu.kotatsu.core.model.getLocale
 import org.koitharu.kotatsu.core.model.isLocal
+import org.koitharu.kotatsu.core.model.withMergedBranches
 import org.koitharu.kotatsu.core.model.withOverride
 import org.koitharu.kotatsu.core.ui.model.MangaOverride
 import org.koitharu.kotatsu.local.domain.model.LocalManga
@@ -85,6 +86,11 @@ data class MangaDetails(
     fun toManga() = mergedManga
 
     fun withOverride(override: MangaOverride?) = copy(override = override)
+
+    fun withMergedBranches() = copy(
+        manga = manga.withMergedBranches(),
+        localManga = localManga?.let { it.copy(manga = it.manga.withMergedBranches()) },
+    )
 
 	fun coverUrl(preferLarge: Boolean = false): String? =
 		override?.coverUrl

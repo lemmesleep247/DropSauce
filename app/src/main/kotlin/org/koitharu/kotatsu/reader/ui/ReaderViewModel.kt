@@ -103,6 +103,7 @@ class ReaderViewModel @Inject constructor(
     downloadScheduler = downloadScheduler,
     deleteLocalMangaUseCase = deleteLocalMangaUseCase,
     localStorageChanges = localStorageChanges,
+    mangaDataRepository = dataRepository,
 ) {
     private val intent = MangaIntent(savedStateHandle)
 
@@ -210,7 +211,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun reload() {
+    override fun reload() {
         loadingJob?.cancel()
         loadImpl()
     }

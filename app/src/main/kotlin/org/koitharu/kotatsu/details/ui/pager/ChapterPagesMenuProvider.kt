@@ -72,6 +72,12 @@ class ChapterPagesMenuProvider(
 			item.isVisible = viewModel.mangaDetails.value?.local != null
 			item.isChecked = viewModel.isDownloadedOnly.value
 		}
+		menu.findItem(R.id.action_merge_scanlators)?.let { item ->
+			val isMerged = viewModel.isScanlatorsMerged.value
+			// only offer it when there is something to merge (or to unmerge)
+			item.isVisible = isMerged || (viewModel.mangaDetails.value?.chapters?.size ?: 0) > 1
+			item.isChecked = isMerged
+		}
 	}
 
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
@@ -87,6 +93,11 @@ class ChapterPagesMenuProvider(
 
 		R.id.action_downloaded -> {
 			viewModel.isDownloadedOnly.value = !menuItem.isChecked
+			true
+		}
+
+		R.id.action_merge_scanlators -> {
+			viewModel.setScanlatorsMerged(!menuItem.isChecked)
 			true
 		}
 

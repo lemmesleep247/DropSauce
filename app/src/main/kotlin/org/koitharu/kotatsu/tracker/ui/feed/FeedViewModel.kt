@@ -113,7 +113,9 @@ class FeedViewModel @Inject constructor(
 	}
 
 	fun stopUpdate() {
-		scheduler.stopNow()
+		launchJob(Dispatchers.Default) {
+			scheduler.stopNow()
+		}
 	}
 
 	fun markAsRead(item: FeedItem) {

@@ -15,6 +15,7 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
@@ -358,11 +359,19 @@ class TrackWorker @AssistedInject constructor(
 				.addTag(TAG_ONESHOT)
 				.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
 				.build()
-			workManager.enqueue(request)
+			// Unique + KEEP so a double tap (or swipe-refresh + menu) cannot run two full checks at once
+			workManager.enqueueUniqueWork(TAG_ONESHOT, ExistingWorkPolicy.KEEP, request)
 		}
 
-		fun stopNow() {
-			workManager.cancelAllWorkByTag(TAG_ONESHOT)
+		suspend fun stopNow() {
+			workManager.cancelAllWorkByTag(TAG_ONESHOT).await()
+			// The "stop" menu action is also shown while a background periodic pass is running.
+			// WorkManager cannot stop a single iteration, so cancel the periodic chain and
+			// re-schedule it to keep future automatic checks alive.
+			if (workManager.awaitUniqueWorkInfoByName(TAG).any { it.state == WorkInfo.State.RUNNING }) {
+				workManager.cancelUniqueWork(TAG).await()
+				schedule()
+			}
 		}
 
 		fun observeIsRunning(): Flow<Boolean> {

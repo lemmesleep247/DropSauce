@@ -43,8 +43,10 @@ interface CatalogueSource : Source {
 	): SMangaUpdate = supervisorScope {
 		// Mihon fetches details and chapters concurrently; this is both ABI behavior and a hot-path
 		// performance requirement for legacy Rx-only extensions.
-		val asyncManga = if (fetchDetails) async { fetchMangaDetails(manga).awaitSingle() } else null
-		val asyncChapters = if (fetchChapters) async { fetchChapterList(manga).awaitSingle() } else null
+		// Route through the lib-1.5 suspend API (whose defaults bridge to the Rx calls) so
+		// extensions overriding getMangaDetails / getChapterList are honoured too.
+		val asyncManga = if (fetchDetails) async { getMangaDetails(manga) } else null
+		val asyncChapters = if (fetchChapters) async { getChapterList(manga) } else null
 		SMangaUpdate(asyncManga?.await() ?: manga, asyncChapters?.await() ?: chapters)
 	}
 

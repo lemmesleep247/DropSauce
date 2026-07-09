@@ -43,8 +43,17 @@ abstract class TrackLogsDao : MangaQueryBuilder.ConditionCallback {
 	@Query("DELETE FROM track_logs WHERE id = :id")
 	abstract suspend fun delete(id: Long)
 
+	@Query("SELECT * FROM track_logs WHERE id = :id")
+	abstract suspend fun findById(id: Long): TrackLogEntity?
+
 	@Query("UPDATE track_logs SET unread = 0 WHERE manga_id = :mangaId AND unread = 1")
 	abstract suspend fun markAsRead(mangaId: Long)
+
+	@Query("SELECT id FROM track_logs WHERE manga_id = :mangaId AND unread = 1")
+	abstract suspend fun findUnreadIds(mangaId: Long): LongArray
+
+	@Query("UPDATE track_logs SET unread = 1 WHERE id IN (:ids)")
+	abstract suspend fun markUnread(ids: Collection<Long>)
 
 	@Query("DELETE FROM track_logs WHERE manga_id NOT IN (SELECT manga_id FROM tracks)")
 	abstract suspend fun gc()

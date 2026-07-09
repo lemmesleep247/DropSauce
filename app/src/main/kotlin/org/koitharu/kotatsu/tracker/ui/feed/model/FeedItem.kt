@@ -14,7 +14,12 @@ data class FeedItem(
 	val manga: Manga,
 	val chapters: List<TrackingLogItem.Chapter>,
 	val isNew: Boolean,
+	val groupPosition: GroupPosition = GroupPosition.SINGLE,
 ) : ListModel {
+
+	// Position within a date group, used to shape the segmented list background.
+	enum class GroupPosition { SINGLE, FIRST, MIDDLE, LAST }
+
 
 	val count: Int
 		get() = chapters.size

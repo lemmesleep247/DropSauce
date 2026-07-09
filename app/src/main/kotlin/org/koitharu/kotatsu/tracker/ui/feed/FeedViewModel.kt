@@ -30,6 +30,7 @@ import org.koitharu.kotatsu.list.ui.model.toErrorState
 import org.koitharu.kotatsu.tracker.domain.TrackingRepository
 import org.koitharu.kotatsu.tracker.domain.UpdatesListQuickFilter
 import org.koitharu.kotatsu.tracker.domain.model.TrackingLogItem
+import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
 import org.koitharu.kotatsu.tracker.work.TrackWorker
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -107,6 +108,20 @@ class FeedViewModel @Inject constructor(
 		scheduler.stopNow()
 	}
 
+	fun markAsRead(item: FeedItem) {
+		launchJob(Dispatchers.Default) {
+			val handle = repository.markLogsRead(item.manga.id)
+			onActionDone.call(ReversibleAction(R.string.marked_as_read, handle))
+		}
+	}
+
+	fun remove(item: FeedItem) {
+		launchJob(Dispatchers.Default) {
+			val handle = repository.removeLog(item.id) ?: return@launchJob
+			onActionDone.call(ReversibleAction(R.string.feed_entry_removed, handle))
+		}
+	}
+
 	private suspend fun List<TrackingLogItem>.mapListTo(destination: MutableList<ListModel>) {
 		val feedItems = map { mangaListMapper.toFeedItem(it) }
 		val bucketedItems = zip(feedItems).groupByDateBucket(instantOf = { it.first.createdAt })
@@ -116,8 +131,15 @@ class FeedViewModel @Inject constructor(
 			} else {
 				ListHeader(R.string.unknown)
 			}
-			for ((_, feedItem) in items) {
-				destination += feedItem
+			val lastIndex = items.lastIndex
+			items.forEachIndexed { index, (_, feedItem) ->
+				val position = when {
+					items.size == 1 -> FeedItem.GroupPosition.SINGLE
+					index == 0 -> FeedItem.GroupPosition.FIRST
+					index == lastIndex -> FeedItem.GroupPosition.LAST
+					else -> FeedItem.GroupPosition.MIDDLE
+				}
+				destination += feedItem.copy(groupPosition = position)
 			}
 		}
 	}

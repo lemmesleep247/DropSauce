@@ -10,6 +10,7 @@ import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.entity.toManga
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.ui.util.ReversibleHandle
 import org.koitharu.kotatsu.core.util.ext.mapItems
 import org.koitharu.kotatsu.core.util.ext.toInstantOrNull
 import org.koitharu.kotatsu.details.domain.ProgressUpdateUseCase
@@ -114,6 +115,37 @@ class TrackingRepository @Inject constructor(
 	suspend fun getLogsCount() = db.getTrackLogsDao().count()
 
 	suspend fun clearLogs() = db.getTrackLogsDao().clear()
+
+	// Deletes a single feed entry, returning a handle that re-inserts it (for undo).
+	suspend fun removeLog(id: Long): ReversibleHandle? {
+		val dao = db.getTrackLogsDao()
+		val entity = dao.findById(id) ?: return null
+		dao.delete(id)
+		return ReversibleHandle {
+			dao.insert(entity)
+		}
+	}
+
+	// Marks a manga's feed updates as read (clears the counter + unread dots), returning a handle
+	// that restores the previous counter and unread flags (for undo).
+	suspend fun markLogsRead(mangaId: Long): ReversibleHandle {
+		val logsDao = db.getTrackLogsDao()
+		val tracksDao = db.getTracksDao()
+		val priorCounter = tracksDao.findNewChapters(mangaId)
+		val priorUnread = logsDao.findUnreadIds(mangaId).toList()
+		db.withTransaction {
+			tracksDao.clearCounter(mangaId)
+			logsDao.markAsRead(mangaId)
+		}
+		return ReversibleHandle {
+			db.withTransaction {
+				tracksDao.setCounter(mangaId, priorCounter)
+				if (priorUnread.isNotEmpty()) {
+					logsDao.markUnread(priorUnread)
+				}
+			}
+		}
+	}
 
 	suspend fun clearCounters() = db.getTracksDao().clearCounters()
 

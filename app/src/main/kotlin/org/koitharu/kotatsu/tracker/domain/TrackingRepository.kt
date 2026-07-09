@@ -47,12 +47,12 @@ class TrackingRepository @Inject constructor(
 	}
 
 	/**
-	 * Manga with unread new chapters — drives the FEED nav badge. Counts tracks, not track_logs:
-	 * `chapters_new` is decremented when the user actually reads and cleared by "Clear feed", while
-	 * log rows have no read path (feed items are keyed by manga, not log id) and would only grow.
+	 * Unread feed entries — drives the FEED nav badge. Counts unread track_logs rows (feed entries)
+	 * rather than manga with new chapters, so deleting a single feed entry lowers the badge without
+	 * touching the manga's `chapters_new` (i.e. the chapter list stays unchanged).
 	 */
 	fun observeUnreadUpdatesCount(): Flow<Int> {
-		return db.getTracksDao().observeUpdatedMangaCount()
+		return db.getTrackLogsDao().observeUnreadCount()
 	}
 
 	fun observeUpdatedManga(limit: Int, filterOptions: Set<ListFilterOption>): Flow<List<MangaTracking>> {

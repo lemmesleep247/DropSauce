@@ -26,6 +26,7 @@ import org.koitharu.kotatsu.list.ui.model.EmptyState
 import org.koitharu.kotatsu.list.ui.model.ListHeader
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
+import org.koitharu.kotatsu.list.ui.model.TipModel
 import org.koitharu.kotatsu.list.ui.model.toErrorState
 import org.koitharu.kotatsu.tracker.domain.TrackingRepository
 import org.koitharu.kotatsu.tracker.domain.UpdatesListQuickFilter
@@ -59,8 +60,12 @@ class FeedViewModel @Inject constructor(
 		quickFilter.appliedOptions,
 		combine(limit, quickFilter.appliedOptions.combineWithSettings(), ::Pair)
 			.flatMapLatest { repository.observeTrackingLog(it.first, it.second) },
-	) { filters, list ->
+		settings.observeAsFlow(AppSettings.KEY_TIPS_CLOSED) { isTipEnabled(TIP_GESTURES) },
+	) { filters, list, isTipVisible ->
 		val result = ArrayList<ListModel>((list.size * 1.4).toInt().coerceAtLeast(3))
+		if (list.isNotEmpty() && isTipVisible) {
+			result += gesturesTip
+		}
 		quickFilter.filterItem(filters)?.let(result::add)
 		if (list.isEmpty()) {
 			result += EmptyState(
@@ -122,6 +127,10 @@ class FeedViewModel @Inject constructor(
 		}
 	}
 
+	fun dismissGesturesTip() {
+		settings.closeTip(TIP_GESTURES)
+	}
+
 	private suspend fun List<TrackingLogItem>.mapListTo(destination: MutableList<ListModel>) {
 		val feedItems = map { mangaListMapper.toFeedItem(it) }
 		val bucketedItems = zip(feedItems).groupByDateBucket(instantOf = { it.first.createdAt })
@@ -152,5 +161,20 @@ class FeedViewModel @Inject constructor(
 		} else {
 			filters
 		}
+	}
+
+	private companion object {
+
+		const val TIP_GESTURES = "feed_gestures"
+
+		val gesturesTip = TipModel(
+			key = TIP_GESTURES,
+			title = R.string.feed_gestures_tip_title,
+			text = R.string.feed_gestures_tip,
+			icon = R.drawable.ic_read,
+			primaryButtonText = 0,
+			secondaryButtonText = 0,
+			isClosable = true,
+		)
 	}
 }

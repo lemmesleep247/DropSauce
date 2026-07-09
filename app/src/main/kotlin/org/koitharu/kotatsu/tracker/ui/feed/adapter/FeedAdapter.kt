@@ -13,12 +13,15 @@ import org.koitharu.kotatsu.list.ui.adapter.listHeaderAD
 import org.koitharu.kotatsu.list.ui.adapter.loadingFooterAD
 import org.koitharu.kotatsu.list.ui.adapter.loadingStateAD
 import org.koitharu.kotatsu.list.ui.adapter.quickFilterAD
+import org.koitharu.kotatsu.list.ui.adapter.tipAD
 import org.koitharu.kotatsu.list.ui.model.ListModel
+import org.koitharu.kotatsu.list.ui.model.TipModel
 import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
 
 class FeedAdapter(
 	listener: MangaListListener,
 	feedClickListener: OnListItemClickListener<FeedItem>,
+	onTipClose: (TipModel) -> Unit,
 ) : BaseListAdapter<ListModel>(), FastScroller.SectionIndexer {
 
 	init {
@@ -30,6 +33,7 @@ class FeedAdapter(
 		addDelegate(ListItemType.HEADER, listHeaderAD(listener))
 		addDelegate(ListItemType.STATE_EMPTY, emptyStateListAD(listener))
 		addDelegate(ListItemType.QUICK_FILTER, quickFilterAD(listener))
+		addDelegate(ListItemType.TIP, tipAD(listener, onTipClose))
 	}
 
 	override fun getSectionText(context: Context, position: Int): CharSequence? {

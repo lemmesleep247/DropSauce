@@ -65,6 +65,7 @@ class FeedFragment :
 			feedClickListener = { item, _ ->
 				router.openDetails(item.toMangaWithOverride())
 			},
+			onTipClose = { viewModel.dismissGesturesTip() },
 		)
 		with(binding.recyclerView) {
 			val paddingVertical = resources.getDimensionPixelSize(R.dimen.list_spacing_normal)
@@ -77,12 +78,16 @@ class FeedFragment :
 			RecyclerScrollKeeper(this).attach()
 			ItemTouchHelper(
 				FeedSwipeCallback(context) { item, isRead, position ->
-					if (isRead) {
+					when {
+						// already read: no-op, just restore the row (guards a fast fling past the cap)
+						isRead && !item.isNew -> feedAdapter.notifyItemChanged(position)
 						// mark-read keeps the row; snap it back, the dot clears via the content flow
-						feedAdapter.notifyItemChanged(position)
-						viewModel.markAsRead(item)
-					} else {
-						viewModel.remove(item)
+						isRead -> {
+							feedAdapter.notifyItemChanged(position)
+							viewModel.markAsRead(item)
+						}
+
+						else -> viewModel.remove(item)
 					}
 				},
 			).attachToRecyclerView(this)

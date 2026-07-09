@@ -19,8 +19,9 @@ import com.google.android.material.R as materialR
 
 /**
  * Swipe left → delete a single feed entry, swipe right → mark it as read.
- * Draws a Material 3 rounded background + icon under the row while swiping and fires a
- * haptic tick when the action threshold is crossed.
+ * The reveal fills the row's full height and width with a rounded background + centered icon and
+ * fires a haptic tick when the action threshold is crossed. An already-read entry can't be marked
+ * read: its right-swipe is capped and greyed out, and the action never fires.
  */
 class FeedSwipeCallback(
 	context: Context,
@@ -28,7 +29,7 @@ class FeedSwipeCallback(
 ) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
 	private val density = context.resources.displayMetrics.density
-	private val pad = 8f * density
+	private val corner = 24f * density
 	private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
 	private val deleteIcon = ContextCompat.getDrawable(context, R.drawable.ic_delete)?.mutate()
@@ -37,8 +38,11 @@ class FeedSwipeCallback(
 	private val readBg = context.getThemeColor(materialR.attr.colorPrimaryContainer, Color.BLUE)
 	private val deleteIconTint = context.getThemeColor(materialR.attr.colorOnErrorContainer, Color.WHITE)
 	private val readIconTint = context.getThemeColor(materialR.attr.colorOnPrimaryContainer, Color.WHITE)
+	private val disabledBg = context.getThemeColor(materialR.attr.colorSurfaceVariant, Color.GRAY)
+	private val disabledIconTint = context.getThemeColor(materialR.attr.colorOutline, Color.LTGRAY)
 
 	private var hapticFired = false
+	private var lastDx = 0f
 
 	override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
 		// only feed rows are swipeable, not the date headers
@@ -54,7 +58,13 @@ class FeedSwipeCallback(
 		target: RecyclerView.ViewHolder,
 	): Boolean = false
 
-	override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float = 0.4f
+	override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+		// A rightward swipe (mark read) on an already-read entry must never commit.
+		if (lastDx > 0f && viewHolder.getItem(FeedItem::class.java)?.isNew == false) {
+			return 3f
+		}
+		return 0.4f
+	}
 
 	override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
 		val item = viewHolder.getItem(FeedItem::class.java) ?: return
@@ -71,30 +81,50 @@ class FeedSwipeCallback(
 		isCurrentlyActive: Boolean,
 	) {
 		val view = viewHolder.itemView
+		var effectiveDx = dX
 		if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX != 0f) {
+			lastDx = dX
 			val isRead = dX > 0f
-			bgPaint.color = if (isRead) readBg else deleteBg
-			val top = view.top + pad
-			val bottom = view.bottom - pad
+			val isAlreadyRead = isRead && viewHolder.getItem(FeedItem::class.java)?.isNew == false
+			if (isAlreadyRead) {
+				// pin the swipe at a shallow point so it reads as "not available"
+				effectiveDx = dX.coerceAtMost(view.width * 0.2f)
+			}
+			bgPaint.color = when {
+				isAlreadyRead -> disabledBg
+				isRead -> readBg
+				else -> deleteBg
+			}
+			val top = view.top.toFloat()
+			val bottom = view.bottom.toFloat()
 			val left: Float
 			val right: Float
 			if (isRead) {
-				left = view.left + pad
-				right = view.left + dX - pad
+				left = view.left.toFloat()
+				right = view.left + effectiveDx
 			} else {
-				left = view.right + dX + pad
-				right = view.right - pad
+				left = view.right + effectiveDx
+				right = view.right.toFloat()
 			}
 			if (right - left > 0f) {
-				// fully-rounded (stadium) pill inset from the row, matching the segmented cards
-				val radius = (bottom - top) / 2f
-				c.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
+				// rounded rect spanning the full row bounds, clipped to the revealed region so it
+				// fills the row's height and touches its sides with rounded outer corners
+				c.save()
+				c.clipRect(left, top, right, bottom)
+				c.drawRoundRect(view.left.toFloat(), top, view.right.toFloat(), bottom, corner, corner, bgPaint)
+				c.restore()
 
 				val icon = if (isRead) readIcon else deleteIcon
 				if (icon != null && right - left >= icon.intrinsicWidth) {
-					val progress = (abs(dX) / view.width).coerceIn(0f, 1f)
+					val progress = (abs(effectiveDx) / view.width).coerceIn(0f, 1f)
 					icon.alpha = ((progress * 3f).coerceAtMost(1f) * 255).toInt()
-					icon.setTint(if (isRead) readIconTint else deleteIconTint)
+					icon.setTint(
+						when {
+							isAlreadyRead -> disabledIconTint
+							isRead -> readIconTint
+							else -> deleteIconTint
+						},
+					)
 					val cx = ((left + right) / 2f).toInt()
 					val cy = ((top + bottom) / 2f).toInt()
 					icon.setBounds(
@@ -107,21 +137,24 @@ class FeedSwipeCallback(
 				}
 			}
 
-			val passedThreshold = abs(dX) >= getSwipeThreshold(viewHolder) * view.width
-			if (isCurrentlyActive) {
-				if (passedThreshold && !hapticFired) {
-					view.hapticFeedback(HapticEffect.CONFIRM)
-					hapticFired = true
-				} else if (!passedThreshold) {
-					hapticFired = false
+			if (!isAlreadyRead) {
+				val passedThreshold = abs(dX) >= 0.4f * view.width
+				if (isCurrentlyActive) {
+					if (passedThreshold && !hapticFired) {
+						view.hapticFeedback(HapticEffect.CONFIRM)
+						hapticFired = true
+					} else if (!passedThreshold) {
+						hapticFired = false
+					}
 				}
 			}
 		}
-		super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+		super.onChildDraw(c, recyclerView, viewHolder, effectiveDx, dY, actionState, isCurrentlyActive)
 	}
 
 	override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
 		super.clearView(recyclerView, viewHolder)
 		hapticFired = false
+		lastDx = 0f
 	}
 }

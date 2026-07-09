@@ -64,6 +64,9 @@ abstract class TrackLogsDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT COUNT(*) FROM track_logs")
 	abstract suspend fun count(): Int
 
+	@Query("SELECT COUNT(*) FROM track_logs WHERE unread = 1")
+	abstract fun observeUnreadCount(): Flow<Int>
+
 	@Transaction
 	@RawQuery(observedEntities = [TrackLogEntity::class])
 	protected abstract fun observeAllImpl(query: SupportSQLiteQuery): Flow<List<TrackLogWithManga>>

@@ -130,7 +130,7 @@
     <string name="marked_as_read">Marked as read</string>
     <string name="feed_entry_removed">Removed</string>
     <string name="feed_gestures_tip_title">Swipe gestures</string>
-    <string name="feed_gestures_tip">Swipe an entry left to remove it from the feed, or right to mark it as read.</string>
+    <string name="feed_gestures_tip">Swipe an entry right to remove it from the feed, or left to mark it as read.</string>
     <string name="update_all">Update all</string>
     <string name="install">Install</string>
     <string name="uninstall">Uninstall</string>

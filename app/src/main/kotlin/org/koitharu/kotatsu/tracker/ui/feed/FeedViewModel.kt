@@ -171,7 +171,7 @@ class FeedViewModel @Inject constructor(
 			key = TIP_GESTURES,
 			title = R.string.feed_gestures_tip_title,
 			text = R.string.feed_gestures_tip,
-			icon = R.drawable.ic_read,
+			icon = R.drawable.ic_gesture_horizontal,
 			primaryButtonText = 0,
 			secondaryButtonText = 0,
 			isClosable = true,

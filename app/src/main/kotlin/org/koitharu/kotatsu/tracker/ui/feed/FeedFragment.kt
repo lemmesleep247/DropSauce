@@ -147,7 +147,9 @@ class FeedFragment :
 		router.openDetails(item.toMangaWithOverride())
 	}
 
-	override fun onReadClick(manga: Manga, view: View) = Unit
+	override fun onReadClick(manga: Manga, view: View) {
+		router.openReader(manga, view)
+	}
 
 	override fun onTagClick(manga: Manga, tag: MangaTag, view: View) = Unit
 }

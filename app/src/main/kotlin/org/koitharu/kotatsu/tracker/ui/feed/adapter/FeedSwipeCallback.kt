@@ -15,21 +15,20 @@ import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.list.ui.adapter.ListItemType
 import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
 import kotlin.math.abs
+import kotlin.math.tanh
 import com.google.android.material.R as materialR
 
 /**
- * Swipe left → delete a single feed entry, swipe right → mark it as read.
- * The reveal fills the row's full height and width with a rounded background + centered icon and
+ * Swipe right → delete a single feed entry, swipe left → mark it as read.
+ * The reveal fills the row's full height and width with a rounded (stadium) pill + centered icon and
  * fires a haptic tick when the action threshold is crossed. An already-read entry can't be marked
- * read: its right-swipe is capped and greyed out, and the action never fires.
+ * read: its swipe rubber-bands to a shallow point and greys out, and the action never fires.
  */
 class FeedSwipeCallback(
 	context: Context,
 	private val onAction: (item: FeedItem, isRead: Boolean, position: Int) -> Unit,
 ) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
-	private val density = context.resources.displayMetrics.density
-	private val corner = 24f * density
 	private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
 	private val deleteIcon = ContextCompat.getDrawable(context, R.drawable.ic_delete)?.mutate()
@@ -59,8 +58,8 @@ class FeedSwipeCallback(
 	): Boolean = false
 
 	override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
-		// A rightward swipe (mark read) on an already-read entry must never commit.
-		if (lastDx > 0f && viewHolder.getItem(FeedItem::class.java)?.isNew == false) {
+		// A leftward swipe (mark read) on an already-read entry must never commit.
+		if (lastDx < 0f && viewHolder.getItem(FeedItem::class.java)?.isNew == false) {
 			return 3f
 		}
 		return 0.4f
@@ -68,7 +67,7 @@ class FeedSwipeCallback(
 
 	override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
 		val item = viewHolder.getItem(FeedItem::class.java) ?: return
-		onAction(item, direction == ItemTouchHelper.RIGHT, viewHolder.bindingAdapterPosition)
+		onAction(item, direction == ItemTouchHelper.LEFT, viewHolder.bindingAdapterPosition)
 	}
 
 	override fun onChildDraw(
@@ -84,11 +83,15 @@ class FeedSwipeCallback(
 		var effectiveDx = dX
 		if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX != 0f) {
 			lastDx = dX
-			val isRead = dX > 0f
+			val isRead = dX < 0f
 			val isAlreadyRead = isRead && viewHolder.getItem(FeedItem::class.java)?.isNew == false
-			if (isAlreadyRead) {
-				// pin the swipe at a shallow point so it reads as "not available"
-				effectiveDx = dX.coerceAtMost(view.width * 0.2f)
+			if (isAlreadyRead && isCurrentlyActive) {
+				// smooth rubber-band toward a shallow limit while actively dragging (tanh is monotonic
+				// with f(0)=0). Only while the finger is moving the view: on release, ItemTouchHelper's
+				// own settle animation interpolates dX from the already-clamped translation back to 0,
+				// so re-applying tanh here would clamp an already-clamped value and jump on release.
+				val limit = view.width * 0.22f
+				effectiveDx = -(limit * tanh(abs(dX) / limit))
 			}
 			bgPaint.color = when {
 				isAlreadyRead -> disabledBg
@@ -100,19 +103,18 @@ class FeedSwipeCallback(
 			val left: Float
 			val right: Float
 			if (isRead) {
-				left = view.left.toFloat()
-				right = view.left + effectiveDx
-			} else {
+				// swipe left reveals the right side
 				left = view.right + effectiveDx
 				right = view.right.toFloat()
+			} else {
+				// swipe right reveals the left side
+				left = view.left.toFloat()
+				right = view.left + effectiveDx
 			}
 			if (right - left > 0f) {
-				// rounded rect spanning the full row bounds, clipped to the revealed region so it
-				// fills the row's height and touches its sides with rounded outer corners
-				c.save()
-				c.clipRect(left, top, right, bottom)
-				c.drawRoundRect(view.left.toFloat(), top, view.right.toFloat(), bottom, corner, corner, bgPaint)
-				c.restore()
+				// full-height stadium pill filling the revealed region
+				val radius = (bottom - top) / 2f
+				c.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
 
 				val icon = if (isRead) readIcon else deleteIcon
 				if (icon != null && right - left >= icon.intrinsicWidth) {

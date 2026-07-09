@@ -196,14 +196,8 @@ class LocalBackupRepository @Inject constructor(
 						getHistoryDao().upsert(it.toEntity())
 					}
 
-					BackupSection.CATEGORIES -> {
-						val restoredIds = HashSet<Long>()
-						val res = input.readJsonArray<CategoryBackup>(serializer()).restoreToDb {
-							getFavouriteCategoriesDao().upsert(it.toEntity())
-							restoredIds.add(it.categoryId.toLong())
-						}
-						removeOrphanReadLaterCategory(restoredIds)
-						res
+					BackupSection.CATEGORIES -> input.readJsonArray<CategoryBackup>(serializer()).restoreToDb {
+						getFavouriteCategoriesDao().upsert(it.toEntity())
 					}
 
 					BackupSection.FAVOURITES -> input.readJsonArray<FavouriteBackup>(serializer()).restoreToDb {
@@ -252,6 +246,11 @@ class LocalBackupRepository @Inject constructor(
 			}
 			input.closeEntry()
 			entry = input.nextEntry
+		}
+		// Run after the whole archive is applied so favourites are already restored and the
+		// emptiness check is accurate.
+		if (BackupSection.CATEGORIES in sections) {
+			removeEmptyReadLaterCategory()
 		}
 		progress?.emit(commonProgress)
 		return result
@@ -428,18 +427,16 @@ class LocalBackupRepository @Inject constructor(
 		}
 	}
 
-	// The built-in "Read later" category is pre-populated on DB creation, so a plain upsert-restore
-	// resurrects it even when the backup was made without it. If the backup doesn't contain it and
-	// the user hasn't put anything into it, drop it so the restored state matches the backup.
-	private suspend fun removeOrphanReadLaterCategory(restoredIds: Set<Long>) {
+	// The built-in "Read later" category is pre-populated on DB creation and dumped into every
+	// backup (even when empty), so a restore always brings it back. An empty read-later carries no
+	// data worth keeping, so drop it after restore; a populated one is left untouched.
+	private suspend fun removeEmptyReadLaterCategory() {
 		runCatchingCancellable {
 			val readLaterTitle = context.getString(R.string.read_later)
 			val dao = database.getFavouriteCategoriesDao()
-			val orphan = dao.findAll().firstOrNull {
-				it.title == readLaterTitle && it.categoryId.toLong() !in restoredIds
-			} ?: return
-			if (database.getFavouritesDao().findAll(orphan.categoryId.toLong()).isEmpty()) {
-				dao.delete(orphan.categoryId.toLong())
+			val readLater = dao.findAll().firstOrNull { it.title == readLaterTitle } ?: return
+			if (database.getFavouritesDao().findAll(readLater.categoryId.toLong()).isEmpty()) {
+				dao.delete(readLater.categoryId.toLong())
 			}
 		}
 	}

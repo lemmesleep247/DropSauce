@@ -16,7 +16,6 @@ import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
 
 fun feedItemAD(
 	clickListener: OnListItemClickListener<FeedItem>,
-	readClickListener: (FeedItem) -> Unit,
 ) = adapterDelegateViewBinding<FeedItem, ListModel, ItemFeedBinding>(
 	{ inflater, parent -> ItemFeedBinding.inflate(inflater, parent, false) },
 ) {
@@ -24,9 +23,6 @@ fun feedItemAD(
 
 	itemView.setOnClickListener {
 		clickListener.onItemClick(item, it)
-	}
-	binding.buttonRead.setOnClickListener {
-		readClickListener(item)
 	}
 
 	bind {

@@ -49,6 +49,7 @@ import org.koitharu.kotatsu.tracker.data.TrackEntity
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import org.koitharu.kotatsu.R
 
 @Singleton
 class MihonBackupManager @Inject constructor(
@@ -178,6 +179,7 @@ class MihonBackupManager @Inject constructor(
                     val categoryResolver = CategoryResolver(backup.backupCategories)
                     categoryResolver.prepare(backup.backupManga)
                     restoreManga(backup, options, diagnostics, categoryResolver)
+                    removeEmptyReadLaterCategory()
                 }
                 if (options.appSettings) {
                     restorePreferences(backup.backupPreferences)
@@ -192,6 +194,17 @@ class MihonBackupManager @Inject constructor(
             diagnostics.toReport()
         }
     }
+
+  // The built-in "Read later" category is pre-populated on DB creation and a Mihon backup never
+  // carries it, so it lingers empty after a restore. Drop it when empty; a populated one stays.
+  private suspend fun removeEmptyReadLaterCategory() {
+    val readLaterTitle = context.getString(R.string.read_later)
+    val dao = db.getFavouriteCategoriesDao()
+    val readLater = dao.findAll().firstOrNull { it.title == readLaterTitle } ?: return
+    if (db.getFavouritesDao().findAll(readLater.categoryId.toLong()).isEmpty()) {
+      dao.delete(readLater.categoryId.toLong())
+    }
+  }
 
   private fun buildDiagnostics(backup: MihonBackup, options: Options): RestoreAccumulator {
     val missingSources = if (options.libraryEntries) {

@@ -63,11 +63,6 @@ class FeedFragment :
 			feedClickListener = { item, _ ->
 				router.openDetails(item.toMangaWithOverride())
 			},
-			readClickListener = { item ->
-				// resume from the last-read position: without an explicit state
-				// the reader restores it from history
-				router.openReader(item.toMangaWithOverride())
-			},
 		)
 		with(binding.recyclerView) {
 			val paddingVertical = resources.getDimensionPixelSize(R.dimen.list_spacing_normal)

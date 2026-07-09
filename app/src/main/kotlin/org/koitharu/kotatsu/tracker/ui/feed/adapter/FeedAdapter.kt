@@ -19,11 +19,10 @@ import org.koitharu.kotatsu.tracker.ui.feed.model.FeedItem
 class FeedAdapter(
 	listener: MangaListListener,
 	feedClickListener: OnListItemClickListener<FeedItem>,
-	readClickListener: (FeedItem) -> Unit,
 ) : BaseListAdapter<ListModel>(), FastScroller.SectionIndexer {
 
 	init {
-		addDelegate(ListItemType.FEED, feedItemAD(feedClickListener, readClickListener))
+		addDelegate(ListItemType.FEED, feedItemAD(feedClickListener))
 		addDelegate(ListItemType.FOOTER_LOADING, loadingFooterAD())
 		addDelegate(ListItemType.STATE_LOADING, loadingStateAD())
 		addDelegate(ListItemType.FOOTER_ERROR, errorFooterAD(listener))

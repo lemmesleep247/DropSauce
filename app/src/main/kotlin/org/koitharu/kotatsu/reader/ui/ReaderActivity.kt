@@ -65,10 +65,12 @@ import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.core.util.ext.zipWithPrevious
 import org.koitharu.kotatsu.databinding.ActivityReaderBinding
 import org.koitharu.kotatsu.details.ui.pager.pages.PagesSavedObserver
+import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.data.TapGridSettings
 import org.koitharu.kotatsu.reader.domain.TapGridArea
 import org.koitharu.kotatsu.reader.ui.config.ReaderConfigSheet
+import org.koitharu.kotatsu.reader.ui.epub.EpubReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import org.koitharu.kotatsu.reader.ui.pager.ReaderUiState
 import org.koitharu.kotatsu.reader.ui.tapgrid.TapGridDispatcher
@@ -268,6 +270,7 @@ class ReaderActivity :
         if (mode == null) {
             return
         }
+        readerManager.isEpub = viewModel.getMangaOrNull()?.isEpub == true
         if (readerManager.currentMode != mode) {
             readerManager.replace(mode)
         }
@@ -495,6 +498,10 @@ class ReaderActivity :
         }
     }
 
+	override fun onEpubSearchClick() {
+		(readerManager.currentReader as? EpubReaderFragment)?.showBookSearch()
+	}
+
     override fun toggleScreenOrientation() {
         if (screenOrientationHelper.toggleScreenOrientation()) {
             Snackbar.make(
@@ -511,6 +518,11 @@ class ReaderActivity :
     }
 
     override fun switchPageTo(index: Int) {
+        if (readerManager.isEpub) {
+            // slider scrubs through the chapter as a percentage
+            readerManager.currentReader?.switchPageTo(index, true)
+            return
+        }
         val pages = viewModel.getCurrentChapterPages()
         val page = pages?.getOrNull(index) ?: return
         val chapterId = viewModel.getCurrentState()?.chapterId ?: return
@@ -531,6 +543,7 @@ class ReaderActivity :
             viewBinding.actionsView.isSliderEnabled = false
             return
         }
+        viewBinding.actionsView.isSliderSmooth = uiState.isEpub
         val chapterTitle = uiState.getChapterTitle(resources)
         supportActionBar?.subtitle = when {
             uiState.incognito -> getString(R.string.incognito_mode)

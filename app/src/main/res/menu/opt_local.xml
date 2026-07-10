@@ -5,10 +5,10 @@
 
 	<item
 		android:id="@+id/action_import"
-		android:icon="@drawable/ic_file_zip"
-		android:orderInCategory="50"
+		android:icon="@drawable/ic_add"
+		android:orderInCategory="-10"
 		android:title="@string/_import"
-		app:showAsAction="never" />
+		app:showAsAction="always" />
 
 	<item
 		android:id="@+id/action_filter"

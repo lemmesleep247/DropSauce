@@ -15,7 +15,9 @@ import android.widget.LinearLayout
 import androidx.annotation.AttrRes
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
+import kotlin.math.roundToInt
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -90,6 +92,19 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	var listener: OnInteractionListener? = null
 
+	// EPUB: the slider is a smooth in-chapter scrollbar - no tick stops, no label, live seeking
+	var isSliderSmooth: Boolean = false
+		set(value) {
+			if (field != value) {
+				field = value
+				if (!value) {
+					binding.slider.value = binding.slider.value.roundToInt().toFloat()
+				}
+				binding.slider.stepSize = if (value) 0f else 1f
+				binding.slider.labelBehavior = if (value) LabelFormatter.LABEL_GONE else LabelFormatter.LABEL_FLOATING
+			}
+		}
+
 	init {
 		orientation = HORIZONTAL
 		gravity = Gravity.CENTER_VERTICAL
@@ -148,7 +163,9 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	override fun onValueChange(slider: Slider, value: Float, fromUser: Boolean) {
 		if (fromUser) {
-			if (isSliderTracking) {
+			if (isSliderSmooth) {
+				listener?.switchPageTo(value.toInt())
+			} else if (isSliderTracking) {
 				isSliderChanged = true
 				// A single light tick per page the thumb crosses, so scrubbing feels like
 				// stepping through pages. No heavier grab/release cues — keep it subtle.
@@ -188,7 +205,10 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	fun setSliderValue(value: Int, max: Int) {
 		binding.slider.valueTo = max.toFloat()
-		binding.slider.setValueRounded(value.toFloat())
+		// epub smooth mode seeks live while dragging - don't fight the user's thumb
+		if (!(isSliderSmooth && isSliderTracking)) {
+			binding.slider.setValueRounded(value.toFloat())
+		}
 	}
 
 	fun setSliderReversed(reversed: Boolean) {

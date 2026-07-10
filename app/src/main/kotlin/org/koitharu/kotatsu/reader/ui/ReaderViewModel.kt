@@ -54,6 +54,7 @@ import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.history.domain.HistoryUpdateUseCase
 import org.koitharu.kotatsu.list.domain.ReadingProgress.Companion.PROGRESS_NONE
 import org.koitharu.kotatsu.local.data.LocalStorageChanges
+import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.local.domain.DeleteLocalMangaUseCase
 import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.model.ContentRating
@@ -74,6 +75,7 @@ import javax.inject.Inject
 
 private const val BOUNDS_PAGE_OFFSET = 2
 private const val PREFETCH_LIMIT = 10
+private const val EPUB_SLIDER_MAX = 1000
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -513,22 +515,33 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * EPUB chapters have a single synthetic page; the bottom slider scrubs through the chapter
+     * as a percentage instead. Called by the epub reader as the WebView scrolls.
+     */
+    fun onEpubProgressChanged(pm: Int) {
+        readingState.update { it?.copy(scroll = pm) }
+        uiState.update { it?.copy(currentPage = pm.coerceIn(0, EPUB_SLIDER_MAX)) }
+    }
+
     @WorkerThread
     private fun notifyStateChanged() {
         val state = getCurrentState() ?: return
         val chapter = chaptersLoader.peekChapter(state.chapterId) ?: return
         val m = mangaDetails.value ?: return
         val chapterIndex = m.chapters[chapter.branch]?.indexOfFirst { it.id == chapter.id } ?: -1
-        val totalPages = chaptersLoader.getPagesCount(chapter.id)
+        val isEpub = m.toManga().isEpub
+        val totalPages = if (isEpub) EPUB_SLIDER_MAX + 1 else chaptersLoader.getPagesCount(chapter.id)
         val newState = ReaderUiState(
             mangaName = m.toManga().title,
             chapter = chapter,
             chapterIndex = chapterIndex,
             chaptersTotal = m.chapters[chapter.branch].sizeOrZero(),
             totalPages = totalPages,
-            currentPage = state.page,
+            currentPage = if (isEpub) state.scroll.coerceIn(0, EPUB_SLIDER_MAX) else state.page,
             percent = computePercent(state.chapterId),
             incognito = isIncognitoMode.value == true,
+            isEpub = isEpub,
         )
         uiState.value = newState
         if (isIncognitoMode.value == false) {

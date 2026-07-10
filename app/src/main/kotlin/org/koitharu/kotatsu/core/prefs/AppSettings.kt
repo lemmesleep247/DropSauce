@@ -228,6 +228,34 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val isReaderVolumeButtonsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_VOLUME_BUTTONS, false)
 
+	var epubFontSize: Int
+		get() = prefs.getInt(KEY_EPUB_FONT_SIZE, 100)
+		set(value) = prefs.edit { putInt(KEY_EPUB_FONT_SIZE, value.coerceIn(50, 200)) }
+
+	var epubFontFamily: String
+		get() = prefs.getString(KEY_EPUB_FONT_FAMILY, "serif") ?: "serif"
+		set(value) = prefs.edit { putString(KEY_EPUB_FONT_FAMILY, value) }
+
+	var epubLineHeight: Int
+		get() = prefs.getInt(KEY_EPUB_LINE_HEIGHT, 160)
+		set(value) = prefs.edit { putInt(KEY_EPUB_LINE_HEIGHT, value.coerceIn(100, 240)) }
+
+	var epubHorizontalPadding: Int
+		get() = prefs.getInt(KEY_EPUB_HORIZONTAL_PADDING, 20)
+		set(value) = prefs.edit { putInt(KEY_EPUB_HORIZONTAL_PADDING, value.coerceIn(0, 64)) }
+
+	var epubTextAlign: String
+		get() = prefs.getString(KEY_EPUB_TEXT_ALIGN, "justify") ?: "justify"
+		set(value) = prefs.edit { putString(KEY_EPUB_TEXT_ALIGN, value) }
+
+	var epubReadingMode: String
+		get() = prefs.getString(KEY_EPUB_READING_MODE, "scroll") ?: "scroll"
+		set(value) = prefs.edit { putString(KEY_EPUB_READING_MODE, value) }
+
+	var isEpubPublisherStyleEnabled: Boolean
+		get() = prefs.getBoolean(KEY_EPUB_PUBLISHER_STYLE, false)
+		set(value) = prefs.edit { putBoolean(KEY_EPUB_PUBLISHER_STYLE, value) }
+
 	val isReaderZoomButtonsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_ZOOM_BUTTONS, false)
 
@@ -978,6 +1006,13 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_READER_ANIMATION = "reader_animation2"
 		const val KEY_READER_CONTROLS = "reader_controls"
 		const val KEY_READER_MODE = "reader_mode"
+		const val KEY_EPUB_FONT_SIZE = "epub_font_size"
+		const val KEY_EPUB_FONT_FAMILY = "epub_font_family"
+		const val KEY_EPUB_LINE_HEIGHT = "epub_line_height"
+		const val KEY_EPUB_HORIZONTAL_PADDING = "epub_horizontal_padding"
+		const val KEY_EPUB_TEXT_ALIGN = "epub_text_align"
+		const val KEY_EPUB_READING_MODE = "epub_reading_mode"
+		const val KEY_EPUB_PUBLISHER_STYLE = "epub_publisher_style"
 		const val KEY_READER_MODE_DETECT = "reader_mode_detect"
 		const val KEY_READER_CROP = "reader_crop"
 		const val KEY_APP_PASSWORD = "app_password"

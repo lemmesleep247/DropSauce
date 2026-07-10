@@ -27,8 +27,11 @@ import org.koitharu.kotatsu.core.util.ext.isZipUri
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toFileNameSafe
 import org.koitharu.kotatsu.core.util.ext.toListSorted
+import org.koitharu.kotatsu.core.util.ext.toZipUri
 import org.koitharu.kotatsu.local.data.MangaIndex
+import org.koitharu.kotatsu.local.data.hasEpubExtension
 import org.koitharu.kotatsu.local.data.hasZipExtension
+import org.koitharu.kotatsu.local.data.isEpubFile
 import org.koitharu.kotatsu.local.data.isZipArchive
 import org.koitharu.kotatsu.local.data.output.LocalMangaOutput.Companion.ENTRY_NAME_INDEX
 import org.koitharu.kotatsu.local.domain.model.LocalManga
@@ -57,6 +60,17 @@ class LocalMangaParser(private val uri: Uri) {
 	private val rootFile: File = File(uri.schemeSpecificPart)
 
 	suspend fun getManga(withDetails: Boolean): LocalManga = runInterruptible(Dispatchers.IO) {
+		val epubFiles = when {
+			rootFile.isEpubFile -> listOf(rootFile)
+			rootFile.isDirectory -> rootFile.listFiles { f: File -> f.isEpubFile }
+				?.sortedWith(compareBy(AlphanumComparator()) { it.name })
+				.orEmpty()
+
+			else -> emptyList()
+		}
+		if (epubFiles.isNotEmpty()) {
+			return@runInterruptible getEpubManga(epubFiles, withDetails)
+		}
 		(uri.resolveFsAndPath()).use { (fileSystem, rootPath) ->
 			val index = MangaIndex.read(fileSystem, rootPath / ENTRY_NAME_INDEX)
 			val mangaInfo = index?.getMangaInfo()
@@ -142,6 +156,80 @@ class LocalMangaParser(private val uri: Uri) {
 		}
 	}
 
+	@Blocking
+	private fun getEpubManga(epubFiles: List<File>, withDetails: Boolean): LocalManga {
+		val isCollection = epubFiles.size > 1 || rootFile.isDirectory
+		val books = epubFiles.map { it to EpubParser.parse(it) }
+		val (firstFile, firstBook) = books.first()
+		val chapters = if (withDetails) {
+			val result = ArrayList<MangaChapter>()
+			var number = 0f
+			books.forEachIndexed { bookIndex, (file, book) ->
+				val volume = if (isCollection) bookIndex + 1 else 0
+				if (book.toc.isNotEmpty()) {
+					result.add(
+						MangaChapter(
+							id = file.toZipUri(TOC_ENTRY).toString().longHashCode(),
+							title = TOC_TITLE,
+							number = 0f,
+							volume = volume,
+							url = file.toZipUri(TOC_ENTRY).toString(),
+							scanlator = null,
+							uploadDate = 0L,
+							branch = null,
+							source = LocalMangaSource,
+						),
+					)
+				}
+				for (item in book.spine) {
+					val url = file.toZipUri(item.href).toString()
+					result.add(
+						MangaChapter(
+							id = url.longHashCode(),
+							title = item.title,
+							number = ++number,
+							volume = volume,
+							url = url,
+							scanlator = null,
+							uploadDate = 0L,
+							branch = null,
+							source = LocalMangaSource,
+						),
+					)
+				}
+			}
+			result
+		} else {
+			null
+		}
+		return LocalManga(
+			Manga(
+				id = rootFile.absolutePath.longHashCode(),
+				title = if (isCollection) {
+					rootFile.name.fileNameToTitle()
+				} else {
+					firstBook.title ?: rootFile.name.fileNameToTitle()
+				},
+				url = rootFile.toUri().toString(),
+				publicUrl = rootFile.toUri().toString(),
+				source = LocalMangaSource,
+				coverUrl = books.firstNotNullOfOrNull { (file, book) ->
+					book.coverHref?.let { file.toZipUri(it).toString() }
+				},
+				chapters = chapters,
+				altTitles = emptySet(),
+				rating = -1f,
+				contentRating = null,
+				tags = emptySet(),
+				state = null,
+				authors = firstBook.authors,
+				largeCoverUrl = null,
+				description = firstBook.description,
+			),
+			rootFile,
+		)
+	}
+
 	suspend fun getMangaInfo(): Manga? = runInterruptible(Dispatchers.IO) {
 		uri.resolveFsAndPath().use { (fileSystem, rootPath) ->
 			val index = MangaIndex.read(fileSystem, rootPath / ENTRY_NAME_INDEX)
@@ -150,6 +238,17 @@ class LocalMangaParser(private val uri: Uri) {
 	}
 
 	suspend fun getPages(chapter: MangaChapter): List<MangaPage> = runInterruptible(Dispatchers.IO) {
+		if (hasEpubExtension(chapter.url.substringBefore('#'))) {
+			// EPUB chapters are rendered as a whole by the text reader - a single synthetic page
+			return@runInterruptible listOf(
+				MangaPage(
+					id = chapter.url.longHashCode(),
+					url = chapter.url,
+					preview = null,
+					source = LocalMangaSource,
+				),
+			)
+		}
 		val chapterUri = chapter.url.toUri().resolve()
 		chapterUri.resolveFsAndPath().use { (fileSystem, rootPath) ->
 			val index = MangaIndex.read(fileSystem, rootPath / ENTRY_NAME_INDEX)
@@ -248,8 +347,13 @@ class LocalMangaParser(private val uri: Uri) {
 
 		private val REGEX_PARENT_PATH_PREFIX = Regex("^(/\\.\\.)+")
 
+		const val TOC_ENTRY = "~toc"
+
+		// ponytail: not localized - chapter titles are built without a Context here
+		const val TOC_TITLE = "Table of Contents"
+
 		@Blocking
-		fun getOrNull(file: File): LocalMangaParser? = if ((file.isDirectory || file.isZipArchive) && file.canRead()) {
+		fun getOrNull(file: File): LocalMangaParser? = if ((file.isDirectory || file.isZipArchive || file.isEpubFile) && file.canRead()) {
 			LocalMangaParser(file)
 		} else {
 			null

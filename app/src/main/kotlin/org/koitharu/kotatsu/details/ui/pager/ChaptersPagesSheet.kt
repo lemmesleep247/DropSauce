@@ -40,6 +40,7 @@ import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.smoothScrollToTop
 import org.koitharu.kotatsu.databinding.SheetChaptersPagesBinding
 import org.koitharu.kotatsu.details.ui.DetailsViewModel
+import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
 import javax.inject.Inject
 import com.google.android.material.R as materialR
@@ -54,6 +55,8 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 	lateinit var settings: AppSettings
 
 	private val viewModel by ChaptersPagesViewModel.ActivityVMLazy(this)
+
+	private var keepTabsVisible = false
 
 	override fun getTheme(): Int {
 		return if (context?.resources?.getBoolean(R.bool.is_tablet) == true) {
@@ -73,8 +76,12 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 		val args = arguments ?: Bundle.EMPTY
 		var defaultTab = args.getInt(AppRouter.KEY_TAB, settings.defaultDetailsTab)
-		val adapter = ChaptersPagesAdapter(this, settings.isPagesTabEnabled)
-		if (!adapter.isPagesTabEnabled) {
+		// EPUB books have text chapters only - no page thumbnails or bookmarks
+		val isEpub = viewModel.getMangaOrNull()?.isEpub == true
+		val adapter = ChaptersPagesAdapter(this, settings.isPagesTabEnabled && !isEpub, isChaptersOnly = isEpub)
+		if (isEpub) {
+			defaultTab = TAB_CHAPTERS
+		} else if (!adapter.isPagesTabEnabled) {
 			defaultTab = (defaultTab - 1).coerceAtLeast(TAB_CHAPTERS)
 		}
 		// The read/continue action now lives in the details page's floating FAB, so the sheet's own
@@ -87,7 +94,9 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		TabLayoutMediator(binding.tabs, binding.pager, adapter).attach()
 		binding.tabs.addOnTabSelectedListener(this)
 		binding.pager.setCurrentItem(defaultTab, false)
-		binding.tabs.isVisible = adapter.itemCount > 1
+		// epub keeps its single Chapters tab visible so the header layout stays put
+		keepTabsVisible = isEpub
+		binding.tabs.isVisible = adapter.itemCount > 1 || keepTabsVisible
 
 		val menuProvider = ChapterPagesMenuProvider(this, binding.pager, settings, viewModel, binding.layoutToolbarContent)
 		onBackPressedDispatcher.addCallback(viewLifecycleOwner, menuProvider)
@@ -226,7 +235,7 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		viewBinding?.run {
 			pager.isUserInputEnabled = !isLocked
 			tabs.visibility = when {
-				(pager.adapter?.itemCount ?: 0) <= 1 -> View.GONE
+				(pager.adapter?.itemCount ?: 0) <= 1 && !keepTabsVisible -> View.GONE
 				isLocked -> View.INVISIBLE
 				else -> View.VISIBLE
 			}

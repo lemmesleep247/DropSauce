@@ -14,6 +14,7 @@ import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.util.ext.isFileUri
+import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.core.util.ext.isZipUri
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.model.Manga
@@ -36,6 +37,10 @@ class DetectReaderModeUseCase @Inject constructor(
 	suspend operator fun invoke(manga: Manga, state: ReaderState?): ReaderMode {
 		dataRepository.getReaderMode(manga.id)?.let { return it }
 		val defaultMode = settings.defaultReaderMode
+		if (manga.isEpub) {
+			// text chapters cannot be sampled as images; mode only selects paged vs scroll
+			return defaultMode
+		}
 		if (!settings.isReaderModeDetectionEnabled || defaultMode == ReaderMode.WEBTOON) {
 			return defaultMode
 		}

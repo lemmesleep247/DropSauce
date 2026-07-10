@@ -7,6 +7,7 @@ import androidx.fragment.app.commit
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.util.ext.findKeyByValue
+import org.koitharu.kotatsu.reader.ui.epub.EpubReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.doublepage.DoubleReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.doublereversed.ReversedDoubleReaderFragment
@@ -29,17 +30,32 @@ class ReaderManager(
 		invalidateTypesMap(useDoublePages)
 	}
 
+	// EPUB books always use the single text reader fragment; the selected ReaderMode only
+	// switches its paged/scroll behavior, so track it here instead of a mode->class lookup
+	var isEpub: Boolean = false
+	private var epubMode: ReaderMode? = null
+
 	val currentReader: BaseReaderFragment<*>?
 		get() = fragmentManager.findFragmentById(container.id) as? BaseReaderFragment<*>
 
 	val currentMode: ReaderMode?
 		get() {
 			val readerClass = currentReader?.javaClass ?: return null
-			return modeMap.findKeyByValue(readerClass)
+			return if (readerClass == EpubReaderFragment::class.java) {
+				epubMode
+			} else {
+				modeMap.findKeyByValue(readerClass)
+			}
 		}
 
 	fun replace(newMode: ReaderMode) {
-		val readerClass = requireNotNull(modeMap[newMode])
+		val readerClass = if (isEpub) {
+			epubMode = newMode
+			EpubReaderFragment::class.java
+		} else {
+			epubMode = null
+			requireNotNull(modeMap[newMode])
+		}
 		fragmentManager.commit {
 			setReorderingAllowed(true)
 			replace(container.id, readerClass, null, null)
@@ -47,6 +63,9 @@ class ReaderManager(
 	}
 
 	fun setDoubleReaderMode(isEnabled: Boolean) {
+		if (isEpub) {
+			return
+		}
 		val mode = currentMode
 		val prevReader = currentReader?.javaClass
 		invalidateTypesMap(isEnabled)

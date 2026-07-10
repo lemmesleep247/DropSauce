@@ -17,6 +17,26 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT * FROM tracks ORDER BY last_check_time ASC LIMIT :limit OFFSET :offset")
 	abstract suspend fun findAll(offset: Int, limit: Int): List<TrackWithManga>
 
+	/**
+	 * Rows eligible for a new-chapters check. Deliberately narrower than [findAll]: track rows are
+	 * also kept alive for feed display/sync (see the track_logs pin in TrackingRepository), and those
+	 * pinned rows must NOT be checked — otherwise manga from untracked categories keep updating.
+	 */
+	@Transaction
+	@Query(
+		"SELECT * FROM tracks WHERE " +
+			"(:trackHistory AND manga_id IN (SELECT manga_id FROM history WHERE deleted_at = 0)) " +
+			"OR (:trackFavourites AND manga_id IN (SELECT DISTINCT manga_id FROM favourites WHERE deleted_at = 0 " +
+			"AND category_id IN (SELECT category_id FROM favourite_categories WHERE (`track` = 1 OR download_new_chapters = 1) AND deleted_at = 0))) " +
+			"ORDER BY last_check_time ASC LIMIT :limit OFFSET :offset",
+	)
+	abstract suspend fun findAllForChecking(
+		trackHistory: Boolean,
+		trackFavourites: Boolean,
+		offset: Int,
+		limit: Int,
+	): List<TrackWithManga>
+
 	@Transaction
 	@Query("SELECT * FROM tracks ORDER BY last_check_time DESC")
 	abstract fun observeAll(): Flow<List<TrackWithManga>>

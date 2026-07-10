@@ -70,7 +70,12 @@ class TrackingRepository @Inject constructor(
 	}
 
 	suspend fun getTracks(offset: Int, limit: Int): List<MangaTracking> {
-		return db.getTracksDao().findAll(offset = offset, limit = limit).map {
+		return db.getTracksDao().findAllForChecking(
+			trackHistory = AppSettings.TRACK_HISTORY in settings.trackSources,
+			trackFavourites = AppSettings.TRACK_FAVOURITES in settings.trackSources,
+			offset = offset,
+			limit = limit,
+		).map {
 			MangaTracking(
 				manga = it.manga.toManga(emptySet(), null),
 				lastChapterId = it.track.lastChapterId,

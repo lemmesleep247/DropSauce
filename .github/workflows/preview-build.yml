@@ -1,6 +1,6 @@
 name: Preview Build
 
-# Builds a standalone "preview" APK for every branch on push, and on manual dispatch.
+# Builds a standalone "preview" APK on manual dispatch.
 # The preview variant is a non-debuggable build with none of the debug-only tooling
 # (no LeakCanary/StrictMode/debug settings/ACRA-debug) and its own applicationId suffix, so it
 # installs alongside the store build. R8/resource shrinking is intentionally OFF so the APK
@@ -9,7 +9,6 @@ name: Preview Build
 # The APK is published as a workflow artifact (zipped by GitHub) for anyone who prefers the Actions tab.
 # The SHA-256/SHA-1/MD5 hashes are printed to the run summary.
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:

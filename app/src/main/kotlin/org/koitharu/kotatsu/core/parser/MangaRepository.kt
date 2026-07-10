@@ -154,3 +154,14 @@ interface MangaRepository {
 		}
 	}
 }
+
+/**
+ * A repository that can bypass its in-memory details cache for update checks.
+ *
+ * This is separate from [MangaRepository.getDetails] because ordinary details screens should still
+ * benefit from caching, while chapter checks must always ask the remote source for its latest list.
+ */
+interface FreshMangaDetailsRepository {
+
+	suspend fun getFreshDetails(manga: Manga): Manga
+}

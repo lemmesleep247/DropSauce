@@ -1,12 +1,11 @@
 package org.koitharu.kotatsu.tracker.domain
 
 import android.util.Log
-import coil3.request.CachePolicy
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.withMergedBranches
-import org.koitharu.kotatsu.core.parser.CachingMangaRepository
+import org.koitharu.kotatsu.core.parser.FreshMangaDetailsRepository
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -130,8 +129,8 @@ class CheckNewChaptersUseCase @Inject constructor(
 
 	private suspend fun fetchDetails(manga: Manga): Manga {
 		val repo = mangaRepositoryFactory.create(manga.source)
-		val details = if (repo is CachingMangaRepository) {
-			repo.getDetails(manga, CachePolicy.WRITE_ONLY)
+		val details = if (repo is FreshMangaDetailsRepository) {
+			repo.getFreshDetails(manga)
 		} else {
 			repo.getDetails(manga)
 		}

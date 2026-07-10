@@ -21,13 +21,15 @@ import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 
 abstract class CachingMangaRepository(
 	private val cache: MemoryContentCache,
-) : MangaRepository {
+) : MangaRepository, FreshMangaDetailsRepository {
 
 	private val detailsMutex = MultiMutex<Long>()
 	private val relatedMangaMutex = MultiMutex<Long>()
 	private val pagesMutex = MultiMutex<Long>()
 
 	final override suspend fun getDetails(manga: Manga): Manga = getDetails(manga, CachePolicy.ENABLED)
+
+	final override suspend fun getFreshDetails(manga: Manga): Manga = getDetails(manga, CachePolicy.WRITE_ONLY)
 
 	final override suspend fun getPages(chapter: MangaChapter): List<MangaPage> = pagesMutex.withLock(chapter.id) {
 		cache.getPages(source, chapter.url)?.let { return it }

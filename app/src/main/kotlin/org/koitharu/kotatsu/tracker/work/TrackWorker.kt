@@ -127,19 +127,24 @@ class TrackWorker @AssistedInject constructor(
 
 		try {
 			channelFlow {
-				for (track in tracks) {
+				// Match Mihon's library updater: different sources may run concurrently, but titles
+				// from the same extension are checked sequentially. Several extensions keep mutable
+				// request state and sites commonly rate-limit concurrent requests from one source.
+				for (sourceTracks in tracks.groupBy { it.manga.source.name }.values) {
 					launch {
 						semaphore.withPermit {
-							send(
-								runCatchingCancellable {
-									checkNewChaptersUseCase.invoke(track)
-								}.getOrElse { error ->
-									MangaUpdates.Failure(
-										manga = track.manga,
-										error = error,
-									)
-								},
-							)
+							for (track in sourceTracks) {
+								send(
+									runCatchingCancellable {
+										checkNewChaptersUseCase.invoke(track)
+									}.getOrElse { error ->
+										MangaUpdates.Failure(
+											manga = track.manga,
+											error = error,
+										)
+									},
+								)
+							}
 						}
 					}
 				}
@@ -378,7 +383,7 @@ class TrackWorker @AssistedInject constructor(
 			val query = WorkQuery.Builder.fromTags(listOf(TAG, TAG_ONESHOT)).build()
 			return workManager.getWorkInfosFlow(query)
 				.map { works ->
-					works.any { x -> x.state == WorkInfo.State.RUNNING }
+					works.any { x -> isTrackerWorkActive(x.state, x.tags) }
 				}
 		}
 
@@ -392,9 +397,16 @@ class TrackWorker @AssistedInject constructor(
 		const val WORKER_CHANNEL_ID = "track_worker"
 		const val WORKER_NOTIFICATION_ID = 35
 		const val TAG = "tracking"
-		const val TAG_ONESHOT = "tracking_oneshot"
+		const val TAG_ONESHOT = TAG_ONESHOT_VALUE
 		const val MAX_PARALLELISM = 6
 		val BATCH_SIZE = if (BuildConfig.DEBUG) 20 else 46
 		const val SETTINGS_ACTION_CODE = 5
 	}
 }
+
+internal fun isTrackerWorkActive(state: WorkInfo.State, tags: Set<String>): Boolean {
+	return state == WorkInfo.State.RUNNING ||
+		(TAG_ONESHOT_VALUE in tags && !state.isFinished)
+}
+
+private const val TAG_ONESHOT_VALUE = "tracking_oneshot"

@@ -546,17 +546,31 @@ class ReaderViewModel @Inject constructor(
         val m = mangaDetails.value ?: return
         val chapterIndex = m.chapters[chapter.branch]?.indexOfFirst { it.id == chapter.id } ?: -1
         val isEpub = m.toManga().isEpub
-        val totalPages = if (isEpub) EPUB_SLIDER_MAX + 1 else chaptersLoader.getPagesCount(chapter.id)
+        // in paged epub mode the slider is a page index driven by onEpubProgressChanged; a chapter
+        // change must not reset it to the smooth 0..1000 scrollbar (the imminent progress report
+        // refreshes the real page/count) - so carry the paged fields over instead of clobbering them
+        val prevUi = uiState.value
+        val isEpubPaged = isEpub && prevUi?.isEpubPaged == true
+        val totalPages = when {
+            !isEpub -> chaptersLoader.getPagesCount(chapter.id)
+            isEpubPaged -> prevUi?.totalPages ?: (EPUB_SLIDER_MAX + 1)
+            else -> EPUB_SLIDER_MAX + 1
+        }
         val newState = ReaderUiState(
             mangaName = m.toManga().title,
             chapter = chapter,
             chapterIndex = chapterIndex,
             chaptersTotal = m.chapters[chapter.branch].sizeOrZero(),
             totalPages = totalPages,
-            currentPage = if (isEpub) state.scroll.coerceIn(0, EPUB_SLIDER_MAX) else state.page,
+            currentPage = when {
+                !isEpub -> state.page
+                isEpubPaged -> (prevUi?.currentPage ?: 0).coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+                else -> state.scroll.coerceIn(0, EPUB_SLIDER_MAX)
+            },
             percent = computePercent(state.chapterId),
             incognito = isIncognitoMode.value == true,
             isEpub = isEpub,
+            isEpubPaged = isEpubPaged,
         )
         uiState.value = newState
         if (isIncognitoMode.value == false) {

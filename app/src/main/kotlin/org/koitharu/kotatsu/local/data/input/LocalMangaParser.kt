@@ -166,21 +166,6 @@ class LocalMangaParser(private val uri: Uri) {
 			var number = 0f
 			books.forEachIndexed { bookIndex, (file, book) ->
 				val volume = if (isCollection) bookIndex + 1 else 0
-				if (book.toc.isNotEmpty()) {
-					result.add(
-						MangaChapter(
-							id = file.toZipUri(TOC_ENTRY).toString().longHashCode(),
-							title = TOC_TITLE,
-							number = 0f,
-							volume = volume,
-							url = file.toZipUri(TOC_ENTRY).toString(),
-							scanlator = null,
-							uploadDate = 0L,
-							branch = null,
-							source = LocalMangaSource,
-						),
-					)
-				}
 				for (item in book.spine) {
 					val url = file.toZipUri(item.href).toString()
 					result.add(

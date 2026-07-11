@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import org.json.JSONObject
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
@@ -43,6 +44,7 @@ import org.koitharu.kotatsu.databinding.FragmentReaderEpubBinding
 import org.koitharu.kotatsu.local.data.input.EpubBook
 import org.koitharu.kotatsu.local.data.input.EpubParser
 import org.koitharu.kotatsu.local.data.input.LocalMangaParser
+import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.ui.ReaderState
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderAdapter
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderFragment
@@ -55,6 +57,12 @@ import com.google.android.material.R as materialR
 
 /**
  * Text reader for EPUB books with scrolling and swipe-paged modes.
+ *
+ * Chapter switching is seamless in both directions: the adjacent chapters are preloaded and spliced
+ * into the same WebView document, separated by boundary markers. At most three chapter blocks live in
+ * the DOM at once ([prev][current][next]); crossing a boundary promotes the neighbour to current and
+ * trims the far block, compensating the scroll/transform so nothing visibly jumps. The current
+ * chapter's extent is always re-derived from the marker positions, so it survives resizes.
  */
 @AndroidEntryPoint
 class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
@@ -62,10 +70,17 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	@Inject
 	lateinit var settings: AppSettings
 
+	@Volatile
 	private var currentChapterId = 0L
+
+	@Volatile
 	private var currentHref: String? = null
+
+	@Volatile
 	private var currentEpubFile: File? = null
 	private var book: EpubBook? = null
+
+	@Volatile
 	private var zipFile: ZipFile? = null
 	private var pagesSnapshot: List<ReaderPage> = emptyList()
 	private var canGoPrev = false
@@ -74,12 +89,18 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private var pagedTopInset = 0
 	private var pagedBottomInset = 0
 	private var scrollTopInset = 0
-	private var preloadJob: Job? = null
-	@Volatile private var preloadedNext: PreloadedChapter? = null
-	private var previousPreloadJob: Job? = null
-	@Volatile private var preloadedPrevious: PreloadedChapter? = null
-	private val previousChapters = ArrayDeque<PreloadedChapter>()
-	private var currentRawHtml = ""
+
+	// the neighbouring chapters, preloaded so a boundary crossing is instant. Each owns its own open
+	// zip; after a seamless commit the chapter we leave becomes the opposite neighbour (its zip stays
+	// open because its block is still in the DOM until it is trimmed).
+	private var preloadNextJob: Job? = null
+	private var preloadPrevJob: Job? = null
+
+	@Volatile
+	private var preloadedNext: PreloadedChapter? = null
+
+	@Volatile
+	private var preloadedPrev: PreloadedChapter? = null
 
 	// current chapter document (href -> injected html), served by shouldInterceptRequest so the
 	// WebView navigates to a real https url - loadDataWithBaseURL leaves an empty data: history
@@ -93,7 +114,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	@Volatile
 	private var pendingPm = 0
 
-	// when scrolling backwards into the previous chapter, land at its end instead of the top
+	// when scrolling backwards into the previous chapter via a full reload, land at its end
 	private var landAtEnd = false
 
 	override fun onCreateViewBinding(
@@ -146,14 +167,12 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	override fun onDestroyView() {
-		preloadJob?.cancel()
-		previousPreloadJob?.cancel()
+		preloadNextJob?.cancel()
+		preloadPrevJob?.cancel()
 		preloadedNext?.zip?.close()
-		preloadedPrevious?.zip?.close()
+		preloadedPrev?.zip?.close()
 		preloadedNext = null
-		preloadedPrevious = null
-		previousChapters.forEach { it.zip.close() }
-		previousChapters.clear()
+		preloadedPrev = null
 		viewBinding?.webView?.destroy()
 		zipFile?.close()
 		zipFile = null
@@ -204,8 +223,6 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
 		pagesSnapshot = pages
-		preloadNextChapter()
-		preloadPreviousChapter()
 		val target = when {
 			pendingState != null -> pages.find { it.chapterId == pendingState.chapterId }
 				?.let { it to pendingState.scroll.coerceIn(0, 1000) }
@@ -246,11 +263,13 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			}
 		}
 		currentChapterId = page.chapterId
-		currentRawHtml = html
 		currentHref = href
 		progressPm = pm
 		pendingPm = pm
 		val binding = viewBinding ?: return
+		// this is a fresh document: the spliced-in neighbours and their markers are gone, so drop any
+		// preloads (they belonged to the previous document) before priming the new ones
+		resetPreloads()
 		mainDocument = href to injectHtml(html)
 		binding.webView.loadUrl("https://$EPUB_HOST/${encodePath(href)}")
 		val index = pagesSnapshot.indexOfFirst { it.chapterId == page.chapterId }
@@ -258,71 +277,88 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			viewModel.onCurrentPageChanged(index, index)
 		}
 		preloadNextChapter()
-		preloadPreviousChapter()
+		preloadPrevChapter()
 	}
 
-	private fun preloadNextChapter() {
-		val chapters = viewModel.getMangaOrNull()?.chapters.orEmpty()
+	private fun resetPreloads() {
+		preloadNextJob?.cancel()
+		preloadPrevJob?.cancel()
+		preloadedNext?.zip?.close()
+		preloadedPrev?.zip?.close()
+		preloadedNext = null
+		preloadedPrev = null
+	}
+
+	private fun chapterAt(offset: Int): MangaChapter? {
+		val chapters = viewModel.getMangaOrNull()?.chapters ?: return null
 		val index = chapters.indexOfFirst { it.id == currentChapterId }
-		val next = chapters.getOrNull(index + 1) ?: return
+		if (index < 0) return null
+		return chapters.getOrNull(index + offset)
+	}
+
+	// completion validates against the (possibly already advanced) currentChapterId, so a preload that
+	// finishes after the user has moved on is discarded instead of corrupting the window
+	private fun preloadNextChapter() {
+		val next = chapterAt(1) ?: return
 		if (preloadedNext?.chapterId == next.id) {
 			attachPreloadedNext()
 			return
 		}
-		if (preloadJob?.isActive == true) return
-		preloadJob = viewLifecycleOwner.lifecycleScope.launch {
-			val loaded = withContext(Dispatchers.IO) {
-				val uri = next.url.toUri()
-				val file = File(uri.schemeSpecificPart)
-				val href = uri.fragment.orEmpty()
-				val html = if (href == LocalMangaParser.TOC_ENTRY) {
-					buildTocHtml(EpubParser.parse(file))
-				} else {
-					EpubParser.readEntryText(file, href)
-				} ?: return@withContext null
-				PreloadedChapter(next.id, file, href, html, ZipFile(file))
-			} ?: return@launch
+		if (preloadNextJob?.isActive == true) return
+		preloadNextJob = viewLifecycleOwner.lifecycleScope.launch {
+			val loaded = loadPreloaded(next) ?: return@launch
+			if (chapterAt(1)?.id != loaded.chapterId || preloadedNext?.chapterId == loaded.chapterId) {
+				loaded.zip.close()
+				return@launch
+			}
 			preloadedNext?.zip?.close()
 			preloadedNext = loaded
 			attachPreloadedNext()
 		}
 	}
 
+	private fun preloadPrevChapter() {
+		if (!isPagedMode) return // scroll mode goes back via a clean reload, not a spliced-in prev chapter
+		val prev = chapterAt(-1) ?: return
+		if (preloadedPrev?.chapterId == prev.id) {
+			attachPreloadedPrev()
+			return
+		}
+		if (preloadPrevJob?.isActive == true) return
+		preloadPrevJob = viewLifecycleOwner.lifecycleScope.launch {
+			val loaded = loadPreloaded(prev) ?: return@launch
+			if (chapterAt(-1)?.id != loaded.chapterId || preloadedPrev?.chapterId == loaded.chapterId) {
+				loaded.zip.close()
+				return@launch
+			}
+			preloadedPrev?.zip?.close()
+			preloadedPrev = loaded
+			attachPreloadedPrev()
+		}
+	}
+
+	private suspend fun loadPreloaded(chapter: MangaChapter): PreloadedChapter? = withContext(Dispatchers.IO) {
+		val uri = chapter.url.toUri()
+		val file = File(uri.schemeSpecificPart)
+		val href = uri.fragment.orEmpty()
+		val html = if (href == LocalMangaParser.TOC_ENTRY) {
+			buildTocHtml(EpubParser.parse(file))
+		} else {
+			EpubParser.readEntryText(file, href)
+		} ?: return@withContext null
+		PreloadedChapter(chapter.id, file, href, html, ZipFile(file))
+	}
+
 	private fun attachPreloadedNext() {
 		val loaded = preloadedNext ?: return
 		val base = "https://$EPUB_HOST/${encodePath(loaded.href)}"
-		viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.preload(${org.json.JSONObject.quote(base)});}", null)
+		viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.preloadNext(${JSONObject.quote(base)});}", null)
 	}
 
-	private fun preloadPreviousChapter() {
-		val chapters = viewModel.getMangaOrNull()?.chapters.orEmpty()
-		val index = chapters.indexOfFirst { it.id == currentChapterId }
-		val previous = chapters.getOrNull(index - 1) ?: return
-		if (preloadedPrevious?.chapterId == previous.id) {
-			attachPreloadedPrevious()
-			return
-		}
-		if (previousPreloadJob?.isActive == true) return
-		previousPreloadJob = viewLifecycleOwner.lifecycleScope.launch {
-			val loaded = withContext(Dispatchers.IO) {
-				val uri = previous.url.toUri()
-				val file = File(uri.schemeSpecificPart)
-				val href = uri.fragment.orEmpty()
-				val html = if (href == LocalMangaParser.TOC_ENTRY) buildTocHtml(EpubParser.parse(file))
-				else EpubParser.readEntryText(file, href)
-					?: return@withContext null
-				PreloadedChapter(previous.id, file, href, html, ZipFile(file))
-			} ?: return@launch
-			preloadedPrevious?.zip?.close()
-			preloadedPrevious = loaded
-			attachPreloadedPrevious()
-		}
-	}
-
-	private fun attachPreloadedPrevious() {
-		val loaded = preloadedPrevious ?: return
+	private fun attachPreloadedPrev() {
+		val loaded = preloadedPrev ?: return
 		val base = "https://$EPUB_HOST/${encodePath(loaded.href)}"
-		viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.preloadPrevious(${org.json.JSONObject.quote(base)});}", null)
+		viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.preloadPrev(${JSONObject.quote(base)});}", null)
 	}
 
 	override fun getCurrentState(): ReaderState? = currentChapterId.takeIf { it != 0L }?.let {
@@ -548,76 +584,111 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val script = """
 			<script>
 			(function(){
-			var nav={prev:false,next:false},paged=$isPagedMode;
+			var nav={prev:false,next:false},paged=$isPagedMode,ANIM=260;
+			// The document holds up to three chapter blocks side by side: [prev][current][next].
+			// Boundary markers separate them. The current chapter's page window is re-derived from the
+			// marker positions on every measure, so it is always correct - even after a resize.
 			var E={
-			 cur:0,pc:1,basePage:0,baseScroll:0,leaving:false,nextMarker:null,currentMarker:null,previousMarkers:[],preloadFailed:false,
+			 cur:0,pc:1,basePage:0,baseScroll:0,busy:false,prevMarker:null,nextMarker:null,
 			 el:function(){return document.scrollingElement||document.documentElement;},
 			 stepW:function(){return document.documentElement.clientWidth||window.innerWidth;},
-			 // page count depends only on text configs + viewport, so measure it ONCE per layout
-			 // (after fonts settle / on config or size change) and cache it - never mid-read
-			 totalPages:function(){return Math.max(1,Math.round(document.body.scrollWidth/this.stepW()));},
-			 measure:function(){this.pc=Math.max(1,this.totalPages()-this.basePage);
-			  if(this.cur>this.basePage+this.pc-1)this.cur=this.basePage+this.pc-1;return this.pc;},
+			 total:function(){return Math.max(1,Math.round(document.body.scrollWidth/this.stepW()));},
+			 // a marker forced to a column boundary sits at x = column_index * stepW
+			 colOf:function(node){return Math.round(node.offsetLeft/this.stepW());},
+			 measure:function(){
+			  this.basePage=this.prevMarker?this.colOf(this.prevMarker):0;
+			  var end=this.nextMarker?this.colOf(this.nextMarker):this.total();
+			  this.pc=Math.max(1,end-this.basePage);
+			  if(this.cur<this.basePage)this.cur=this.basePage;
+			  if(this.cur>this.basePage+this.pc-1)this.cur=this.basePage+this.pc-1;
+			  return this.pc;},
 			 pageCount:function(){return this.pc;},
-			 preload:function(base){if(this.nextMarker)return;this.preloadFailed=false;
-			  fetch('https://$EPUB_HOST$NEXT_DOCUMENT_PATH',{cache:'no-store'}).then(function(r){return r.text();}).then(function(raw){
-			   var currentPages=E.measure();var d=new DOMParser().parseFromString(raw,'text/html');
-			   d.querySelectorAll('[src],[href],[poster]').forEach(function(el){['src','href','poster'].forEach(function(a){var v=el.getAttribute(a);if(v&&!v.startsWith('#')){try{el.setAttribute(a,new URL(v,base).href);}catch(x){}}});});
-			   var marker=document.createElement('div');marker.className='__epub_chapter_boundary';
-			   document.body.appendChild(marker);while(d.body.firstChild)document.body.appendChild(d.body.firstChild);
-			   E.nextMarker=marker;E.pc=currentPages;
-			  }).catch(function(){E.preloadFailed=true;});},
-			 preloadPrevious:function(base){if(this.currentMarker)return;
-			  fetch('https://$EPUB_HOST$PREVIOUS_DOCUMENT_PATH',{cache:'no-store'}).then(function(r){return r.text();}).then(function(raw){
-			   var beforePages=E.totalPages(),beforeScroll=E.el().scrollTop,first=document.body.firstChild;
-			   var d=new DOMParser().parseFromString(raw,'text/html');
-			   d.querySelectorAll('[src],[href],[poster]').forEach(function(el){['src','href','poster'].forEach(function(a){var v=el.getAttribute(a);if(v&&!v.startsWith('#')){try{el.setAttribute(a,new URL(v,base).href);}catch(x){}}});});
-			   var frag=document.createDocumentFragment();while(d.body.firstChild)frag.appendChild(d.body.firstChild);
-			   var marker=document.createElement('div');marker.className='__epub_chapter_boundary';frag.appendChild(marker);document.body.insertBefore(frag,first);
-			   E.currentMarker=marker;
-			   if(paged){var added=E.totalPages()-beforePages;E.basePage+=added;E.cur+=added;E.apply(false);}
-			   else{E.baseScroll=marker.offsetTop;E.el().scrollTop=beforeScroll+E.baseScroll;}
-			  });},
-			 commitNext:function(){var marker=this.nextMarker;if(!marker||!EpubBridge.onSeamlessNext())return false;
-			  if(this.currentMarker)this.previousMarkers.push(this.currentMarker);this.currentMarker=marker;
-			  if(paged){this.basePage=this.cur;this.nextMarker=null;this.measure();}
-			  else{this.baseScroll=marker.offsetTop;this.nextMarker=null;}
-			  this.leaving=false;this.report();return true;},
-			 commitPrevious:function(){var marker=this.currentMarker;if(!marker||!EpubBridge.onSeamlessPrevious())return false;
-			  this.nextMarker=marker;this.currentMarker=this.previousMarkers.length?this.previousMarkers.pop():null;
-			  this.baseScroll=this.currentMarker?this.currentMarker.offsetTop:0;this.leaving=false;this.report();return true;},
+			 scrollStart:function(){return this.baseScroll;},
+			 scrollEnd:function(){return this.nextMarker?this.nextMarker.offsetTop:this.el().scrollHeight;},
 			 apply:function(animate){var b=document.body.style;
 			  b.transition=animate?'transform .25s cubic-bezier(.25,.1,.25,1)':'none';
-			  b.transform='translateX(-'+(this.cur*this.stepW())+'px)';},
+			  b.transform='translate3d(-'+(this.cur*this.stepW())+'px,0,0)';},
 			 report:function(){var pm,localPage=0;
-			  if(paged){localPage=this.cur-this.basePage;pm=this.pc<=1?1000:Math.min(1000,Math.round(localPage*1000/(this.pc-1)));}
-			  else{var se=this.el(),end=this.nextMarker?this.nextMarker.offsetTop:se.scrollHeight;var m=Math.max(0,end-this.baseScroll-window.innerHeight),p=Math.max(0,se.scrollTop-this.baseScroll);pm=m<=0?1000:Math.min(1000,Math.round(p*1000/m));}
+			  if(paged){localPage=this.cur-this.basePage;pm=this.pc<=1?1000:Math.min(1000,Math.max(0,Math.round(localPage*1000/(this.pc-1))));}
+			  else{var se=this.el(),s=this.scrollStart(),e=this.scrollEnd(),m=Math.max(0,e-s-window.innerHeight),p=Math.max(0,se.scrollTop-s);pm=m<=0?1000:Math.min(1000,Math.round(p*1000/m));}
 			  EpubBridge.onProgress(pm,paged?localPage:0,paged?this.pc:0);},
 			 restore:function(pm){
 			  if(paged){this.cur=this.basePage+Math.max(0,Math.min(this.pc-1,Math.round(pm/1000*(this.pc-1))));this.apply(false);}
-			  else{var se=this.el(),end=this.nextMarker?this.nextMarker.offsetTop:se.scrollHeight;se.scrollTop=this.baseScroll+pm/1000*Math.max(0,end-this.baseScroll-window.innerHeight);}
+			  else{var se=this.el(),s=this.scrollStart(),e=this.scrollEnd();se.scrollTop=s+pm/1000*Math.max(0,e-s-window.innerHeight);}
 			  this.report();},
-			 goto:function(p){if(!paged)return;
-			  this.cur=this.basePage+Math.max(0,Math.min(this.pc-1,p));this.apply(true);this.report();},
-			 page:function(d){if(!paged)return;var n=this.cur+d;
-			  if(n<this.basePage){if(nav.prev)EpubBridge.onEdgeSwipe(-1);return;}
-			  if(n>=this.basePage+this.pc){if(nav.next&&this.nextMarker){this.cur=n;this.apply(true);this.leaving=true;setTimeout(function(){E.commitNext();},250);}else if(nav.next&&this.preloadFailed)EpubBridge.onEdgeSwipe(1);else this.apply(true);return;}
+			 goto:function(p){if(!paged||this.busy)return;this.cur=this.basePage+Math.max(0,Math.min(this.pc-1,p));this.apply(true);this.report();},
+			 rewrite:function(doc,base){doc.querySelectorAll('[src],[href],[poster]').forEach(function(el){['src','href','poster'].forEach(function(a){var v=el.getAttribute(a);if(v&&v.charAt(0)!=='#'){try{el.setAttribute(a,new URL(v,base).href);}catch(x){}}});});},
+			 boundary:function(){var m=document.createElement('div');m.className='__epub_chapter_boundary';return m;},
+			 preloadNext:function(base){if(this.nextMarker)return;
+			  fetch('https://$EPUB_HOST$NEXT_DOCUMENT_PATH',{cache:'no-store'}).then(function(r){return r.ok?r.text():Promise.reject();}).then(function(raw){
+			   if(E.nextMarker)return;
+			   var d=new DOMParser().parseFromString(raw,'text/html');E.rewrite(d,base);
+			   var m=E.boundary();document.body.appendChild(m);while(d.body.firstChild)document.body.appendChild(d.body.firstChild);
+			   E.nextMarker=m;if(paged)E.measure();E.report();
+			  }).catch(function(){});},
+			 preloadPrev:function(base){if(!paged||this.prevMarker)return;
+			  fetch('https://$EPUB_HOST$PREV_DOCUMENT_PATH',{cache:'no-store'}).then(function(r){return r.ok?r.text():Promise.reject();}).then(function(raw){
+			   if(E.prevMarker)return;
+			   var d=new DOMParser().parseFromString(raw,'text/html');E.rewrite(d,base);
+			   var m=E.boundary();var first=document.body.firstChild;document.body.insertBefore(m,first);
+			   var frag=document.createDocumentFragment();while(d.body.firstChild)frag.appendChild(d.body.firstChild);
+			   document.body.insertBefore(frag,m);
+			   E.prevMarker=m;
+			   if(paged){var added=E.colOf(m);E.basePage=added;E.cur+=added;E.measure();E.apply(false);}
+			   else{E.el().scrollTop+=m.offsetTop;}
+			   E.report();
+			  }).catch(function(){});},
+			 // slide fully into the neighbour, then swap chapters once the animation lands
+			 enterNext:function(){if(this.busy)return;if(!this.nextMarker){if(nav.next)EpubBridge.onEdgeSwipe(1);return;}
+			  this.busy=true;this.cur=this.basePage+this.pc;this.apply(true);setTimeout(function(){E.commitNext();},ANIM);},
+			 enterPrev:function(){if(this.busy)return;if(!this.prevMarker){if(nav.prev)EpubBridge.onEdgeSwipe(-1);return;}
+			  this.busy=true;this.cur=this.basePage-1;this.apply(true);setTimeout(function(){E.commitPrev();},ANIM);},
+			 // promote next->current, trim the far (prev) block; compensate so nothing visibly jumps
+			 commitNext:function(){
+			  if(!this.nextMarker){this.busy=false;return false;}
+			  if(!EpubBridge.onSeamlessNext()){this.busy=false;if(paged){this.measure();this.cur=this.basePage+this.pc-1;this.apply(true);}this.report();return false;}
+			  if(paged){
+			   // trim the far (prev) block so at most [prev][current] remain; compensate so nothing jumps
+			   if(this.prevMarker){while(document.body.firstChild&&document.body.firstChild!==this.prevMarker)document.body.removeChild(document.body.firstChild);document.body.removeChild(this.prevMarker);}
+			   this.prevMarker=this.nextMarker;this.nextMarker=null;
+			   this.measure();this.cur=this.basePage;this.apply(false);
+			  }else{
+			   // scroll mode keeps the appended content in place and just advances the chapter baseline
+			   this.baseScroll=this.nextMarker.offsetTop;this.nextMarker=null;
+			  }
+			  this.busy=false;this.report();return true;},
+			 // promote prev->current, trim the far (next) block
+			 commitPrev:function(){
+			  if(!this.prevMarker){this.busy=false;return false;}
+			  if(!EpubBridge.onSeamlessPrev()){this.busy=false;this.measure();this.cur=this.basePage;this.apply(true);this.report();return false;}
+			  if(this.nextMarker){
+			   while(document.body.lastChild&&document.body.lastChild!==this.nextMarker)document.body.removeChild(document.body.lastChild);
+			   document.body.removeChild(this.nextMarker);}
+			  this.nextMarker=this.prevMarker;this.prevMarker=null;
+			  if(paged){this.measure();this.cur=Math.min(this.cur,this.basePage+this.pc-1);if(this.cur<this.basePage)this.cur=this.basePage;this.apply(false);}
+			  this.busy=false;this.report();return true;},
+			 page:function(d){if(!paged||this.busy)return;var n=this.cur+d;
+			  if(n<this.basePage){this.enterPrev();return;}
+			  if(n>=this.basePage+this.pc){this.enterNext();return;}
 			  this.cur=n;this.apply(true);this.report();},
 			 style:function(fs,font,lh,pad,align,publisher,isPaged,pm){var s=document.documentElement.style;
 			  s.setProperty('--ep-fs',fs);s.setProperty('--ep-font',font);s.setProperty('--ep-lh',lh);
 			  s.setProperty('--ep-pad',pad+'px');s.setProperty('--ep-align',align);
 			  paged=isPaged;document.documentElement.classList.toggle('ep-publisher',publisher);
 			  document.documentElement.classList.toggle('ep-paged',paged);
-			  if(!paged){document.body.style.transform='none';document.body.style.transition='none';}
-			  requestAnimationFrame(function(){E.measure();E.restore(pm);});},
+			  if(!paged){document.body.style.transform='none';document.body.style.transition='none';E.baseScroll=E.prevMarker?E.prevMarker.offsetTop:0;}
+			  requestAnimationFrame(function(){if(paged)E.measure();E.restore(pm);});},
 			 setNav:function(p,n){nav.prev=p;nav.next=n;}
 			};
 			document.documentElement.classList.toggle('ep-publisher',${settings.isEpubPublisherStyleEnabled});
 			document.documentElement.classList.toggle('ep-paged',paged);
 			window.__epub=E;
-			var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(paged){E.measure();E.apply(false);E.report();}},120);});
-			var reporting=false;window.addEventListener('scroll',function(){if(paged)return;if(!reporting){reporting=true;requestAnimationFrame(function(){reporting=false;var center=E.el().scrollTop+window.innerHeight/2;if(E.nextMarker&&center>=E.nextMarker.offsetTop)E.commitNext();else if(E.currentMarker&&center<E.currentMarker.offsetTop)E.commitPrevious();else E.report();});}},{passive:true});
-			// keep scrolling past the chapter edge -> seamlessly continue into the next/prev chapter
+			var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(paged){E.measure();E.apply(false);}E.report();},120);});
+			// scroll mode is seamless forward only: when the boundary reaches mid-viewport, promote the
+			// appended next chapter to current. Backward navigation is a clean reload (onEdgeSwipe).
+			var reporting=false;window.addEventListener('scroll',function(){if(paged)return;if(!reporting){reporting=true;requestAnimationFrame(function(){reporting=false;
+			 if(E.nextMarker&&E.el().scrollTop+window.innerHeight/2>=E.nextMarker.offsetTop)E.commitNext();else E.report();});}},{passive:true});
+			// scroll mode: at the true document edge (no neighbour spliced yet) fall back to a reload
 			function atBottom(){var se=E.el();return se.scrollTop+window.innerHeight>=se.scrollHeight-2;}
 			function atTop(){return E.el().scrollTop<=2;}
 			var startX=null,startY=null,fired=false,multi=false,dragging=false,dragDx=0;
@@ -629,36 +700,39 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			 if(startY===null||fired||multi)return;
 			 var dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY;
 			 if(paged){
+			  if(E.busy)return;
 			  // follow the finger, snap on release - a half-recognized swipe can't strand the page
-			  if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)){dragging=true;}
-			  if(dragging){dragDx=dx;
-			   var t=E.pageCount(),off=dx;
-			   // only resist at the true book edge - if an adjacent chapter exists, follow the finger fully so it flows over
-			   if((E.cur<=E.basePage&&dx>0&&!nav.prev)||(E.cur>=E.basePage+t-1&&dx<0&&!nav.next))off=dx/3;
+			  if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy))dragging=true;
+			  if(dragging){dragDx=dx;var off=dx;
+			   var atStart=E.cur<=E.basePage,atEnd=E.cur>=E.basePage+E.pc-1;
+			   // resist only when there is genuinely nothing to slide into (no spliced neighbour)
+			   if((atStart&&dx>0&&!E.prevMarker)||(atEnd&&dx<0&&!E.nextMarker))off=dx/3;
 			   var b=document.body.style;b.transition='none';
-			   b.transform='translateX('+(-(E.cur*E.stepW()-off))+'px)';}
+			   b.transform='translate3d('+(-(E.cur*E.stepW()-off))+'px,0,0)';}
 			  return;
 			 }
-			 if(dy<-8&&atBottom()&&nav.next&&E.preloadFailed){fired=true;EpubBridge.onEdgeSwipe(1);}
-			 else if(dy>8&&atTop()&&nav.prev){fired=true;EpubBridge.onEdgeSwipe(-1);}
+			 if(dy<-8&&atBottom()&&nav.next&&!E.nextMarker){fired=true;EpubBridge.onEdgeSwipe(1);}
+			 else if(dy>8&&atTop()&&nav.prev&&!E.prevMarker){fired=true;EpubBridge.onEdgeSwipe(-1);}
 			},{passive:true});
 			document.addEventListener('touchend',function(e){
 			 if(multi){if(e.touches.length===0)multi=false;startX=null;startY=null;dragging=false;return;}
 			 if(startX===null)return;
-			 if(paged&&dragging){
-			  var w=E.stepW(),t=E.pageCount();
+			 if(paged&&dragging&&!E.busy){
+			  var w=E.stepW();
 			  if(dragDx<=-w*0.2){
-			   if(E.cur<E.basePage+t-1){E.cur++;E.apply(true);E.report();}
-			   else if(nav.next&&E.nextMarker){E.cur++;E.apply(true);E.leaving=true;setTimeout(function(){E.commitNext();},250);}else if(nav.next&&E.preloadFailed){EpubBridge.onEdgeSwipe(1);}else{E.apply(true);}
+			   if(E.cur<E.basePage+E.pc-1){E.cur++;E.apply(true);E.report();}
+			   else if(E.nextMarker){E.enterNext();}
+			   else if(nav.next){EpubBridge.onEdgeSwipe(1);}else{E.apply(true);}
 			  }else if(dragDx>=w*0.2){
 			   if(E.cur>E.basePage){E.cur--;E.apply(true);E.report();}
+			   else if(E.prevMarker){E.enterPrev();}
 			   else if(nav.prev){EpubBridge.onEdgeSwipe(-1);}else{E.apply(true);}
 			  }else{E.apply(true);}
 			 }
 			 startX=null;startY=null;dragging=false;dragDx=0;
 			},{passive:true});
 			// measure page count once, after fonts have loaded so column widths are final
-			function boot(){if(!E.nextMarker)E.measure();EpubBridge.onReady();}
+			function boot(){if(paged)E.measure();EpubBridge.onReady();}
 			window.addEventListener('load',function(){
 			 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){requestAnimationFrame(boot);});}
 			 else{requestAnimationFrame(boot);}
@@ -706,46 +780,65 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	private inner class Bridge {
 
+		// called synchronously from the page as the reader slides into the appended next chapter.
+		// Promotes the chapter we are leaving to the "prev" slot (its block stays in the DOM), moves
+		// current onto the preloaded next, and primes the following chapter.
 		@JavascriptInterface
 		fun onSeamlessNext(): Boolean {
 			val next = preloadedNext ?: return false
-			preloadedNext = null
-			val currentZip = zipFile ?: return false
-			previousChapters.addLast(PreloadedChapter(currentChapterId, currentEpubFile ?: return false, currentHref.orEmpty(), currentRawHtml, currentZip))
+			val oldZip = zipFile
+			val oldFile = currentEpubFile
+			val oldHref = currentHref
+			val oldId = currentChapterId
+			val oldHtml = mainDocument?.second
+			preloadPrevJob?.cancel()
+			preloadedPrev?.zip?.close()
+			preloadedPrev = if (oldZip != null && oldFile != null && oldId != 0L) {
+				PreloadedChapter(oldId, oldFile, oldHref.orEmpty(), oldHtml.orEmpty(), oldZip)
+			} else {
+				null
+			}
 			zipFile = next.zip
 			currentEpubFile = next.file
 			currentHref = next.href
 			currentChapterId = next.chapterId
-			currentRawHtml = next.html
+			preloadedNext = null
+			mainDocument = null
 			progressPm = 0
 			pendingPm = 0
-			mainDocument = null
 			view?.post {
-				viewModel.onEpubChapterChanged(next.chapterId)
+				viewModel.onEpubChapterChanged(next.chapterId, 0)
 				preloadNextChapter()
 			}
 			return true
 		}
 
 		@JavascriptInterface
-		fun onSeamlessPrevious(): Boolean {
-			val previous = previousChapters.removeLastOrNull() ?: preloadedPrevious ?: return false
-			if (preloadedPrevious?.chapterId == previous.chapterId) preloadedPrevious = null
-			val currentZip = zipFile ?: return false
-			preloadJob?.cancel()
+		fun onSeamlessPrev(): Boolean {
+			val prev = preloadedPrev ?: return false
+			val oldZip = zipFile
+			val oldFile = currentEpubFile
+			val oldHref = currentHref
+			val oldId = currentChapterId
+			val oldHtml = mainDocument?.second
+			preloadNextJob?.cancel()
 			preloadedNext?.zip?.close()
-			preloadedNext = PreloadedChapter(currentChapterId, currentEpubFile ?: return false, currentHref.orEmpty(), currentRawHtml, currentZip)
-			zipFile = previous.zip
-			currentEpubFile = previous.file
-			currentHref = previous.href
-			currentChapterId = previous.chapterId
-			currentRawHtml = previous.html
+			preloadedNext = if (oldZip != null && oldFile != null && oldId != 0L) {
+				PreloadedChapter(oldId, oldFile, oldHref.orEmpty(), oldHtml.orEmpty(), oldZip)
+			} else {
+				null
+			}
+			zipFile = prev.zip
+			currentEpubFile = prev.file
+			currentHref = prev.href
+			currentChapterId = prev.chapterId
+			preloadedPrev = null
+			mainDocument = null
 			progressPm = 1000
 			pendingPm = 1000
-			mainDocument = null
 			view?.post {
-				viewModel.onEpubChapterChanged(previous.chapterId, 1000)
-				preloadPreviousChapter()
+				viewModel.onEpubChapterChanged(prev.chapterId, 1000)
+				preloadPrevChapter()
 			}
 			return true
 		}
@@ -766,10 +859,10 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 					null,
 				)
 				attachPreloadedNext()
-				attachPreloadedPrevious()
+				attachPreloadedPrev()
 				pendingSearchQuery?.let { query ->
 					pendingSearchQuery = null
-					viewBinding?.webView?.evaluateJavascript("window.find(${org.json.JSONObject.quote(query)});", null)
+					viewBinding?.webView?.evaluateJavascript("window.find(${JSONObject.quote(query)});", null)
 				}
 			}
 		}
@@ -786,7 +879,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	private inner class EpubWebViewClient : WebViewClient() {
 
-			override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+		override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
 			val url = request.url
 			if (url.host != EPUB_HOST) {
 				// books are local: block any external resource
@@ -796,8 +889,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				val html = preloadedNext?.html ?: return WebResourceResponse("text/plain", "utf-8", null)
 				return WebResourceResponse("text/html", "utf-8", html.byteInputStream())
 			}
-			if (url.path == PREVIOUS_DOCUMENT_PATH) {
-				val html = preloadedPrevious?.html ?: return WebResourceResponse("text/plain", "utf-8", null)
+			if (url.path == PREV_DOCUMENT_PATH) {
+				val html = preloadedPrev?.html ?: return WebResourceResponse("text/plain", "utf-8", null)
 				return WebResourceResponse("text/html", "utf-8", html.byteInputStream())
 			}
 			val entryName = url.path.orEmpty().removePrefix("/")
@@ -806,17 +899,12 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 					return WebResourceResponse("text/html", "utf-8", html.byteInputStream())
 				}
 			}
-			val currentZip = zipFile
-			val currentEntry = currentZip?.getEntry(entryName)
-			if (currentZip != null && currentEntry != null) {
-				return WebResourceResponse(guessMimeType(entryName), null, currentZip.getInputStream(currentEntry))
+			// resources may belong to the current chapter or to either spliced-in neighbour
+			for (zip in listOfNotNull(zipFile, preloadedNext?.zip, preloadedPrev?.zip)) {
+				val entry = zip.getEntry(entryName) ?: continue
+				return WebResourceResponse(guessMimeType(entryName), null, zip.getInputStream(entry))
 			}
-			val nextZip = preloadedNext?.zip
-			val nextEntry = nextZip?.getEntry(entryName)
-			if (nextZip != null && nextEntry != null) return WebResourceResponse(guessMimeType(entryName), null, nextZip.getInputStream(nextEntry))
-			val previousZip = preloadedPrevious?.zip ?: return null
-			val previousEntry = previousZip.getEntry(entryName) ?: return null
-			return WebResourceResponse(guessMimeType(entryName), null, previousZip.getInputStream(previousEntry))
+			return null
 		}
 
 		override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -842,7 +930,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		const val EPUB_HOST = "epub.book"
 		const val EPUB_MODE_PAGED = "paged"
 		const val NEXT_DOCUMENT_PATH = "/__epub_next__"
-		const val PREVIOUS_DOCUMENT_PATH = "/__epub_previous__"
+		const val PREV_DOCUMENT_PATH = "/__epub_prev__"
 		const val MAX_SEARCH_RESULTS = 100
 		fun guessMimeType(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
 			"html", "htm", "xhtml", "xml" -> "text/html"

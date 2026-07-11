@@ -55,7 +55,7 @@ DropSauce is a free and open-source manga reader for Android, built to feel quic
 </p>
 
 ## Highlights
-
+- NEW: FULL EPUB READING SUPPORT (OFFLINE ONLY)
 - Lightweight Android-first experience with a modern, polished interface.
 - Full extension support with library, reading, history, bookmarks, tracking, stats, and settings tools.
 - Google Drive sync, local backup/restore, and in-app updates to keep your setup moving with you.

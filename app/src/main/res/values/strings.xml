@@ -463,6 +463,10 @@
 	<string name="epub_align_justified">Justified</string>
 	<string name="epub_publisher_style">Use book formatting</string>
 	<string name="epub_search_book">Search book</string>
+	<string name="epub_theme_system">Follow system</string>
+	<string name="epub_theme_light">Light page</string>
+	<string name="epub_theme_dark">Dark page</string>
+	<string name="epub_theme_black">Black page</string>
 	<string name="epub_search_hint">Enter text to find</string>
 	<string name="epub_no_search_results">No matches found</string>
 	<string name="epub_untitled_chapter">Untitled chapter</string>

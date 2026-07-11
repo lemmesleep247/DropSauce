@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.text.Html
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.Gravity
@@ -21,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import androidx.core.net.toUri
+import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
@@ -33,9 +33,9 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.prefs.ReaderBackground
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
+import org.koitharu.kotatsu.core.util.ext.isNightMode
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.toZipUri
 import org.koitharu.kotatsu.databinding.FragmentReaderEpubBinding
@@ -70,6 +70,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private var canGoPrev = false
 	private var canGoNext = false
 	private var pendingSearchQuery: String? = null
+	private var pagedTopInset = 0
+	private var pagedBottomInset = 0
 
 	// current chapter document (href -> injected html), served by shouldInterceptRequest so the
 	// WebView navigates to a real https url - loadDataWithBaseURL leaves an empty data: history
@@ -106,10 +108,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			webViewClient = EpubWebViewClient()
 			addJavascriptInterface(Bridge(), "EpubBridge")
 		}
-		viewModel.readerSettingsProducer.observe(viewLifecycleOwner) {
-			it.applyBackground(binding.root)
-			applyColors(it.background)
-		}
+		this.settings.observeAsFlow(AppSettings.KEY_EPUB_THEME) { epubTheme }
+			.observe(viewLifecycleOwner) { applyColors() }
 		viewModel.uiState.observe(viewLifecycleOwner) { state ->
 			canGoPrev = state != null && state.hasPreviousChapter()
 			canGoNext = state != null && state.hasNextChapter()
@@ -147,16 +147,40 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	override fun onCreateAdapter(): BaseReaderAdapter<*>? = null
 
+	private fun barHeight(id: Int): Int {
+		val bar = activity?.findViewById<View>(id) ?: return 0
+		val margin = (bar.layoutParams as? ViewGroup.MarginLayoutParams)?.bottomMargin ?: 0
+		return bar.height + margin
+	}
+
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+		pagedTopInset = maxOf(pagedTopInset, barHeight(R.id.appbar_top), bars.top)
+		pagedBottomInset = maxOf(pagedBottomInset, barHeight(R.id.toolbar_docked), bars.bottom)
 		viewBinding?.root?.updatePadding(
 			left = if (isPagedMode) bars.left else 0,
-			top = if (isPagedMode) bars.top else 0,
+			top = if (isPagedMode) pagedTopInset else 0,
 			right = if (isPagedMode) bars.right else 0,
-			bottom = if (isPagedMode) bars.bottom else 0,
+			bottom = if (isPagedMode) pagedBottomInset else 0,
 		)
-		v.post { applyTypography() }
+		v.post {
+			pagedTopInset = maxOf(pagedTopInset, barHeight(R.id.appbar_top))
+			pagedBottomInset = maxOf(pagedBottomInset, barHeight(R.id.toolbar_docked))
+			if (isPagedMode) {
+				v.updatePadding(left = bars.left, top = pagedTopInset, right = bars.right, bottom = pagedBottomInset)
+			}
+			applyTopInset()
+			applyTypography()
+		}
 		return insets
+	}
+
+	// scroll mode pushes the first line below the top info bar via a body top-padding
+	private fun applyTopInset() {
+		viewBinding?.webView?.evaluateJavascript(
+			"if(window.__epub){document.documentElement.style.setProperty('--ep-top','${pagedTopInset}px');}",
+			null,
+		)
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
@@ -232,11 +256,16 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 	}
 
-	// the bottom slider: position is chapter progress 0..1000 (a smooth in-chapter scrollbar)
+	// the bottom slider: in paged mode position is a page index (slider has stops), in scroll
+	// mode it is chapter progress 0..1000 (a smooth in-chapter scrollbar)
 	override fun switchPageTo(position: Int, smooth: Boolean) {
-		val pm = position.coerceIn(0, 1000)
-		progressPm = pm
-		viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.restore($pm);}", null)
+		if (isPagedMode) {
+			viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.goto($position);}", null)
+		} else {
+			val pm = position.coerceIn(0, 1000)
+			progressPm = pm
+			viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.restore($pm);}", null)
+		}
 	}
 
 	override fun scrollBy(delta: Int, smooth: Boolean): Boolean {
@@ -252,13 +281,10 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		return true
 	}
 
-	override fun onZoomIn() {
-		settings.epubFontSize += 10
-	}
+	// zoom is intentionally not supported for text books - adjust the text size instead
+	override fun onZoomIn() = Unit
 
-	override fun onZoomOut() {
-		settings.epubFontSize -= 10
-	}
+	override fun onZoomOut() = Unit
 
 	fun showBookSearch() {
 		val input = TextInputEditText(requireContext()).apply {
@@ -293,7 +319,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 					.mapNotNull { chapter ->
 						val uri = chapter.url.toUri()
 						val text = EpubParser.readEntryText(File(uri.schemeSpecificPart), uri.fragment.orEmpty())
-							?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_LEGACY).toString() }
+							?.let { HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_LEGACY).toString() }
 							?: return@mapNotNull null
 						val match = text.indexOf(query, ignoreCase = true).takeIf { it >= 0 } ?: return@mapNotNull null
 						val start = (match - 45).coerceAtLeast(0)
@@ -337,11 +363,12 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 	}
 
-	private fun applyColors(background: ReaderBackground) {
+	private fun applyColors() {
 		val binding = viewBinding ?: return
-		val bg = resolveBackgroundColor(background)
+		val bg = resolveBackgroundColor()
 		val fg = foregroundFor(bg)
 		val accent = requireContext().getThemeColor(appcompatR.attr.colorPrimary, Color.BLUE)
+		binding.root.setBackgroundColor(bg)
 		binding.webView.setBackgroundColor(bg)
 		binding.webView.evaluateJavascript(
 			"var s=document.documentElement.style;" +
@@ -352,16 +379,22 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		)
 	}
 
-	private fun resolveBackgroundColor(background: ReaderBackground): Int = when (background) {
-		ReaderBackground.DEFAULT -> requireContext().getThemeColor(android.R.attr.colorBackground, Color.WHITE)
-		ReaderBackground.LIGHT -> ContextThemeWrapper(requireContext(), materialR.style.ThemeOverlay_Material3_Light)
-			.getThemeColor(android.R.attr.colorBackground, Color.WHITE)
-
-		ReaderBackground.DARK -> ContextThemeWrapper(requireContext(), materialR.style.ThemeOverlay_Material3_Dark)
-			.getThemeColor(android.R.attr.colorBackground, Color.BLACK)
-
-		ReaderBackground.WHITE -> Color.WHITE
-		ReaderBackground.BLACK -> Color.BLACK
+	// page theme is epub-only (settings.epubTheme), independent from the manga reader background;
+	// "system" follows day/night mode, not the reader activity theme (which is always dark)
+	private fun resolveBackgroundColor(): Int {
+		val dark = when (settings.epubTheme) {
+			"light" -> false
+			"dark" -> true
+			"black" -> return Color.BLACK
+			else -> resources.isNightMode
+		}
+		return if (dark) {
+			ContextThemeWrapper(requireContext(), materialR.style.ThemeOverlay_Material3_Dark)
+				.getThemeColor(android.R.attr.colorBackground, Color.BLACK)
+		} else {
+			ContextThemeWrapper(requireContext(), materialR.style.ThemeOverlay_Material3_Light)
+				.getThemeColor(android.R.attr.colorBackground, Color.WHITE)
+		}
 	}
 
 	// the reader activity theme can be dark while the app is in day mode, so pick the text
@@ -390,8 +423,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun injectHtml(source: String): String {
-		val background = viewModel.readerSettingsProducer.value.background
-		val bgColor = resolveBackgroundColor(background)
+		val bgColor = resolveBackgroundColor()
 		val bg = bgColor.toCssColor()
 		val fg = foregroundFor(bgColor).toCssColor()
 		val accent = requireContext().getThemeColor(appcompatR.attr.colorPrimary, Color.BLUE).toCssColor()
@@ -400,12 +432,15 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			<style>
 			:root{--ep-bg:$bg;--ep-fg:$fg;--ep-ac:$accent;--ep-fs:${settings.epubFontSize}%;
 			--ep-font:${settings.epubFontFamily};--ep-lh:${settings.epubLineHeight / 100f};
-			--ep-pad:${settings.epubHorizontalPadding}px;--ep-align:${settings.epubTextAlign};}
+			--ep-pad:${settings.epubHorizontalPadding}px;--ep-align:${settings.epubTextAlign};
+			--ep-top:${pagedTopInset}px;}
 			html{background:var(--ep-bg) !important;}
 			html:not(.ep-publisher) body{background:var(--ep-bg) !important;color:var(--ep-fg) !important;
 			font-size:var(--ep-fs) !important;line-height:var(--ep-lh) !important;
 			font-family:var(--ep-font) !important;text-align:var(--ep-align) !important;}
 			body{margin:0 !important;padding:20px var(--ep-pad) !important;box-sizing:border-box;word-wrap:break-word;}
+			/* scroll mode: clear the top info bar, and leave a gap at the end so the next chapter flows in */
+			html:not(.ep-paged) body{padding-top:calc(var(--ep-top) + 16px) !important;padding-bottom:20vh !important;}
 			html:not(.ep-publisher) body *{color:var(--ep-fg) !important;background-color:transparent !important;
 			font-family:var(--ep-font) !important;line-height:var(--ep-lh) !important;}
 			html:not(.ep-publisher) p,html:not(.ep-publisher) div,html:not(.ep-publisher) section,
@@ -415,9 +450,11 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			html:not(.ep-publisher) h1,html:not(.ep-publisher) h2,html:not(.ep-publisher) h3,
 			html:not(.ep-publisher) h4,html:not(.ep-publisher) h5,html:not(.ep-publisher) h6{text-align:left !important;}
 			html:not(.ep-publisher) a,html:not(.ep-publisher) a *{color:var(--ep-ac) !important;}
-			html.ep-paged,html.ep-paged body{height:100%;overflow-y:hidden;}
-			html.ep-paged body{column-width:calc(100vw - (var(--ep-pad) * 2));
-			column-gap:calc(var(--ep-pad) * 2);column-fill:auto;overflow-x:visible;}
+			html.ep-paged{height:100%;overflow:hidden;touch-action:none;}
+			html.ep-paged body{height:100%;overflow:visible;
+			column-width:calc(100vw - (var(--ep-pad) * 2));
+			column-gap:calc(var(--ep-pad) * 2);column-fill:auto;
+			width:auto !important;max-width:none !important;will-change:transform;}
 			img,svg,image,video{max-width:100% !important;height:auto !important;}
 			</style>
 		""".trimIndent()
@@ -426,44 +463,91 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			(function(){
 			var nav={prev:false,next:false},paged=$isPagedMode;
 			var E={
+			 cur:0,pc:1,
 			 el:function(){return document.scrollingElement||document.documentElement;},
-			 max:function(){var se=this.el();return paged?se.scrollWidth-window.innerWidth:se.scrollHeight-window.innerHeight;},
-			 pos:function(){var se=this.el();return paged?se.scrollLeft:se.scrollTop;},
-			 report:function(){var m=this.max();var pm=m<=0?1000:Math.min(1000,Math.round(this.pos()*1000/m));EpubBridge.onProgress(pm);},
-			 restore:function(pm){var se=this.el(),p=pm/1000*this.max();if(paged)se.scrollLeft=p;else se.scrollTop=p;this.report();},
-			 page:function(d){var se=this.el(),p=this.pos(),m=this.max();
-			  if((d<0&&p<=2)||(d>0&&p>=m-2)){if((d<0&&nav.prev)||(d>0&&nav.next))EpubBridge.onEdgeSwipe(d);return;}
-			  se.scrollTo({left:p+d*window.innerWidth,top:0,behavior:'smooth'});},
+			 stepW:function(){return document.documentElement.clientWidth||window.innerWidth;},
+			 // page count depends only on text configs + viewport, so measure it ONCE per layout
+			 // (after fonts settle / on config or size change) and cache it - never mid-read
+			 measure:function(){this.pc=Math.max(1,Math.round(document.body.scrollWidth/this.stepW()));
+			  if(this.cur>this.pc-1)this.cur=this.pc-1;return this.pc;},
+			 pageCount:function(){return this.pc;},
+			 apply:function(animate){var b=document.body.style;
+			  b.transition=animate?'transform .25s cubic-bezier(.25,.1,.25,1)':'none';
+			  b.transform='translateX(-'+(this.cur*this.stepW())+'px)';},
+			 report:function(){var pm;
+			  if(paged){pm=this.pc<=1?1000:Math.min(1000,Math.round(this.cur*1000/(this.pc-1)));}
+			  else{var se=this.el();var m=se.scrollHeight-window.innerHeight;pm=m<=0?1000:Math.min(1000,Math.round(se.scrollTop*1000/m));}
+			  EpubBridge.onProgress(pm,paged?this.cur:0,paged?this.pc:0);},
+			 restore:function(pm){
+			  if(paged){this.cur=Math.max(0,Math.min(this.pc-1,Math.round(pm/1000*(this.pc-1))));this.apply(false);}
+			  else{var se=this.el();se.scrollTop=pm/1000*(se.scrollHeight-window.innerHeight);}
+			  this.report();},
+			 goto:function(p){if(!paged)return;
+			  this.cur=Math.max(0,Math.min(this.pc-1,p));this.apply(true);this.report();},
+			 page:function(d){if(!paged)return;var n=this.cur+d;
+			  if(n<0){if(nav.prev)EpubBridge.onEdgeSwipe(-1);return;}
+			  if(n>=this.pc){if(nav.next)EpubBridge.onEdgeSwipe(1);return;}
+			  this.cur=n;this.apply(true);this.report();},
 			 style:function(fs,font,lh,pad,align,publisher,isPaged,pm){var s=document.documentElement.style;
 			  s.setProperty('--ep-fs',fs);s.setProperty('--ep-font',font);s.setProperty('--ep-lh',lh);
 			  s.setProperty('--ep-pad',pad+'px');s.setProperty('--ep-align',align);
 			  paged=isPaged;document.documentElement.classList.toggle('ep-publisher',publisher);
 			  document.documentElement.classList.toggle('ep-paged',paged);
-			  requestAnimationFrame(function(){E.restore(pm);});},
+			  if(!paged){document.body.style.transform='none';document.body.style.transition='none';}
+			  requestAnimationFrame(function(){E.measure();E.restore(pm);});},
 			 setNav:function(p,n){nav.prev=p;nav.next=n;}
 			};
 			document.documentElement.classList.toggle('ep-publisher',${settings.isEpubPublisherStyleEnabled});
 			document.documentElement.classList.toggle('ep-paged',paged);
 			window.__epub=E;
-			var reporting=false;window.addEventListener('scroll',function(){if(!reporting){reporting=true;requestAnimationFrame(function(){reporting=false;E.report();});}},{passive:true});
+			var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(paged){E.measure();E.apply(false);E.report();}},120);});
+			var reporting=false;window.addEventListener('scroll',function(){if(paged)return;if(!reporting){reporting=true;requestAnimationFrame(function(){reporting=false;E.report();});}},{passive:true});
 			// keep scrolling past the chapter edge -> seamlessly continue into the next/prev chapter
 			function atBottom(){var se=E.el();return se.scrollTop+window.innerHeight>=se.scrollHeight-2;}
 			function atTop(){return E.el().scrollTop<=2;}
-			var startX=null,startY=null,fired=false;
-			document.addEventListener('touchstart',function(e){startX=e.touches[0].clientX;startY=e.touches[0].clientY;fired=false;},{passive:true});
+			var startX=null,startY=null,fired=false,multi=false,dragging=false,dragDx=0;
+			document.addEventListener('touchstart',function(e){
+			 if(e.touches.length>1){multi=true;startX=null;startY=null;dragging=false;return;}
+			 startX=e.touches[0].clientX;startY=e.touches[0].clientY;fired=false;multi=false;dragging=false;dragDx=0;},{passive:true});
 			document.addEventListener('touchmove',function(e){
-			 if(startY===null||fired)return;
+			 if(e.touches.length>1){multi=true;startX=null;startY=null;dragging=false;return;}
+			 if(startY===null||fired||multi)return;
 			 var dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY;
-			 if(paged&&Math.abs(dx)>Math.abs(dy)){e.preventDefault();return;}
-			 if(dy<-80&&atBottom()&&nav.next){fired=true;EpubBridge.onEdgeSwipe(1);}
-			 else if(dy>80&&atTop()&&nav.prev){fired=true;EpubBridge.onEdgeSwipe(-1);}
-			},{passive:false});
-			document.addEventListener('touchend',function(e){
-			 if(paged&&startX!==null&&!fired){var dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY;
-			  if(Math.abs(dx)>=60&&Math.abs(dx)>Math.abs(dy)*1.2){fired=true;E.page(dx<0?1:-1);}}
-			 startX=null;startY=null;
+			 if(paged){
+			  // follow the finger, snap on release - a half-recognized swipe can't strand the page
+			  if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)){dragging=true;}
+			  if(dragging){dragDx=dx;
+			   var t=E.pageCount(),off=dx;
+			   // only resist at the true book edge - if an adjacent chapter exists, follow the finger fully so it flows over
+			   if((E.cur<=0&&dx>0&&!nav.prev)||(E.cur>=t-1&&dx<0&&!nav.next))off=dx/3;
+			   var b=document.body.style;b.transition='none';
+			   b.transform='translateX('+(-(E.cur*E.stepW()-off))+'px)';}
+			  return;
+			 }
+			 if(dy<-40&&atBottom()&&nav.next){fired=true;EpubBridge.onEdgeSwipe(1);}
+			 else if(dy>40&&atTop()&&nav.prev){fired=true;EpubBridge.onEdgeSwipe(-1);}
 			},{passive:true});
-			window.addEventListener('load',function(){setTimeout(function(){EpubBridge.onReady();},50);});
+			document.addEventListener('touchend',function(e){
+			 if(multi){if(e.touches.length===0)multi=false;startX=null;startY=null;dragging=false;return;}
+			 if(startX===null)return;
+			 if(paged&&dragging){
+			  var w=E.stepW(),t=E.pageCount();
+			  if(dragDx<=-w*0.2){
+			   if(E.cur<t-1){E.cur++;E.apply(true);E.report();}
+			   else if(nav.next){EpubBridge.onEdgeSwipe(1);}else{E.apply(true);}
+			  }else if(dragDx>=w*0.2){
+			   if(E.cur>0){E.cur--;E.apply(true);E.report();}
+			   else if(nav.prev){EpubBridge.onEdgeSwipe(-1);}else{E.apply(true);}
+			  }else{E.apply(true);}
+			 }
+			 startX=null;startY=null;dragging=false;dragDx=0;
+			},{passive:true});
+			// measure page count once, after fonts have loaded so column widths are final
+			function boot(){E.measure();EpubBridge.onReady();}
+			window.addEventListener('load',function(){
+			 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){requestAnimationFrame(boot);});}
+			 else{requestAnimationFrame(boot);}
+			});
 			})();
 			</script>
 		""".trimIndent()
@@ -508,16 +592,17 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private inner class Bridge {
 
 		@JavascriptInterface
-		fun onProgress(pm: Int) {
+		fun onProgress(pm: Int, page: Int, pageCount: Int) {
 			progressPm = pm.coerceIn(0, 1000)
 			view?.post {
-				viewModel.onEpubProgressChanged(progressPm)
+				viewModel.onEpubProgressChanged(progressPm, page, pageCount)
 			}
 		}
 
 		@JavascriptInterface
 		fun onReady() {
 			view?.post {
+				applyTopInset()
 				viewBinding?.webView?.evaluateJavascript(
 					"if(window.__epub){__epub.setNav($canGoPrev,$canGoNext);__epub.restore($pendingPm);}",
 					null,
@@ -536,6 +621,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				viewModel.switchChapterBy(delta)
 			}
 		}
+
 	}
 
 	private inner class EpubWebViewClient : WebViewClient() {

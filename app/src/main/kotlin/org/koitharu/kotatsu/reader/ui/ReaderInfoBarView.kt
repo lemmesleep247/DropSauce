@@ -245,9 +245,10 @@ class ReaderInfoBarView @JvmOverloads constructor(
 				R.string.reader_info_pattern,
 				state.chapterNumber,
 				state.chaptersTotal,
-				// epub: currentPage is chapter progress 0..1000, show as x/100 instead of a page count
-				if (state.isEpub) state.currentPage / 10 else state.currentPage + 1,
-				if (state.isEpub) 100 else state.totalPages,
+				// epub scroll mode: currentPage is chapter progress 0..1000, show as x/100;
+				// epub paged mode reports real page numbers, same as manga
+				if (state.isEpub && !state.isEpubPaged) state.currentPage / 10 else state.currentPage + 1,
+				if (state.isEpub && !state.isEpubPaged) 100 else state.totalPages,
 			) + if (state.percent in 0f..1f) {
 				"     " + context.getString(R.string.percent_string_pattern, (state.percent * 100).format())
 			} else {

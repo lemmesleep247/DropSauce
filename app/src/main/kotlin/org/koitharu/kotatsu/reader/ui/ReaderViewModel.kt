@@ -520,9 +520,16 @@ class ReaderViewModel @Inject constructor(
      * EPUB chapters have a single synthetic page; the bottom slider scrubs through the chapter
      * as a percentage instead. Called by the epub reader as the WebView scrolls.
      */
-    fun onEpubProgressChanged(pm: Int) {
+    fun onEpubProgressChanged(pm: Int, page: Int = 0, pageCount: Int = 0) {
         readingState.update { it?.copy(scroll = pm) }
-        uiState.update { it?.copy(currentPage = pm.coerceIn(0, EPUB_SLIDER_MAX)) }
+        uiState.update {
+            it?.copy(
+                // paged mode reports real page numbers -> stepped slider; scroll mode is smooth 0..1000
+                currentPage = if (pageCount > 0) page.coerceIn(0, pageCount - 1) else pm.coerceIn(0, EPUB_SLIDER_MAX),
+                totalPages = if (pageCount > 0) pageCount else EPUB_SLIDER_MAX + 1,
+                isEpubPaged = pageCount > 0,
+            )
+        }
     }
 
     @WorkerThread

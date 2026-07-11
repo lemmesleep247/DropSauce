@@ -543,7 +543,7 @@ class ReaderActivity :
             viewBinding.actionsView.isSliderEnabled = false
             return
         }
-        viewBinding.actionsView.isSliderSmooth = uiState.isEpub
+        viewBinding.actionsView.isSliderSmooth = uiState.isEpub && !uiState.isEpubPaged
         val chapterTitle = uiState.getChapterTitle(resources)
         supportActionBar?.subtitle = when {
             uiState.incognito -> getString(R.string.incognito_mode)

@@ -277,7 +277,8 @@ class ReaderActivity :
         if (viewBinding.appbarTop.isVisible) {
             lifecycle.postDelayed(TimeUnit.SECONDS.toMillis(1), hideUiRunnable)
         }
-        viewBinding.actionsView.setSliderReversed(mode == ReaderMode.REVERSED)
+        // EPUB text always reads left-to-right; never inherit a reversed manga mode's flipped slider
+        viewBinding.actionsView.setSliderReversed(mode == ReaderMode.REVERSED && !readerManager.isEpub)
         viewBinding.timerControl.onReaderModeChanged(mode)
     }
 

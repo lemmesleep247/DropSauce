@@ -193,7 +193,22 @@ object EpubParser {
 		return Opf(title?.trim(), authors, description?.trim(), coverId, tocId, manifest, spine)
 	}
 
-	private fun XmlPullParser.nextTextSafe(): String? = runCatching { nextText() }.getOrNull()?.takeIf { it.isNotBlank() }
+	// read the full text of the current element, flattening any child markup. nextText() throws on
+	// mixed content (common in <dc:description>, which often wraps HTML), so walk to the END_TAG
+	private fun XmlPullParser.nextTextSafe(): String? {
+		if (eventType != XmlPullParser.START_TAG) return null
+		val sb = StringBuilder()
+		var depth = 1
+		while (depth > 0) {
+			when (next()) {
+				XmlPullParser.TEXT, XmlPullParser.CDSECT -> sb.append(text)
+				XmlPullParser.START_TAG -> depth++
+				XmlPullParser.END_TAG -> depth--
+				XmlPullParser.END_DOCUMENT -> break
+			}
+		}
+		return sb.toString().trim().takeIf { it.isNotBlank() }
+	}
 
 	private fun parseNcx(xml: String, opfDir: String): List<EpubBook.TocItem> {
 		val parser = newParser(xml)

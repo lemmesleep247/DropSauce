@@ -19,6 +19,7 @@ import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.model.MangaOverride
 import org.koitharu.kotatsu.core.util.ext.consumeAll
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
@@ -57,6 +58,7 @@ class OverrideConfigActivity : BaseActivity<ActivityOverrideEditBinding>(), View
 		viewBinding.buttonPickGallery.setOnClickListener(this)
 		viewBinding.buttonPickFile.setOnClickListener(this)
 		viewBinding.buttonPickPage.setOnClickListener(this)
+		viewBinding.buttonPickUrl.setOnClickListener(this)
 		viewBinding.buttonResetCover.setOnClickListener(this)
 		viewBinding.layoutName.setEndIconOnClickListener(this)
 		viewBinding.editName.doAfterTextChanged { updateOriginalNamePreview() }
@@ -127,7 +129,35 @@ class OverrideConfigActivity : BaseActivity<ActivityOverrideEditBinding>(), View
 				val manga = viewModel.data.value?.first
 				pickPageLauncher.launch(manga)
 			}
+
+			R.id.button_pick_url -> showCoverUrlDialog()
 		}
+	}
+
+	private fun showCoverUrlDialog() {
+		val editText = com.google.android.material.textfield.TextInputEditText(this).apply {
+			setHint(R.string.url)
+			inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+			setText(viewModel.data.value?.second?.coverUrl?.takeIf { it.isHttpUrl() })
+		}
+		val padding = resources.getDimensionPixelOffset(R.dimen.margin_normal)
+		val container = android.widget.FrameLayout(this).apply {
+			setPadding(padding, padding / 2, padding, 0)
+			addView(editText)
+		}
+		com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+			.setTitle(R.string.pick_cover_url)
+			.setView(container)
+			.setNegativeButton(android.R.string.cancel, null)
+			.setPositiveButton(android.R.string.ok) { _, _ ->
+				val url = editText.text?.toString()?.trim().orEmpty()
+				if (url.isHttpUrl()) {
+					viewModel.updateCover(url)
+				} else {
+					Snackbar.make(viewBinding.imageViewCover, R.string.invalid_url, Snackbar.LENGTH_SHORT).show()
+				}
+			}
+			.show()
 	}
 
 	private fun onDataChanged(data: Pair<Manga, MangaOverride>) {

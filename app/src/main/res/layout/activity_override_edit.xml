@@ -144,11 +144,11 @@
 							app:drawableStartCompat="@drawable/ic_grid" />
 
 						<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
-							android:id="@+id/button_reset_cover"
+							android:id="@+id/button_pick_url"
 							android:layout_width="match_parent"
 							android:layout_height="wrap_content"
-							android:text="@string/use_default_cover"
-							app:drawableStartCompat="@drawable/ic_revert" />
+							android:text="@string/pick_cover_url"
+							app:drawableStartCompat="@drawable/ic_web" />
 
 					</LinearLayout>
 
@@ -182,6 +182,15 @@
 							android:text="@string/original_cover"
 							android:textAppearance="?textAppearanceLabelSmall"
 							android:textColor="?colorOnSurfaceVariant" />
+
+						<com.google.android.material.button.MaterialButton
+							android:id="@+id/button_reset_cover"
+							style="?attr/materialIconButtonFilledTonalStyle"
+							android:layout_width="wrap_content"
+							android:layout_height="wrap_content"
+							android:layout_marginTop="8dp"
+							android:contentDescription="@string/use_default_cover"
+							app:icon="@drawable/ic_revert" />
 
 					</LinearLayout>
 

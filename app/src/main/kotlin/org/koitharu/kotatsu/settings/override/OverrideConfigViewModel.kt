@@ -19,6 +19,7 @@ import org.koitharu.kotatsu.core.util.MimeTypes
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.isFileUri
+import org.koitharu.kotatsu.core.util.ext.isNetworkUri
 import org.koitharu.kotatsu.core.util.ext.openSource
 import org.koitharu.kotatsu.core.util.ext.require
 import org.koitharu.kotatsu.core.util.ext.toFileOrNull
@@ -77,7 +78,8 @@ class OverrideConfigViewModel @Inject constructor(
 
 	private suspend fun String.cachedFile(): String {
 		val uri = toUriOrNull()
-		if (uri == null || uri.isFileUri()) {
+		if (uri == null || uri.isFileUri() || uri.isNetworkUri()) {
+			// Remote (http/https) covers are kept as-is so Discord and lists can load them directly.
 			return this
 		}
 		val cacheDir = context.getExternalFilesDir(DIR_COVERS) ?: return this

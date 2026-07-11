@@ -69,9 +69,15 @@ fun ImageRequest.Builder.mangaExtra(manga: Manga?): ImageRequest.Builder = apply
  * Only applied to remote (http) covers; local/custom `file://` covers are already stable.
  * A fresh copy is pulled from the source only when the manga is opened (see the details screen),
  * which overwrites this entry.
+ *
+ * Skipped for user-set cover overrides (a URL that differs from the source cover): those are already
+ * stable and must keep their own cache key, otherwise they'd collide with the source cover cached
+ * under `cover:$mangaId` and the override would never show in lists.
  */
 fun ImageRequest.Builder.stableMangaCoverKey(manga: Manga?, coverUrl: String?): ImageRequest.Builder = apply {
-	if (manga != null && isRemoteCoverUrl(coverUrl)) {
+	if (manga != null && isRemoteCoverUrl(coverUrl) &&
+		(coverUrl == manga.coverUrl || coverUrl == manga.largeCoverUrl)
+	) {
 		diskCacheKey(mangaCoverDiskCacheKey(manga.id))
 	}
 }

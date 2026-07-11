@@ -43,6 +43,7 @@ import org.koitharu.kotatsu.core.prefs.observeAsStateFlow
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.firstNotNull
+import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.requireValue
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.domain.DetailsInteractor
@@ -546,7 +547,10 @@ class ReaderViewModel @Inject constructor(
         uiState.value = newState
         if (isIncognitoMode.value == false) {
             statsCollector.onStateChanged(m.id, state, totalPages)
-            discordRpc.updateRpc(m.toManga(), newState)
+            // Only http(s) covers work on Discord (URL override or source default); a local custom
+            // image can't be reached by Discord's servers, so fall back to the source cover.
+            val discordCover = m.toManga().coverUrl?.takeIf { it.isHttpUrl() } ?: m.sourceManga.coverUrl
+            discordRpc.updateRpc(m.toManga(), newState, discordCover)
         }
     }
 

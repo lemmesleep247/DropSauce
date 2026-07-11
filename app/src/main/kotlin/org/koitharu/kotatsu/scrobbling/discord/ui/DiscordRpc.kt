@@ -82,7 +82,7 @@ class DiscordRpc @Inject constructor(
 	}
 
 	@AnyThread
-	fun updateRpc(manga: Manga, state: ReaderUiState) {
+	fun updateRpc(manga: Manga, state: ReaderUiState, coverUrl: String?) {
 		getRpc()?.run {
 			if (settings.isDiscordRpcSkipNsfw && manga.isNsfw()) {
 				clearRpc()
@@ -99,7 +99,9 @@ class DiscordRpc @Inject constructor(
 						start = lastActivity?.timestamps?.start ?: System.currentTimeMillis(),
 					),
 					assets = Assets(
-						largeImage = manga.coverUrl,
+						// Discord fetches cover URLs server-side, so a local file:// cover is unreachable.
+						// Callers pass an http(s) cover (URL override or source default); never a local file.
+						largeImage = coverUrl,
 						largeText = context.getString(R.string.reading_s, manga.title),
 						smallText = context.getString(R.string.discord_rpc_description),
 						smallImage = appIcon,

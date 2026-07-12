@@ -532,13 +532,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-	fun onEpubChapterChanged(chapterId: Long, scroll: Int = 0) {
-		val state = ReaderState(chapterId = chapterId, page = 0, scroll = scroll)
-		readingState.value = state
-		saveCurrentState(state)
-		notifyStateChanged()
-	}
-
     @WorkerThread
     private fun notifyStateChanged() {
         val state = getCurrentState() ?: return

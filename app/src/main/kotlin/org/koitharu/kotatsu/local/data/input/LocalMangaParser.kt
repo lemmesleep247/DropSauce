@@ -332,11 +332,6 @@ class LocalMangaParser(private val uri: Uri) {
 
 		private val REGEX_PARENT_PATH_PREFIX = Regex("^(/\\.\\.)+")
 
-		const val TOC_ENTRY = "~toc"
-
-		// ponytail: not localized - chapter titles are built without a Context here
-		const val TOC_TITLE = "Table of Contents"
-
 		@Blocking
 		fun getOrNull(file: File): LocalMangaParser? = if ((file.isDirectory || file.isZipArchive || file.isEpubFile) && file.canRead()) {
 			LocalMangaParser(file)

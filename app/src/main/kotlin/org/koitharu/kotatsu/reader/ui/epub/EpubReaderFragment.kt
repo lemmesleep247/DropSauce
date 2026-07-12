@@ -35,7 +35,9 @@ import org.json.JSONObject
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.isNightMode
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.toZipUri
@@ -436,6 +438,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val bg = bgColor.toCssColor()
 		val fg = foregroundFor(bgColor).toCssColor()
 		val accent = requireContext().getThemeColor(appcompatR.attr.colorPrimary, Color.BLUE).toCssColor()
+		val nextLabel = JSONObject.quote(getString(R.string.pull_to_next_chapter))
+		val prevLabel = JSONObject.quote(getString(R.string.pull_to_prev_chapter))
 		val head = """
 			<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 			<style>
@@ -462,16 +466,32 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			column-gap:calc(var(--ep-pad) * 2);column-fill:auto;
 			width:auto !important;max-width:none !important;will-change:transform;}
 			img,svg,image,video{max-width:100% !important;height:auto !important;}
+			#ep-edge{position:fixed;top:0;left:0;transform:translate(-50%,-50%);
+			opacity:0;transition:opacity .12s ease;pointer-events:none;z-index:2147483000;}
+			#ep-edge.show{opacity:1;}
+			#ep-edge .box{display:flex;flex-direction:column;align-items:center;gap:8px;}
+			#ep-edge svg{width:46px;height:46px;display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.35));}
+			#ep-edge .track{fill:none;stroke:var(--ep-fg);opacity:.25;stroke-width:3;}
+			#ep-edge .prog{fill:none;stroke:var(--ep-ac);stroke-width:3;stroke-linecap:round;
+			stroke-dasharray:138.2;stroke-dashoffset:138.2;transition:stroke-dashoffset .06s linear;}
+			#ep-edge .arrow{fill:none;stroke:var(--ep-fg);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
+			transform-box:fill-box;transform-origin:center;}
+			#ep-edge.full .arrow,#ep-edge.full .prog{stroke:var(--ep-ac);}
+			#ep-edge .label{color:var(--ep-fg);font-size:13px;font-family:var(--ep-font);
+			text-align:center;white-space:nowrap;opacity:.9;display:none;}
+			#ep-edge.with-label .label{display:block;}
 			</style>
 		""".trimIndent()
 		val script = """
 			<script>
 			(function(){
 			var nav={prev:false,next:false},paged=$isPagedMode;
+			var L_NEXT=$nextLabel,L_PREV=$prevLabel,RING=138.2; // 2*PI*22
 			// One chapter only. Paged: cur page in [0,totalPages); turn = translate by one viewport width.
-			// Reaching an edge just asks the app to load the neighbouring chapter (onEdgeSwipe).
+			// Dragging past an edge opens a gap and fills a progress ring shown IN that gap; when it
+			// completes, load the adjacent chapter (onEdgeSwipe).
 			var E={
-			 paged:paged,page:0,totalPages:1,
+			 paged:paged,page:0,totalPages:1,edge:0,pull:0,startY:0,armed:false,fired:false,ov:null,prog:null,arrow:null,label:null,
 			 el:function(){return document.scrollingElement||document.documentElement;},
 			 stepW:function(){return document.documentElement.clientWidth||window.innerWidth;},
 			 measure:function(){this.totalPages=Math.max(1,Math.round(document.body.scrollWidth/this.stepW()));
@@ -488,8 +508,23 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			  else{var se=this.el();se.scrollTop=pm/1000*Math.max(0,se.scrollHeight-window.innerHeight);}
 			  this.report();},
 			 goto:function(p){if(!paged)return;this.page=Math.max(0,Math.min(this.totalPages-1,p));this.apply(true);this.report();},
-			 fwd:function(){if(this.page<this.totalPages-1){this.page++;this.apply(true);this.report();}else if(nav.next){EpubBridge.onEdgeSwipe(1);}else{this.apply(true);}},
-			 back:function(){if(this.page>0){this.page--;this.apply(true);this.report();}else if(nav.prev){EpubBridge.onEdgeSwipe(-1);}else{this.apply(true);}},
+			 fwd:function(){if(this.page<this.totalPages-1){this.page++;this.apply(true);this.report();}else{this.apply(true);}},
+			 back:function(){if(this.page>0){this.page--;this.apply(true);this.report();}else{this.apply(true);}},
+			 pullMax:function(){return paged?Math.max(80,this.stepW()*0.3):130;},
+			 setEdge:function(dir){if(this.edge===dir)return;this.edge=dir;
+			  if(this.label)this.label.textContent=dir>0?L_NEXT:L_PREV;
+			  if(this.arrow)this.arrow.style.transform='rotate('+(paged?(dir>0?0:180):(dir>0?90:-90))+'deg)';
+			  if(this.ov)this.ov.classList.add('show');},
+			 setPull:function(p){this.pull=Math.max(0,Math.min(1,p));
+			  if(this.prog)this.prog.style.strokeDashoffset=RING*(1-this.pull);
+			  var full=this.pull>=1;if(this.ov)this.ov.classList.toggle('full',full);
+			  // haptic once when the ring completes; lift the finger here to actually switch
+			  if(full&&!this.armed){this.armed=true;EpubBridge.onEdgeFull();}else if(!full){this.armed=false;}},
+			 place:function(cx,cy,withLabel){if(!this.ov)return;this.ov.style.left=cx+'px';this.ov.style.top=cy+'px';this.ov.classList.toggle('with-label',!!withLabel);},
+			 clearEdge:function(){this.edge=0;this.pull=0;this.startY=0;this.armed=false;
+			  if(this.ov)this.ov.classList.remove('show','full');
+			  if(!paged){document.body.style.transition='transform .2s ease';document.body.style.transform='translateY(0)';}},
+			 commitEdge:function(dir){if(this.fired)return;this.fired=true;this.setPull(1);EpubBridge.onEdgeSwipe(dir);},
 			 style:function(fs,font,lh,pad,align,publisher,isPaged,pm){var s=document.documentElement.style;
 			  s.setProperty('--ep-fs',fs);s.setProperty('--ep-font',font);s.setProperty('--ep-lh',lh);
 			  s.setProperty('--ep-pad',pad+'px');s.setProperty('--ep-align',align);
@@ -499,50 +534,79 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			  requestAnimationFrame(function(){E.restore(pm);});},
 			 setNav:function(p,n){nav.prev=p;nav.next=n;}
 			};
+			// ring/arrow indicator lives on <html> so the body's paging transform never moves it
+			(function(){var ov=document.createElement('div');ov.id='ep-edge';
+			 ov.innerHTML='<div class="box"><svg viewBox="0 0 52 52"><g transform="rotate(-90 26 26)">'+
+			  '<circle class="track" cx="26" cy="26" r="22"></circle><circle class="prog" cx="26" cy="26" r="22"></circle></g>'+
+			  '<path class="arrow" d="M21 17 L31 26 L21 35"></path></svg><div class="label"></div></div>';
+			 document.documentElement.appendChild(ov);
+			 E.ov=ov;E.prog=ov.querySelector('.prog');E.arrow=ov.querySelector('.arrow');E.label=ov.querySelector('.label');})();
 			document.documentElement.classList.toggle('ep-publisher',${settings.isEpubPublisherStyleEnabled});
 			document.documentElement.classList.toggle('ep-paged',paged);
+			// quick fade-in on load so a freshly-loaded chapter doesn't pop in
+			document.documentElement.style.transition='opacity .13s ease';
+			document.documentElement.style.opacity='0';
 			window.__epub=E;
 			var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(paged){E.measure();E.apply(false);}E.report();},120);});
 			var reporting=false;window.addEventListener('scroll',function(){if(paged)return;if(!reporting){reporting=true;requestAnimationFrame(function(){reporting=false;E.report();});}},{passive:true});
-			// scroll mode: keep dragging past the chapter edge -> load the adjacent chapter
 			function atBottom(){var se=E.el();return se.scrollTop+window.innerHeight>=se.scrollHeight-2;}
 			function atTop(){return E.el().scrollTop<=2;}
-			var startX=null,startY=null,fired=false,multi=false,dragging=false,dragDx=0;
+			var startX=null,startY=null,multi=false,dragging=false,dragDx=0;
 			document.addEventListener('touchstart',function(e){
+			 if(E.fired)return;
 			 if(e.touches.length>1){multi=true;startX=null;startY=null;dragging=false;return;}
-			 startX=e.touches[0].clientX;startY=e.touches[0].clientY;fired=false;multi=false;dragging=false;dragDx=0;},{passive:true});
+			 startX=e.touches[0].clientX;startY=e.touches[0].clientY;multi=false;dragging=false;dragDx=0;
+			 if(E.edge)E.clearEdge();},{passive:true});
 			document.addEventListener('touchmove',function(e){
+			 if(E.fired)return;
 			 if(e.touches.length>1){multi=true;startX=null;startY=null;dragging=false;return;}
-			 if(startY===null||fired||multi)return;
-			 var dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY;
+			 if(startY===null||multi)return;
+			 var dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY,cy=e.touches[0].clientY;
 			 if(paged){
-			  // follow the finger, snap on release - a half-recognized swipe can't strand the page
 			  if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy))dragging=true;
-			  if(dragging){dragDx=dx;var off=dx;
-			   // resist at the book's true ends (no adjacent chapter)
-			   if((E.page<=0&&dx>0&&!nav.prev)||(E.page>=E.totalPages-1&&dx<0&&!nav.next))off=dx/3;
-			   var b=document.body.style;b.transition='none';
-			   b.transform='translate3d('+(-(E.page*E.stepW()-off))+'px,0,0)';}
+			  if(!dragging)return;
+			  dragDx=dx;
+			  var nextEdge=(E.page>=E.totalPages-1&&dx<0&&nav.next),prevEdge=(E.page<=0&&dx>0&&nav.prev);
+			  if(nextEdge||prevEdge){var dir=nextEdge?1:-1;E.setEdge(dir);E.setPull(Math.abs(dx)/E.pullMax());
+			   // let the content follow the finger, opening a gap at the edge; ring sits in the gap
+			   var reveal=Math.min(Math.abs(dx),E.stepW()*0.5),off=(dx<0?-reveal:reveal),W=E.stepW();
+			   document.body.style.transition='none';
+			   document.body.style.transform='translate3d('+(-(E.page*E.stepW()-off))+'px,0,0)';
+			   E.place(dir>0?(W-Math.max(30,reveal/2)):Math.max(30,reveal/2),window.innerHeight/2,false);
+			  }else{if(E.edge)E.clearEdge();var off=dx;
+			   if((E.page<=0&&dx>0)||(E.page>=E.totalPages-1&&dx<0))off=dx/3;
+			   document.body.style.transition='none';
+			   document.body.style.transform='translate3d('+(-(E.page*E.stepW()-off))+'px,0,0)';}
 			  return;
 			 }
-			 if(dy<-8&&atBottom()&&nav.next){fired=true;EpubBridge.onEdgeSwipe(1);}
-			 else if(dy>8&&atTop()&&nav.prev){fired=true;EpubBridge.onEdgeSwipe(-1);}
+			 // scroll: drag past the edge -> shift the page to open a gap, ring shown in the gap
+			 if(atBottom()&&nav.next&&dy<0){if(E.edge!==1){E.setEdge(1);E.startY=cy;}
+			  var pl=Math.max(0,E.startY-cy);E.setPull(pl/E.pullMax());var g=Math.min(pl,160);
+			  document.body.style.transition='none';document.body.style.transform='translateY('+(-g)+'px)';
+			  E.place(E.stepW()/2,window.innerHeight-Math.max(34,g/2),true);}
+			 else if(atTop()&&nav.prev&&dy>0){if(E.edge!==-1){E.setEdge(-1);E.startY=cy;}
+			  var pl=Math.max(0,cy-E.startY);E.setPull(pl/E.pullMax());var g=Math.min(pl,160);
+			  document.body.style.transition='none';document.body.style.transform='translateY('+g+'px)';
+			  E.place(E.stepW()/2,Math.max(34,g/2),true);}
+			 else if(E.edge)E.clearEdge();
 			},{passive:true});
 			document.addEventListener('touchend',function(e){
 			 if(multi){if(e.touches.length===0)multi=false;startX=null;startY=null;dragging=false;return;}
+			 if(E.fired){startX=null;startY=null;dragging=false;dragDx=0;return;}
 			 if(startX===null)return;
-			 if(paged&&dragging){var w=E.stepW();
-			  if(dragDx<=-w*0.2)E.fwd();
-			  else if(dragDx>=w*0.2)E.back();
-			  else E.apply(true);}
+			 if(paged&&dragging){
+			  if(E.edge){if(E.pull>=1)E.commitEdge(E.edge);else{E.clearEdge();E.apply(true);}}
+			  else{var w=E.stepW();if(dragDx<=-w*0.2)E.fwd();else if(dragDx>=w*0.2)E.back();else E.apply(true);}
+			 }else if(!paged&&E.edge){if(E.pull>=1)E.commitEdge(E.edge);else E.clearEdge();}
 			 startX=null;startY=null;dragging=false;dragDx=0;
 			},{passive:true});
 			// first layout: after fonts load so column widths are final
-			function boot(){if(paged)E.measure();EpubBridge.onReady();}
+			function boot(){if(paged)E.measure();document.documentElement.style.opacity='1';EpubBridge.onReady();}
 			window.addEventListener('load',function(){
 			 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){requestAnimationFrame(boot);});}
 			 else{requestAnimationFrame(boot);}
 			});
+			setTimeout(function(){document.documentElement.style.opacity='1';},1000); // safety: never stay hidden
 			})();
 			</script>
 		""".trimIndent()
@@ -585,6 +649,13 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 					pendingSearchQuery = null
 					viewBinding?.webView?.evaluateJavascript("window.find(${JSONObject.quote(query)});", null)
 				}
+			}
+		}
+
+		@JavascriptInterface
+		fun onEdgeFull() {
+			view?.post {
+				viewBinding?.webView?.hapticFeedback(HapticEffect.CONFIRM)
 			}
 		}
 

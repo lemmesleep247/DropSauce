@@ -118,7 +118,7 @@ private enum class SettingsSection(
 	val tintIcon: Boolean = true,
 ) {
 	SYNC(
-		R.string.google_drive_sync, R.drawable.ic_google_g, "sync",
+		R.string.google_drive_sync, R.drawable.ic_gdrive, "sync",
 		intArrayOf(R.string.sync_sign_in, R.string.sync_frequency),
 		SyncSettingsFragment::class.java,
 	),

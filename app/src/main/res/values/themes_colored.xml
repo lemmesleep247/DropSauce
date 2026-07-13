@@ -491,4 +491,53 @@
 		<item name="colorSurfaceContainerHigh">@color/shana_surfaceContainerHigh</item>
 		<item name="colorSurfaceContainerHighest">@color/shana_surfaceContainerHighest</item>
 	</style>
+	<!-- Lime -->
+	<style name="ThemeOverlay.Kotatsu.Lime">
+		<item name="colorPrimary">@color/lime_primary</item>
+		<item name="colorOnPrimary">@color/lime_onPrimary</item>
+		<item name="colorPrimaryContainer">@color/lime_primaryContainer</item>
+		<item name="colorOnPrimaryContainer">@color/lime_onPrimaryContainer</item>
+		<item name="colorSecondary">@color/lime_secondary</item>
+		<item name="colorOnSecondary">@color/lime_onSecondary</item>
+		<item name="colorSecondaryContainer">@color/lime_secondaryContainer</item>
+		<item name="colorOnSecondaryContainer">@color/lime_onSecondaryContainer</item>
+		<item name="colorTertiary">@color/lime_tertiary</item>
+		<item name="colorOnTertiary">@color/lime_onTertiary</item>
+		<item name="colorTertiaryContainer">@color/lime_tertiaryContainer</item>
+		<item name="colorOnTertiaryContainer">@color/lime_onTertiaryContainer</item>
+		<item name="colorError">@color/lime_error</item>
+		<item name="colorOnError">@color/lime_onError</item>
+		<item name="colorErrorContainer">@color/lime_errorContainer</item>
+		<item name="colorOnErrorContainer">@color/lime_onErrorContainer</item>
+		<item name="android:colorBackground">@color/lime_background</item>
+		<item name="colorOnBackground">@color/lime_onBackground</item>
+		<item name="colorSurface">@color/lime_surface</item>
+		<item name="colorOnSurface">@color/lime_onSurface</item>
+		<item name="colorSurfaceVariant">@color/lime_surfaceVariant</item>
+		<item name="colorOnSurfaceVariant">@color/lime_onSurfaceVariant</item>
+		<item name="colorOutline">@color/lime_outline</item>
+		<item name="colorOutlineVariant">@color/lime_outlineVariant</item>
+		<item name="colorSurfaceInverse">@color/lime_inverseSurface</item>
+		<item name="colorOnSurfaceInverse">@color/lime_inverseOnSurface</item>
+		<item name="colorPrimaryInverse">@color/lime_inversePrimary</item>
+		<item name="colorPrimaryFixed">@color/lime_primaryFixed</item>
+		<item name="colorOnPrimaryFixed">@color/lime_onPrimaryFixed</item>
+		<item name="colorPrimaryFixedDim">@color/lime_primaryFixedDim</item>
+		<item name="colorOnPrimaryFixedVariant">@color/lime_onPrimaryFixedVariant</item>
+		<item name="colorSecondaryFixed">@color/lime_secondaryFixed</item>
+		<item name="colorOnSecondaryFixed">@color/lime_onSecondaryFixed</item>
+		<item name="colorSecondaryFixedDim">@color/lime_secondaryFixedDim</item>
+		<item name="colorOnSecondaryFixedVariant">@color/lime_onSecondaryFixedVariant</item>
+		<item name="colorTertiaryFixed">@color/lime_tertiaryFixed</item>
+		<item name="colorOnTertiaryFixed">@color/lime_onTertiaryFixed</item>
+		<item name="colorTertiaryFixedDim">@color/lime_tertiaryFixedDim</item>
+		<item name="colorOnTertiaryFixedVariant">@color/lime_onTertiaryFixedVariant</item>
+		<item name="colorSurfaceDim">@color/lime_surfaceDim</item>
+		<item name="colorSurfaceBright">@color/lime_surfaceBright</item>
+		<item name="colorSurfaceContainerLowest">@color/lime_surfaceContainerLowest</item>
+		<item name="colorSurfaceContainerLow">@color/lime_surfaceContainerLow</item>
+		<item name="colorSurfaceContainer">@color/lime_surfaceContainer</item>
+		<item name="colorSurfaceContainerHigh">@color/lime_surfaceContainerHigh</item>
+		<item name="colorSurfaceContainerHighest">@color/lime_surfaceContainerHighest</item>
+	</style>
 </resources>

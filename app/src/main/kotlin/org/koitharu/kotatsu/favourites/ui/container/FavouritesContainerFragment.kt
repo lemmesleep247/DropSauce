@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
@@ -29,6 +30,7 @@ import org.koitharu.kotatsu.core.util.ext.recyclerView
 import org.koitharu.kotatsu.core.util.ext.setTabsEnabled
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
 import org.koitharu.kotatsu.databinding.FragmentFavouritesContainerBinding
+import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.databinding.ItemEmptyStateBinding
 
 @AndroidEntryPoint
@@ -60,6 +62,9 @@ class FavouritesContainerFragment : BaseFragment<FragmentFavouritesContainerBind
 			FavouritesTabConfigurationStrategy(pagerAdapter, viewModel, router),
 		).attach()
 		binding.stubEmpty.setOnInflateListener(this)
+		if (!isHidden) {
+			attachTabsToAppBar()
+		}
 		actionModeDelegate.addListener(this)
 		viewModel.categories.observe(viewLifecycleOwner, pagerAdapter)
 		viewModel.isEmpty.observe(viewLifecycleOwner, ::onEmptyStateChanged)
@@ -68,6 +73,7 @@ class FavouritesContainerFragment : BaseFragment<FragmentFavouritesContainerBind
 	}
 
 	override fun onDestroyView() {
+		detachTabsFromAppBar()
 		actionModeDelegate.removeListener(this)
 		super.onDestroyView()
 	}
@@ -76,6 +82,11 @@ class FavouritesContainerFragment : BaseFragment<FragmentFavouritesContainerBind
 
 	override fun onHiddenChanged(hidden: Boolean) {
 		super.onHiddenChanged(hidden)
+		if (hidden) {
+			detachTabsFromAppBar()
+		} else {
+			attachTabsToAppBar()
+		}
 		if (!hidden) {
 			// This tab is kept alive across bottom-nav switches, so its category lists would retain
 			// their previous scroll. Reset every instantiated category page (the visible one plus any
@@ -131,5 +142,35 @@ class FavouritesContainerFragment : BaseFragment<FragmentFavouritesContainerBind
 		return childFragmentManager.findCurrentPagerFragment(
 			viewBinding?.pager ?: return null,
 		)
+	}
+
+	// The category tabs live in the activity's AppBarLayout while this tab is visible, so they scroll
+	// off-screen together with the search bar instead of being pinned above the (edge-to-edge) lists.
+	private fun attachTabsToAppBar() {
+		val tabs = viewBinding?.tabs ?: return
+		val appBar = (activity as? AppBarOwner)?.appBar ?: return
+		if (tabs.parent === appBar) {
+			return
+		}
+		(tabs.parent as? ViewGroup)?.removeView(tabs)
+		appBar.addView(
+			tabs,
+			AppBarLayout.LayoutParams(
+				AppBarLayout.LayoutParams.MATCH_PARENT,
+				AppBarLayout.LayoutParams.WRAP_CONTENT,
+			).apply {
+				scrollFlags = AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL or
+					AppBarLayout.LayoutParams.SCROLL_FLAG_ENTER_ALWAYS or
+					AppBarLayout.LayoutParams.SCROLL_FLAG_SNAP
+			},
+		)
+	}
+
+	private fun detachTabsFromAppBar() {
+		val tabs = viewBinding?.tabs ?: return
+		val parent = tabs.parent as? ViewGroup ?: return
+		if (parent !== viewBinding?.root) {
+			parent.removeView(tabs)
+		}
 	}
 }

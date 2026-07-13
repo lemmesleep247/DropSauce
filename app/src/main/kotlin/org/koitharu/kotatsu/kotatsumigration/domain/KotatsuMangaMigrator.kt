@@ -5,8 +5,10 @@ import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.history.data.HistoryEntity
+import org.koitharu.kotatsu.mihon.model.mihonChapterId
 import org.koitharu.kotatsu.mihon.model.mihonMangaId
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
 import org.koitharu.kotatsu.tracker.data.TrackEntity
@@ -43,9 +45,14 @@ class KotatsuMangaMigrator @Inject constructor(
 		if (newId == oldId) {
 			return null
 		}
-		// Store the manga under its new identity (source + id), keeping cached chapters so the
-		// reader can resume offline until the first live refresh.
-		val newManga = oldManga.copy(id = newId, source = newSource)
+		// Re-key cached chapters exactly like the live Mihon adapter. Keeping their Kotatsu ids here
+		// makes the first refresh lose the chapter pointer and recover it from the old percentage.
+		val migratedChapters = oldManga.chapters?.map { it.forMihonSource(newSource) }
+		val chapterIds = oldManga.chapters.orEmpty()
+			.zip(migratedChapters.orEmpty())
+			.associate { (old, new) -> old.id to new.id }
+		fun migrateChapterId(id: Long) = chapterIds[id] ?: id
+		val newManga = oldManga.copy(id = newId, source = newSource, chapters = migratedChapters)
 		mangaDataRepository.storeManga(newManga, replaceExisting = true)
 
 		database.withTransaction {
@@ -55,7 +62,7 @@ class KotatsuMangaMigrator @Inject constructor(
 				favouritesDao.upsert(f.copy(mangaId = newId))
 			}
 
-			// history — percent + chapter pointer preserved (cached chapters carry the same ids)
+			// history — percent preserved and chapter pointer translated to the Mihon identity
 			val historyDao = database.getHistoryDao()
 			historyDao.find(oldId)?.let { h ->
 				historyDao.upsert(
@@ -63,7 +70,7 @@ class KotatsuMangaMigrator @Inject constructor(
 						mangaId = newId,
 						createdAt = h.createdAt,
 						updatedAt = h.updatedAt,
-						chapterId = h.chapterId,
+						chapterId = migrateChapterId(h.chapterId),
 						page = h.page,
 						scroll = h.scroll,
 						percent = h.percent,
@@ -85,7 +92,7 @@ class KotatsuMangaMigrator @Inject constructor(
 				tracksDao.upsert(
 					TrackEntity(
 						mangaId = newId,
-						lastChapterId = t.lastChapterId,
+						lastChapterId = migrateChapterId(t.lastChapterId),
 						newChapters = t.newChapters,
 						lastCheckTime = t.lastCheckTime,
 						lastChapterDate = t.lastChapterDate,
@@ -95,11 +102,13 @@ class KotatsuMangaMigrator @Inject constructor(
 				)
 			}
 
-			// bookmarks — chapter pointer kept (cached chapters carry the same ids)
+			// bookmarks — translate their chapter pointers with the cached chapters
 			val bookmarksDao = database.getBookmarksDao()
 			val oldBookmarks = bookmarksDao.findAll(oldId)
 			if (oldBookmarks.isNotEmpty()) {
-				bookmarksDao.upsert(oldBookmarks.map { it.copy(mangaId = newId) })
+				bookmarksDao.upsert(oldBookmarks.map {
+					it.copy(mangaId = newId, chapterId = migrateChapterId(it.chapterId))
+				})
 			}
 
 			// scrobbling — no manga FK, so move explicitly and delete the old rows
@@ -132,3 +141,8 @@ class KotatsuMangaMigrator @Inject constructor(
 		return newId
 	}
 }
+
+internal fun MangaChapter.forMihonSource(source: MangaSource): MangaChapter = copy(
+	id = mihonChapterId(source.name, url),
+	source = source,
+)

@@ -613,13 +613,13 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                     Icon(
                                         painter = painterResource(iconRes),
                                         contentDescription = null,
-										modifier = Modifier.size(34.dp),
+                                        modifier = Modifier.size(34.dp),
                                         tint = contentColor,
                                     )
-									Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = stringResource(labelRes),
-										style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -1030,13 +1030,13 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                     Icon(
                                         painter = painterResource(iconRes),
                                         contentDescription = null,
-										modifier = Modifier.size(34.dp),
+                                        modifier = Modifier.size(34.dp),
                                         tint = contentColor,
                                     )
-									Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = stringResource(labelRes),
-										style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,

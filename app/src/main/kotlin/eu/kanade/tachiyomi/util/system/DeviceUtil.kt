@@ -24,6 +24,7 @@ object DeviceUtil {
 		Build.MANUFACTURER.equals("samsung", ignoreCase = true)
 	}
 
+	@SuppressLint("PrivateApi")
 	val oneUiVersion: Double? by lazy {
 		runCatching {
 			val version = Build.VERSION::class.java

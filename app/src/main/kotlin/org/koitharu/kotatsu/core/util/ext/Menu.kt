@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.core.util.ext
 
+import android.annotation.SuppressLint
 import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.ColorFilter
@@ -43,6 +44,7 @@ fun Menu.adjustPopupMenuIcons(
 	}
 }
 
+@SuppressLint("PrivateApi")
 private fun Menu.findOptionalIconsMethod(): Method? {
 	var currentClass: Class<*>? = javaClass
 	while (currentClass != null) {

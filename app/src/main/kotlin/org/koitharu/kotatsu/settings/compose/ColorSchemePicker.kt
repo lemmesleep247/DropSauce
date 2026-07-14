@@ -117,7 +117,7 @@ private fun ColorSchemeCard(
 	Column(
 		modifier = Modifier
 			.width(96.dp)
-			.clickable(enabled = enabled, onClick = onClick),
+			.clickable(interactionSource = null, indication = null, enabled = enabled, onClick = onClick),
 		horizontalAlignment = Alignment.CenterHorizontally,
 	) {
 		Surface(

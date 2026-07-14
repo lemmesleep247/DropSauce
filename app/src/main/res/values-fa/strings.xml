@@ -308,7 +308,6 @@
     <string name="prefetch_content">پیش بازگذاری محتوا</string>
     <string name="mark_as_current">نشانه گذاری به عنوان فعلی</string>
     <string name="language">زبان</string>
-    <string name="theme_name_dynamic">پویا</string>
     <string name="theme_name_expressive">صریح (تست)</string>
     <string name="color_theme">طرح رنگ</string>
     <string name="show_in_grid_view">نمایش به حالت شبکه ای</string>

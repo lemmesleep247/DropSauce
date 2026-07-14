@@ -155,7 +155,6 @@
     <string name="show_in_grid_view">গ্রিড ভিউতে দেখান</string>
     <string name="language">ভাষা</string>
     <string name="delete_old_backups">পুরনো ব্যাকআপ মুছে ফেলুন</string>
-    <string name="theme_name_dynamic">ডাইনামিক</string>
     <string name="theme_name_miku">মিকু</string>
     <string name="data_not_restored">ডেটা পুনরুদ্ধার করা হয়নি</string>
     <string name="incognito_mode_hint">আপনার পড়ার অগ্রগতি সেভ হবে না</string>

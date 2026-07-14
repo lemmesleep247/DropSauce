@@ -263,7 +263,6 @@
     <string name="list_options">Тізімді реттеу</string>
     <string name="related_manga_summary">Байланыс маңга тізімін көрсету. Кейде тізім қате я мүлде болмауы мүмкін</string>
     <string name="remove_completed_downloads_confirm">Жүктеу тарихыңыз тазарады</string>
-    <string name="theme_name_dynamic">Динамикалық</string>
     <string name="reader_zoom_buttons_summary">Ұлғайту батырмасын астыңғы оң жақта көрсету я көрсетпеу</string>
     <string name="pages_cache">Бет кәші</string>
     <string name="reset">Арылту</string>

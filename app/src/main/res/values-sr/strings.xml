@@ -144,7 +144,6 @@
     <string name="list_options">Листа опција</string>
     <string name="related_manga_summary">Прикажи листу сродних Манги. У неким случајевима може бити нетачна или је неће бити</string>
     <string name="remove_completed_downloads_confirm">Ваша историја преузимања ће бити трајно избрисана. Ниједна преузета датотека неће бити избрисана</string>
-    <string name="theme_name_dynamic">Динамичка</string>
     <string name="text_clear_cookies_prompt">Бићеш одјављен са свих извора</string>
     <string name="clear_cookies">Избриши колачиће</string>
     <string name="reader_zoom_buttons_summary">Прикажи дугмад за управљање увећања и смањивања у доњем десном углу</string>

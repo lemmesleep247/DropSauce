@@ -152,7 +152,6 @@
     <string name="network_unavailable">Không có mạng</string>
     <string name="prefetch_content">Tải trước nội dung</string>
     <string name="mark_as_current">Đánh dấu là hiện tại đã đọc xong</string>
-    <string name="theme_name_dynamic">Động</string>
     <string name="error_occurred">Đã xảy ra lỗi</string>
     <string name="history">Lịch sử</string>
     <string name="grid">Dạng lưới</string>

@@ -117,7 +117,11 @@ class HistoryRepository @Inject constructor(
 		}
 		assert(manga.chapters != null)
 		db.withTransaction {
-			mangaRepository.storeManga(manga, replaceExisting = true)
+			// The reader passes a branch-filtered manga: persisting its chapter list would replace
+			// the cached chapters table with only the selected scanlator's chapters (or an empty
+			// list on a branch mismatch), permanently erasing the other branches. History never has
+			// fresher chapters than the details pipeline, so store metadata only.
+			mangaRepository.storeManga(manga.copy(chapters = null), replaceExisting = true)
 			val branch = manga.chapters?.findById(chapterId)?.branch
 			db.getHistoryDao().upsert(
 				HistoryEntity(

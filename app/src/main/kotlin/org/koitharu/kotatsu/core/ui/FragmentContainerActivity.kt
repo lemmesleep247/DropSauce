@@ -10,7 +10,6 @@ import androidx.fragment.app.commit
 import com.google.android.material.appbar.AppBarLayout
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.core.util.ext.consumeSystemBarsInsets
 import org.koitharu.kotatsu.databinding.ActivityContainerBinding
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.main.ui.owners.SnackbarOwner
@@ -30,6 +29,7 @@ abstract class FragmentContainerActivity(private val fragmentClass: Class<out Fr
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityContainerBinding.inflate(layoutInflater))
+		viewBinding.statusBarScrim?.blurTarget = viewBinding.container
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
 		val fm = supportFragmentManager
 		if (fm.findFragmentById(R.id.container) == null) {
@@ -42,12 +42,14 @@ abstract class FragmentContainerActivity(private val fragmentClass: Class<out Fr
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+		// Top inset is not consumed and not padded here: the appbar's WindowInsetHolder occupies it
+		// while expanded and scrolls away with the toolbar, letting content go edge-to-edge under
+		// the status bar (protected by the StatusBarBlurView).
 		viewBinding.appbar.updatePadding(
 			left = bars.left,
 			right = bars.right,
-			top = bars.top,
 		)
-		return insets.consumeSystemBarsInsets(top = true)
+		return insets
 	}
 
 	protected open fun getFragmentExtras(): Bundle? = intent.extras

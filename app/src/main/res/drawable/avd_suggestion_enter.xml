@@ -1,72 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:aapt="http://schemas.android.com/aapt">
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt">
 	<aapt:attr name="android:drawable">
-		<vector
-			android:name="suggestion_enter"
-			android:width="24dp"
-			android:height="24dp"
-			android:viewportWidth="24"
-			android:viewportHeight="24">
-			<group
-				android:name="bulb"
-				android:pivotX="12"
-				android:pivotY="20">
-				<path
-					android:name="bulb_path"
-					android:fillColor="#000000"
-					android:pathData="M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z" />
+		<vector android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+			<group android:name="g" android:pivotX="480" android:pivotY="480">
+				<path android:fillColor="#000000" android:pathData="M480,880Q447,880 423.5,856.5Q400,833 400,800L560,800Q560,833 536.5,856.5Q513,880 480,880ZM360,760Q343,760 331.5,748.5Q320,737 320,720Q320,703 331.5,691.5Q343,680 360,680L600,680Q617,680 628.5,691.5Q640,703 640,720Q640,737 628.5,748.5Q617,760 600,760L360,760ZM330,640Q261,599 220.5,530Q180,461 180,380Q180,255 267.5,167.5Q355,80 480,80Q605,80 692.5,167.5Q780,255 780,380Q780,461 739.5,530Q699,599 630,640L330,640Z" />
 			</group>
 		</vector>
 	</aapt:attr>
-	<target android:name="bulb">
+	<target android:name="g">
 		<aapt:attr name="android:animation">
 			<set>
-				<objectAnimator
-					android:duration="120"
-					android:interpolator="@android:interpolator/fast_out_slow_in"
-					android:propertyName="rotation"
-					android:valueFrom="0"
-					android:valueTo="-14"
-					android:valueType="floatType" />
-				<objectAnimator
-					android:duration="140"
-					android:interpolator="@android:interpolator/fast_out_slow_in"
-					android:propertyName="rotation"
-					android:startOffset="120"
-					android:valueFrom="-14"
-					android:valueTo="12"
-					android:valueType="floatType" />
-				<objectAnimator
-					android:duration="120"
-					android:interpolator="@android:interpolator/fast_out_slow_in"
-					android:propertyName="rotation"
-					android:startOffset="260"
-					android:valueFrom="12"
-					android:valueTo="-6"
-					android:valueType="floatType" />
-				<objectAnimator
-					android:duration="100"
-					android:interpolator="@android:interpolator/fast_out_slow_in"
-					android:propertyName="rotation"
-					android:startOffset="380"
-					android:valueFrom="-6"
-					android:valueTo="0"
-					android:valueType="floatType" />
-				<objectAnimator
-					android:duration="320"
-					android:interpolator="@android:anim/overshoot_interpolator"
-					android:propertyName="scaleX"
-					android:valueFrom="0.75"
-					android:valueTo="1.0"
-					android:valueType="floatType" />
-				<objectAnimator
-					android:duration="320"
-					android:interpolator="@android:anim/overshoot_interpolator"
-					android:propertyName="scaleY"
-					android:valueFrom="0.75"
-					android:valueTo="1.0"
-					android:valueType="floatType" />
+				<objectAnimator android:propertyName="scaleX" android:valueFrom="0.6" android:valueTo="1" android:duration="@integer/config_defaultAnimTime" android:interpolator="@android:interpolator/overshoot" />
+				<objectAnimator android:propertyName="scaleY" android:valueFrom="0.6" android:valueTo="1" android:duration="@integer/config_defaultAnimTime" android:interpolator="@android:interpolator/overshoot" />
 			</set>
 		</aapt:attr>
 	</target>

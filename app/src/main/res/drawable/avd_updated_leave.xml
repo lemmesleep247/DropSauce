@@ -1,41 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
-	xmlns:aapt="http://schemas.android.com/aapt">
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt">
 	<aapt:attr name="android:drawable">
-		<vector
-			android:name="updated_leave"
-			android:width="24dp"
-			android:height="24dp"
-			android:viewportWidth="24"
-			android:viewportHeight="24">
-			<group
-				android:name="root"
-				android:pivotX="12"
-				android:pivotY="12">
-				<path
-					android:name="updated_path"
-					android:fillColor="#000000"
-					android:pathData="M12 20C12.4 20 12.7 20 13.1 19.9C13.2 20.6 13.4 21.3 13.7 21.8C13.2 21.9 12.6 22 12 22C6.5 22 2 17.5 2 12C2 6.5 6.5 2 12 2C17.5 2 22 6.5 22 12C22 12.5 21.92 12.97 21.84 13.5L21.8 13.7C21.2 13.4 20.6 13.2 19.9 13.1C20 12.7 20 12.4 20 12C20 7.6 16.4 4 12 4C7.6 4 4 7.6 4 12C4 16.4 7.6 20 12 20M12.5 12.3L15.6 14.1C15.2 14.4 14.8 14.7 14.5 15.1L11 13V7H12.5V12.3M17.74 17.75L19 15L20.25 17.75L23 19L20.25 20.26L19 23L17.74 20.26L15 19L17.74 17.75Z" />
+		<vector android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+			<group android:name="g" android:pivotX="480" android:pivotY="480">
+				<path android:fillColor="#000000" android:pathData="M438,508L380,451Q369,440 352.5,440Q336,440 324,452Q313,463 313,480Q313,497 324,508L410,594Q422,606 438,606Q454,606 466,594L636,424Q648,412 647.5,396Q647,380 636,368Q624,356 607.5,355.5Q591,355 579,367L438,508ZM326,870L268,772L158,748Q143,745 134,732.5Q125,720 127,705L138,592L63,506Q53,495 53,480Q53,465 63,454L138,368L127,255Q125,240 134,227.5Q143,215 158,212L268,188L326,90Q334,77 348,72.5Q362,68 376,74L480,118L584,74Q598,68 612,72.5Q626,77 634,90L692,188L802,212Q817,215 826,227.5Q835,240 833,255L822,368L897,454Q907,465 907,480Q907,495 897,506L822,592L833,705Q835,720 826,732.5Q817,745 802,748L692,772L634,870Q626,883 612,887.5Q598,892 584,886L480,842L376,886Q362,892 348,887.5Q334,883 326,870ZM378,798L480,754L584,798L640,702L750,676L740,564L814,480L740,394L750,282L640,258L582,162L480,206L376,162L320,258L210,282L220,394L146,480L220,564L210,678L320,702L378,798ZM480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480L480,480Z" />
 			</group>
 		</vector>
 	</aapt:attr>
-	<target android:name="root">
+	<target android:name="g">
 		<aapt:attr name="android:animation">
 			<set>
-				<objectAnimator
-					android:duration="240"
-					android:interpolator="@android:interpolator/fast_out_slow_in"
-					android:propertyName="scaleX"
-					android:valueFrom="1.1"
-					android:valueTo="1.0"
-					android:valueType="floatType" />
-				<objectAnimator
-					android:duration="240"
-					android:interpolator="@android:interpolator/fast_out_slow_in"
-					android:propertyName="scaleY"
-					android:valueFrom="1.1"
-					android:valueTo="1.0"
-					android:valueType="floatType" />
+				<objectAnimator android:propertyName="scaleX" android:valueFrom="0.85" android:valueTo="1" android:duration="@integer/config_defaultAnimTime" android:interpolator="@android:interpolator/fast_out_slow_in" />
+				<objectAnimator android:propertyName="scaleY" android:valueFrom="0.85" android:valueTo="1" android:duration="@integer/config_defaultAnimTime" android:interpolator="@android:interpolator/fast_out_slow_in" />
 			</set>
 		</aapt:attr>
 	</target>

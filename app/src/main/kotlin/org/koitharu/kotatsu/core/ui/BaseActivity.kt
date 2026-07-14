@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.viewbinding.ViewBinding
 import dagger.hilt.android.EntryPointAccessors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.koitharu.kotatsu.BuildConfig
@@ -70,7 +71,7 @@ abstract class BaseActivity<B : ViewBinding> :
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
 			AppCompatDelegate.setApplicationLocales(entryPoint.settings.appLocales)
 		}
-		super.attachBaseContext(newBase)
+		super.attachBaseContext(newBase.withUiScale(entryPoint.settings.uiScalePercent))
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -293,4 +294,16 @@ abstract class BaseActivity<B : ViewBinding> :
 
 		private const val RECREATE_FADE_DURATION_MS = 220L
 	}
+}
+
+/**
+ * Scale the whole UI by overriding the display density. [scalePercent] is 100 for the default
+ * (no-op); smaller/larger values shrink/grow every dp, sp and image across the app, mirroring the
+ * system "Display size" setting.
+ */
+private fun Context.withUiScale(scalePercent: Int): Context {
+	if (scalePercent == 100) return this
+	val config = Configuration(resources.configuration)
+	config.densityDpi = (config.densityDpi * scalePercent / 100f).roundToInt()
+	return createConfigurationContext(config)
 }

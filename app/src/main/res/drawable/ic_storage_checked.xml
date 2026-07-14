@@ -1,12 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><!-- drawable/sd.xml -->
-<vector
-	xmlns:android="http://schemas.android.com/apk/res/android"
-	android:width="24dp"
-	android:height="24dp"
-	android:tint="?attr/colorControlNormal"
-	android:viewportWidth="24"
-	android:viewportHeight="24">
-	<path
-		android:fillColor="#000000"
-		android:pathData="M18,8H16V4H18M15,8H13V4H15M12,8H10V4H12M18,2H10L4,8V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V4A2,2 0 0,0 18,2Z" />
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+	android:width="24dp"	android:height="24dp"	android:tint="?attr/colorControlNormal"	android:viewportWidth="960"	android:viewportHeight="960">	<path android:fillColor="@android:color/white" android:pathData="M680,640Q705,640 722.5,623Q740,606 740,580Q740,555 722.5,537.5Q705,520 680,520Q654,520 637,537.5Q620,555 620,580Q620,606 637,623Q654,640 680,640ZM80,360L216,224Q227,213 241.5,206.5Q256,200 273,200L686,200Q703,200 717.5,206.5Q732,213 743,224L880,360L80,360ZM160,760Q126,760 103,737Q80,714 80,680L80,440L880,440L880,680Q880,714 856.5,737Q833,760 800,760L160,760Z" />
 </vector>

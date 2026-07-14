@@ -8,7 +8,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
@@ -61,7 +60,6 @@ import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.remotelist.ui.RemoteListFragment
-import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import com.google.android.material.R as materialR
 
@@ -71,8 +69,7 @@ private const val SORT_BUTTON_MAX_WIDTH_FRACTION = 0.45f
 class MangaListActivity :
 	BaseActivity<ActivityMangaListBinding>(),
 	AppBarOwner, View.OnClickListener,
-	FilterCoordinator.Owner,
-	AppBarLayout.OnOffsetChangedListener {
+	FilterCoordinator.Owner {
 
 	override val appBar: AppBarLayout
 		get() = viewBinding.appbar
@@ -104,9 +101,7 @@ class MangaListActivity :
 		source = resolved.source
 		activeLanguageName = resolved.languageSubtitle
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
-		if (viewBinding.containerFilterHeader != null) {
-			viewBinding.appbar.addOnOffsetChangedListener(this)
-		}
+		viewBinding.statusBarScrim?.blurTarget = viewBinding.container
 		viewBinding.buttonOrder?.setOnClickListener(this)
 		configureSortButton()
 		applyTitle()
@@ -192,18 +187,6 @@ class MangaListActivity :
 
 	override fun isNsfwContent(): Flow<Boolean> = flowOf(source.isNsfw())
 
-	override fun onOffsetChanged(appBarLayout: AppBarLayout, verticalOffset: Int) {
-		val container = viewBinding.containerFilterHeader ?: return
-		container.background = if (verticalOffset.absoluteValue < appBarLayout.totalScrollRange) {
-			container.context.getThemeColor(materialR.attr.backgroundColor).toDrawable()
-		} else {
-			viewBinding.collapsingToolbarLayout?.contentScrim
-		}
-	}
-
-	/**
-	 * Only for landscape
-	 */
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val barsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
 		viewBinding.cardSide?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
@@ -211,12 +194,14 @@ class MangaListActivity :
 			topMargin = barsInsets.top + resources.getDimensionPixelOffset(R.dimen.grid_spacing_outer_double)
 			bottomMargin = barsInsets.bottom + resources.getDimensionPixelOffset(R.dimen.side_card_offset)
 		}
+		// Top inset is left unconsumed and not padded: the appbar's WindowInsetHolder fills it while
+		// expanded and scrolls away with the rest, so content goes edge-to-edge under the status bar
+		// (protected by the StatusBarBlurView).
 		viewBinding.appbar.updatePaddingRelative(
-			top = barsInsets.top,
 			end = if (viewBinding.cardSide == null) barsInsets.end(v) else 0,
 			start = barsInsets.start(v),
 		)
-		return insets.consumeSystemBarsInsets(v, top = true, end = true)
+		return insets.consumeSystemBarsInsets(v, end = true)
 	}
 
 	override fun onClick(v: View) {

@@ -103,6 +103,7 @@ android {
 	lint {
 		abortOnError = true
 		warningsAsErrors = true
+		sarifReport = true
 		checkDependencies = true
 		disable 'MissingTranslation',
 			'PrivateResource',

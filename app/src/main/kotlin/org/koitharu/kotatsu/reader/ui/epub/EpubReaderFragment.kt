@@ -1,19 +1,19 @@
 package org.koitharu.kotatsu.reader.ui.epub
 
-import android.annotation.SuppressLint
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.text.Layout
+import android.text.Spanned
+import android.text.SpannedString
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.view.ContextThemeWrapper
-import android.view.LayoutInflater
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.TextView
@@ -24,25 +24,25 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
-import org.json.JSONObject
+import org.jsoup.Jsoup
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
-import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
-import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.isNightMode
 import org.koitharu.kotatsu.core.util.ext.observe
-import org.koitharu.kotatsu.core.util.ext.toZipUri
 import org.koitharu.kotatsu.databinding.FragmentReaderEpubBinding
-import org.koitharu.kotatsu.local.data.input.EpubParser
+import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.ui.ReaderState
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderAdapter
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderFragment
@@ -54,12 +54,9 @@ import androidx.appcompat.R as appcompatR
 import com.google.android.material.R as materialR
 
 /**
- * Text reader for EPUB books with scrolling and swipe-paged modes.
- *
- * One chapter lives in the WebView at a time. Paged mode flows it into CSS columns and turns pages
- * with a transform; scroll mode scrolls it vertically. Reaching a chapter edge simply loads the
- * neighbouring chapter (switchChapterBy) - there is deliberately no cross-chapter splicing, so
- * nothing accumulates in memory and there is no position to get out of sync.
+ * Native EPUB flow. Chapters are virtualized by RecyclerView in vertical mode and converted to a
+ * flat, chapter-spanning ViewPager2 page list in paged mode. Both modes navigate with the same
+ * chapter/character locator, so changing modes never reloads a chapter or loses the position.
  */
 @AndroidEntryPoint
 class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
@@ -67,240 +64,383 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	@Inject
 	lateinit var settings: AppSettings
 
-	@Volatile
-	private var currentChapterId = 0L
+	private var chapters: List<NativeChapter> = emptyList()
+	private var chapterStarts: LongArray = LongArray(0)
+	private var totalCharacters = 0L
+	private var verticalView: RecyclerView? = null
+	private var pagerView: ViewPager2? = null
+	private var pages: List<NativePage> = emptyList()
+	private var paginationKey: String? = null
+	private var lastLocator = Locator(0, 0)
+	private var loading = false
+	private var restoring = false
+	private var progressScheduled = false
+	private var renderGeneration = 0
 
-	@Volatile
-	private var currentHref: String? = null
+	private val rebuildRunnable = Runnable {
+		if (chapters.isNotEmpty()) renderMode(currentLocator())
+	}
 
-	@Volatile
-	private var currentEpubFile: File? = null
+	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?) =
+		FragmentReaderEpubBinding.inflate(inflater, container, false)
 
-	@Volatile
-	private var zipFile: ZipFile? = null
-	private var pagesSnapshot: List<ReaderPage> = emptyList()
-	private var canGoPrev = false
-	private var canGoNext = false
-	private var pendingSearchQuery: String? = null
-	private var pagedTopInset = 0
-	private var pagedBottomInset = 0
-	private var scrollTopInset = 0
-
-	// current chapter document (href -> injected html), served by shouldInterceptRequest so the
-	// WebView navigates to a real https url - loadDataWithBaseURL leaves an empty data: history
-	// entry behind that blows up with ERR_INVALID_RESPONSE on renavigation
-	@Volatile
-	private var mainDocument: Pair<String, String>? = null
-
-	@Volatile
-	private var progressPm = 0 // reading position inside the chapter, permille
-
-	@Volatile
-	private var pendingPm = 0
-
-	// when moving to the previous chapter, land at its end instead of its start
-	private var landAtEnd = false
-
-	override fun onCreateViewBinding(
-		inflater: LayoutInflater,
-		container: ViewGroup?,
-	) = FragmentReaderEpubBinding.inflate(inflater, container, false)
-
-	@SuppressLint("SetJavaScriptEnabled")
 	override fun onViewBindingCreated(binding: FragmentReaderEpubBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
-		with(binding.webView) {
-			settings.javaScriptEnabled = true
-			settings.allowFileAccess = false
-			settings.allowContentAccess = false
-			settings.defaultTextEncodingName = "UTF-8"
-			// keep the view out of the decor's touchables so the reader tap grid keeps working
-			isClickable = false
-			isLongClickable = false
-			overScrollMode = View.OVER_SCROLL_NEVER
-			webViewClient = EpubWebViewClient()
-			addJavascriptInterface(Bridge(), "EpubBridge")
-		}
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_THEME) { epubTheme }
-			.observe(viewLifecycleOwner) { applyColors() }
-		viewModel.uiState.observe(viewLifecycleOwner) { state ->
-			canGoPrev = state != null && state.hasPreviousChapter()
-			canGoNext = state != null && state.hasNextChapter()
-			viewBinding?.webView?.evaluateJavascript(
-				"if(window.__epub){__epub.setNav($canGoPrev,$canGoNext);}",
-				null,
-			)
-		}
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_SIZE) { epubFontSize }
-			.observe(viewLifecycleOwner) { applyTypography() }
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_FAMILY) { epubFontFamily }
-			.observe(viewLifecycleOwner) { applyTypography() }
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_LINE_HEIGHT) { epubLineHeight }
-			.observe(viewLifecycleOwner) { applyTypography() }
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_HORIZONTAL_PADDING) { epubHorizontalPadding }
-			.observe(viewLifecycleOwner) { applyTypography() }
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_TEXT_ALIGN) { epubTextAlign }
-			.observe(viewLifecycleOwner) { applyTypography() }
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_THEME) { epubTheme }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_SIZE) { epubFontSize }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_FAMILY) { epubFontFamily }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_LINE_HEIGHT) { epubLineHeight }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_HORIZONTAL_PADDING) { epubHorizontalPadding }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_TEXT_ALIGN) { epubTextAlign }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_PUBLISHER_STYLE) { isEpubPublisherStyleEnabled }
+			.observe(viewLifecycleOwner) { scheduleRebuild() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }
 			.observe(viewLifecycleOwner) {
-				viewBinding?.root?.requestApplyInsets()
-				applyTypography()
+				binding.root.requestApplyInsets()
+				scheduleRebuild()
 			}
-		this.settings.observeAsFlow(AppSettings.KEY_EPUB_PUBLISHER_STYLE) { isEpubPublisherStyleEnabled }
-			.observe(viewLifecycleOwner) { applyTypography() }
 	}
 
 	override fun onDestroyView() {
-		viewBinding?.webView?.destroy()
-		zipFile?.close()
-		zipFile = null
-		currentEpubFile = null
+		viewBinding?.root?.removeCallbacks(rebuildRunnable)
+		verticalView = null
+		pagerView = null
+		pages = emptyList()
+		paginationKey = null
 		super.onDestroyView()
 	}
 
 	override fun onCreateAdapter(): BaseReaderAdapter<*>? = null
 
-	private fun barHeight(id: Int): Int {
-		val bar = activity?.findViewById<View>(id) ?: return 0
-		val margin = (bar.layoutParams as? ViewGroup.MarginLayoutParams)?.bottomMargin ?: 0
-		return bar.height + margin
-	}
-
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
-		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-		pagedTopInset = maxOf(pagedTopInset, barHeight(R.id.appbar_top), bars.top)
-		pagedBottomInset = maxOf(pagedBottomInset, barHeight(R.id.toolbar_docked), bars.bottom)
-		scrollTopInset = maxOf(scrollTopInset, barHeight(R.id.infoBar))
-		val initialLeft = if (isPagedMode) bars.left else 0
-		val initialTop = if (isPagedMode) pagedTopInset else scrollTopInset
-		val initialRight = if (isPagedMode) bars.right else 0
-		val initialBottom = if (isPagedMode) pagedBottomInset else 0
-		var viewportChanged = v.paddingLeft != initialLeft || v.paddingTop != initialTop ||
-			v.paddingRight != initialRight || v.paddingBottom != initialBottom
-		viewBinding?.root?.updatePadding(
-			left = initialLeft,
-			top = initialTop,
-			right = initialRight,
-			bottom = initialBottom,
-		)
-		v.post {
-			pagedTopInset = maxOf(pagedTopInset, barHeight(R.id.appbar_top))
-			pagedBottomInset = maxOf(pagedBottomInset, barHeight(R.id.toolbar_docked))
-			scrollTopInset = maxOf(scrollTopInset, barHeight(R.id.infoBar))
-			val left = if (isPagedMode) bars.left else 0
-			val top = if (isPagedMode) pagedTopInset else scrollTopInset
-			val right = if (isPagedMode) bars.right else 0
-			val bottom = if (isPagedMode) pagedBottomInset else 0
-			viewportChanged = viewportChanged || v.paddingLeft != left || v.paddingTop != top ||
-				v.paddingRight != right || v.paddingBottom != bottom
-			v.updatePadding(left = left, top = top, right = right, bottom = bottom)
-			if (viewportChanged) applyTypography()
-		}
+		// Reader controls overlay the book. Reserving their size here leaves permanent blank bands
+		// whenever the controls are hidden.
+		v.updatePadding(0, 0, 0, 0)
 		return insets
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
-		pagesSnapshot = pages
-		val target = when {
-			pendingState != null -> pages.find { it.chapterId == pendingState.chapterId }
-				?.let { it to pendingState.scroll.coerceIn(0, 1000) }
-
-			else -> pages.find { it.chapterId == currentChapterId }?.let { it to progressPm }
-		} ?: pages.firstOrNull()?.let { it to 0 } ?: return
-		var (page, pm) = target
-		if (landAtEnd) {
-			landAtEnd = false
-			if (page.chapterId != currentChapterId && pm == 0) {
-				pm = 1000
-			}
+		val mangaChapters = viewModel.getMangaOrNull()?.chapters.orEmpty()
+		if (mangaChapters.isEmpty()) return
+		if (chapters.isEmpty() && !loading) {
+			loading = true
+			chapters = withContext(Dispatchers.IO) { parseChapters(mangaChapters) }
+			loading = false
+			buildChapterIndex()
 		}
-		if (page.chapterId == currentChapterId) {
-			if (pendingState != null && pm != progressPm) {
-				viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.restore($pm);}", null)
+		if (chapters.isEmpty()) return
+		val state = pendingState ?: viewModel.getCurrentState()
+		val chapter = state?.chapterId?.let { id -> chapters.indexOfFirst { it.id == id } }
+			?.takeIf { it >= 0 } ?: lastLocator.chapter.coerceIn(chapters.indices)
+		val offset = state?.scroll?.let { pm -> chapters[chapter].text.length * pm.coerceIn(0, 1000) / 1000 }
+			?: lastLocator.offset
+		renderMode(Locator(chapter, offset))
+	}
+
+	private fun parseChapters(source: List<MangaChapter>): List<NativeChapter> {
+		val archives = HashMap<File, ZipFile>()
+		return try {
+			source.map { chapter ->
+				val uri = chapter.url.toUri()
+				val file = File(uri.schemeSpecificPart)
+				val zip = archives.getOrPut(file) { ZipFile(file) }
+				val entryName = uri.fragment.orEmpty()
+				val entry = zip.getEntry(entryName) ?: zip.getEntry(entryName.removePrefix("/"))
+				val raw = entry?.let { zip.getInputStream(it).bufferedReader().use { reader -> reader.readText() } }.orEmpty()
+				val document = Jsoup.parse(raw)
+				document.select("script,style,noscript").remove()
+				val parsed = HtmlCompat.fromHtml(document.body().html(), HtmlCompat.FROM_HTML_MODE_LEGACY)
+				val text = SpannedString(parsed.trimmed())
+				NativeChapter(
+					id = chapter.id,
+					title = chapter.title.orEmpty(),
+					text = if (text.isNotEmpty()) text else SpannedString("\u2014"),
+				)
 			}
+		} finally {
+			archives.values.forEach(ZipFile::close)
+		}
+	}
+
+	private fun Spanned.trimmed(): CharSequence {
+		var start = 0
+		var end = length
+		while (start < end && this[start].isWhitespace()) start++
+		while (end > start && this[end - 1].isWhitespace()) end--
+		return subSequence(start, end)
+	}
+
+	private fun buildChapterIndex() {
+		chapterStarts = LongArray(chapters.size)
+		var cursor = 0L
+		chapters.forEachIndexed { index, chapter ->
+			chapterStarts[index] = cursor
+			cursor += chapter.text.length.coerceAtLeast(1)
+		}
+		totalCharacters = cursor.coerceAtLeast(1)
+	}
+
+	private fun scheduleRebuild() {
+		val root = viewBinding?.root ?: return
+		root.removeCallbacks(rebuildRunnable)
+		root.post(rebuildRunnable)
+	}
+
+	private fun renderMode(locator: Locator) {
+		val container = viewBinding?.readerContainer ?: return
+		if (container.width == 0 || container.height == 0) {
+			container.post { renderMode(locator) }
 			return
 		}
-		loadChapter(page, pm)
+		lastLocator = locator.clamped()
+		restoring = true
+		renderGeneration++
+		container.removeAllViews()
+		verticalView = null
+		pagerView = null
+		if (isPagedMode) renderPaged(container, lastLocator) else renderVertical(container, lastLocator)
 	}
 
-	private suspend fun loadChapter(page: ReaderPage, pm: Int) {
-		val uri = page.url.toUri()
-		val file = File(uri.schemeSpecificPart)
-		val href = uri.fragment.orEmpty()
-		val html = withContext(Dispatchers.IO) {
-			if (file != currentEpubFile) {
-				zipFile?.close()
-				zipFile = ZipFile(file)
-				currentEpubFile = file
+	private fun renderVertical(container: FrameLayout, locator: Locator) {
+		val recycler = RecyclerView(requireContext()).apply {
+			layoutParams = FrameLayout.LayoutParams(-1, -1)
+			layoutManager = LinearLayoutManager(context)
+			adapter = ChapterAdapter()
+			itemAnimator = null
+			overScrollMode = View.OVER_SCROLL_NEVER
+			isClickable = false
+			isFocusable = false
+			descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+			setBackgroundColor(backgroundColor)
+			addOnScrollListener(object : RecyclerView.OnScrollListener() {
+				override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) = scheduleProgress()
+			})
+		}
+		verticalView = recycler
+		container.addView(recycler)
+		val manager = recycler.layoutManager as LinearLayoutManager
+		manager.scrollToPositionWithOffset(locator.chapter, 0)
+		recycler.post {
+			val child = manager.findViewByPosition(locator.chapter)
+			if (child != null) {
+				val fraction = locator.offset.toFloat() / chapters[locator.chapter].text.length.coerceAtLeast(1)
+				recycler.scrollBy(0, (child.height * fraction).toInt())
 			}
-			EpubParser.readEntryText(file, href) ?: "<p>${getString(R.string.not_found_404)}</p>"
-		}
-		currentChapterId = page.chapterId
-		currentHref = href
-		progressPm = pm
-		pendingPm = pm
-		val binding = viewBinding ?: return
-		mainDocument = href to injectHtml(html)
-		binding.webView.loadUrl("https://$EPUB_HOST/${encodePath(href)}")
-		val index = pagesSnapshot.indexOfFirst { it.chapterId == page.chapterId }
-		if (index >= 0) {
-			viewModel.onCurrentPageChanged(index, index)
+			restoring = false
+			notifyProgress()
 		}
 	}
 
-	override fun getCurrentState(): ReaderState? = currentChapterId.takeIf { it != 0L }?.let {
-		ReaderState(chapterId = it, page = 0, scroll = progressPm)
+	private fun renderPaged(container: FrameLayout, locator: Locator) {
+		val generation = renderGeneration
+		val key = "${container.width}:${container.height}:${settings.epubFontSize}:${settings.epubFontFamily}:" +
+			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:${settings.epubTextAlign}"
+		container.setBackgroundColor(backgroundColor)
+		if (pages.isNotEmpty() && paginationKey == key) {
+			renderPagedReady(container, locator)
+			return
+		}
+		viewLifecycleOwner.lifecycleScope.launch {
+			val newPages = withContext(Dispatchers.Default) { paginate(container.width, container.height) }
+			if (generation != renderGeneration || !isPagedMode || viewBinding?.readerContainer !== container) return@launch
+			pages = newPages
+			paginationKey = key
+			renderPagedReady(container, locator)
+		}
+	}
+
+	private fun renderPagedReady(container: FrameLayout, locator: Locator) {
+		val pager = ViewPager2(requireContext()).apply {
+			layoutParams = FrameLayout.LayoutParams(-1, -1)
+			orientation = ViewPager2.ORIENTATION_HORIZONTAL
+			adapter = PageAdapter()
+			overScrollMode = View.OVER_SCROLL_NEVER
+			isClickable = false
+			isFocusable = false
+			registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+				override fun onPageSelected(position: Int) {
+				if (!restoring) notifyProgress()
+			}
+			})
+		}
+		(pager.getChildAt(0) as? RecyclerView)?.apply {
+			isClickable = false
+			isFocusable = false
+			descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+		}
+		pagerView = pager
+		container.addView(pager)
+		val target = pages.indexOfFirst {
+			it.chapter == locator.chapter && locator.offset >= it.start && locator.offset < it.end
+		}.takeIf { it >= 0 } ?: pages.indexOfLast { it.chapter <= locator.chapter }.coerceAtLeast(0)
+		pager.setCurrentItem(target, false)
+		pager.post {
+			restoring = false
+			notifyProgress()
+		}
+	}
+
+	private fun paginate(viewWidth: Int, viewHeight: Int): List<NativePage> {
+		val density = resources.displayMetrics.density
+		val horizontal = (settings.epubHorizontalPadding * density).toInt().coerceAtLeast(1)
+		val vertical = (16 * density).toInt()
+		val width = (viewWidth - horizontal * 2).coerceAtLeast(1)
+		val height = (viewHeight - vertical * 2).coerceAtLeast(1)
+		val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
+			color = foregroundColor
+			textSize = 16f * resources.displayMetrics.scaledDensity * settings.epubFontSize / 100f
+			typeface = readerTypeface
+		}
+		val result = ArrayList<NativePage>()
+		chapters.forEachIndexed { chapterIndex, chapter ->
+			val layout = StaticLayout.Builder.obtain(chapter.text, 0, chapter.text.length, paint, width)
+				.setAlignment(textAlignment)
+				.setIncludePad(true)
+				.setLineSpacing(0f, settings.epubLineHeight / 100f)
+				.build()
+			var start = 0
+			while (start < chapter.text.length) {
+				val firstLine = layout.getLineForOffset(start)
+				val bottom = (layout.getLineTop(firstLine) + height).coerceAtMost(layout.height)
+				val lastLine = layout.getLineForVertical((bottom - 1).coerceAtLeast(0))
+				val end = layout.getLineEnd(lastLine).coerceAtLeast(start + 1).coerceAtMost(chapter.text.length)
+				result += NativePage(chapterIndex, start, end)
+				start = end
+			}
+		}
+		return result.ifEmpty { listOf(NativePage(0, 0, chapters.first().text.length)) }
+	}
+
+	private fun createTextView(parent: ViewGroup, paged: Boolean): TextView = TextView(parent.context).apply {
+		layoutParams = if (paged) ViewGroup.LayoutParams(-1, -1) else ViewGroup.LayoutParams(-1, -2)
+		setTextColor(foregroundColor)
+		setBackgroundColor(backgroundColor)
+		textSize = 16f * settings.epubFontSize / 100f
+		typeface = readerTypeface
+		setLineSpacing(0f, settings.epubLineHeight / 100f)
+		includeFontPadding = true
+		gravity = Gravity.TOP or when (settings.epubTextAlign) {
+			"center" -> Gravity.CENTER_HORIZONTAL
+			"right", "end" -> Gravity.END
+			else -> Gravity.START
+		}
+		textAlignment = when (settings.epubTextAlign) {
+			"center" -> View.TEXT_ALIGNMENT_CENTER
+			"right", "end" -> View.TEXT_ALIGNMENT_VIEW_END
+			else -> View.TEXT_ALIGNMENT_VIEW_START
+		}
+		if (android.os.Build.VERSION.SDK_INT >= 26 && settings.epubTextAlign == "justify") {
+			justificationMode = Layout.JUSTIFICATION_MODE_INTER_WORD
+		}
+		val density = resources.displayMetrics.density
+		val h = (settings.epubHorizontalPadding * density).toInt()
+		val v = ((if (paged) 16 else 20) * density).toInt()
+		setPadding(h, v, h, if (paged) v else (36 * density).toInt())
+		isClickable = false
+		isLongClickable = false
+	}
+
+	private fun currentLocator(): Locator {
+		pagerView?.let { pager ->
+			return pages.getOrNull(pager.currentItem)?.let { Locator(it.chapter, it.start) } ?: lastLocator
+		}
+		verticalView?.let { recycler ->
+			val manager = recycler.layoutManager as? LinearLayoutManager ?: return lastLocator
+			val index = manager.findFirstVisibleItemPosition().takeIf { it >= 0 } ?: return lastLocator
+			val child = manager.findViewByPosition(index) ?: return Locator(index, 0)
+			val visibleOffset = (-child.top).coerceAtLeast(0)
+			val charOffset = (chapters[index].text.length.toLong() * visibleOffset / child.height.coerceAtLeast(1)).toInt()
+			return Locator(index, charOffset).clamped()
+		}
+		return lastLocator.clamped()
+	}
+
+	private fun scheduleProgress() {
+		if (restoring || progressScheduled) return
+		progressScheduled = true
+		viewBinding?.root?.postDelayed({
+			progressScheduled = false
+			notifyProgress()
+		}, PROGRESS_INTERVAL_MS)
+	}
+
+	private fun notifyProgress() {
+		if (chapters.isEmpty()) return
+		val locator = currentLocator().clamped()
+		lastLocator = locator
+		val chapter = chapters[locator.chapter]
+		val chapterPm = locator.offset * 1000 / chapter.text.length.coerceAtLeast(1)
+		val globalPage = pagerView?.currentItem ?: 0
+		val firstChapterPage = if (pagerView != null) pages.indexOfFirst { it.chapter == locator.chapter }.coerceAtLeast(0) else 0
+		val page = globalPage - firstChapterPage
+		val pageCount = if (pagerView != null) pages.count { it.chapter == locator.chapter } else 0
+		viewModel.onEpubProgressChanged(chapter.id, chapterPm, page, pageCount)
+	}
+
+	override fun getCurrentState(): ReaderState? {
+		if (chapters.isEmpty()) return null
+		val locator = currentLocator().clamped()
+		val chapter = chapters[locator.chapter]
+		return ReaderState(chapter.id, 0, locator.offset * 1000 / chapter.text.length.coerceAtLeast(1))
 	}
 
 	override fun switchPageBy(delta: Int) {
-		if (isPagedMode) return // paged EPUBs deliberately require a horizontal swipe
-		val webView = viewBinding?.webView ?: return
-		if (webView.canScrollVertically(delta)) {
-			val d = (webView.height * 0.9).toInt() * delta
-			webView.evaluateJavascript(
-				"if(window.__epub){__epub.el().scrollBy({top:$d,left:0,behavior:${if (isAnimationEnabled()) "'smooth'" else "'auto'"}});}",
-				null,
-			)
-		} else {
-			landAtEnd = delta < 0
-			viewModel.switchChapterBy(delta)
+		pagerView?.let {
+			it.setCurrentItem((it.currentItem + delta).coerceIn(0, pages.lastIndex), isAnimationEnabled())
+			return
 		}
+		verticalView?.smoothScrollBy(0, (verticalView?.height ?: 0) * 9 / 10 * delta)
 	}
 
-	// the bottom slider: in paged mode position is a page index (slider has stops), in scroll
-	// mode it is chapter progress 0..1000 (a smooth in-chapter scrollbar)
 	override fun switchPageTo(position: Int, smooth: Boolean) {
-		if (isPagedMode) {
-			viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.goto($position);}", null)
-		} else {
-			val pm = position.coerceIn(0, 1000)
-			progressPm = pm
-			viewBinding?.webView?.evaluateJavascript("if(window.__epub){__epub.restore($pm);}", null)
+		pagerView?.let {
+			val chapter = pages.getOrNull(it.currentItem)?.chapter ?: return
+			val first = pages.indexOfFirst { page -> page.chapter == chapter }.coerceAtLeast(0)
+			val count = pages.count { page -> page.chapter == chapter }
+			it.setCurrentItem(first + position.coerceIn(0, count - 1), smooth && isAnimationEnabled())
+			return
 		}
+		val chapter = currentLocator().chapter
+		val offset = chapters[chapter].text.length * position.coerceIn(0, 1000) / 1000
+		goTo(Locator(chapter, offset), smooth)
 	}
 
 	override fun scrollBy(delta: Int, smooth: Boolean): Boolean {
-		if (isPagedMode) return false
-		val webView = viewBinding?.webView ?: return false
-		if (!webView.canScrollVertically(delta)) {
-			return false
-		}
-		webView.evaluateJavascript(
-			"if(window.__epub){__epub.el().scrollBy({top:$delta,left:0,behavior:${if (smooth && isAnimationEnabled()) "'smooth'" else "'auto'"}});}",
-			null,
-		)
+		val recycler = verticalView ?: return false
+		if (!recycler.canScrollVertically(delta)) return false
+		if (smooth) recycler.smoothScrollBy(0, delta) else recycler.scrollBy(0, delta)
 		return true
 	}
 
-	// zoom is intentionally not supported for text books - adjust the text size instead
-	override fun onZoomIn() = Unit
+	private fun goTo(locator: Locator, smooth: Boolean = false) {
+		lastLocator = locator.clamped()
+		if (pagerView != null) {
+			val page = pages.indexOfFirst { it.chapter == lastLocator.chapter && lastLocator.offset in it.start until it.end }
+			if (page >= 0) pagerView?.setCurrentItem(page, smooth && isAnimationEnabled())
+		} else {
+			val recycler = verticalView ?: return
+			val manager = recycler.layoutManager as LinearLayoutManager
+			manager.scrollToPositionWithOffset(lastLocator.chapter, 0)
+			recycler.post {
+				val child = manager.findViewByPosition(lastLocator.chapter) ?: return@post
+				val fraction = lastLocator.offset.toFloat() / chapters[lastLocator.chapter].text.length.coerceAtLeast(1)
+				recycler.scrollBy(0, (child.height * fraction).toInt())
+				notifyProgress()
+			}
+		}
+	}
 
+	override fun onZoomIn() = Unit
 	override fun onZoomOut() = Unit
 
 	fun showBookSearch() {
-		val input = TextInputEditText(requireContext()).apply {
-			setSingleLine()
-		}
+		val input = TextInputEditText(requireContext()).apply { setSingleLine() }
 		val field = TextInputLayout(requireContext()).apply {
 			hint = getString(R.string.epub_search_hint)
 			boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
@@ -310,33 +450,25 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val container = FrameLayout(requireContext()).apply {
 			val margin = (24 * resources.displayMetrics.density).toInt()
 			setPadding(margin, 8, margin, 0)
-			addView(field, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+			addView(field, FrameLayout.LayoutParams(-1, -2))
 		}
 		MaterialAlertDialogBuilder(requireContext())
-			.setTitle(R.string.epub_search_book)
-			.setView(container)
+			.setTitle(R.string.epub_search_book).setView(container)
 			.setNegativeButton(android.R.string.cancel, null)
-			.setPositiveButton(R.string.search) { _, _ -> searchBook(input.text.toString().trim()) }
-			.show()
+			.setPositiveButton(R.string.search) { _, _ -> searchBook(input.text.toString().trim()) }.show()
 	}
 
 	private fun searchBook(query: String) {
-		if (query.isEmpty()) return
+		if (query.isEmpty() || chapters.isEmpty()) return
 		Toast.makeText(requireContext(), R.string.loading_, Toast.LENGTH_SHORT).show()
 		viewLifecycleOwner.lifecycleScope.launch {
-			val chapters = viewModel.getMangaOrNull()?.chapters.orEmpty()
-			val results = withContext(Dispatchers.IO) {
-				chapters.asSequence()
-					.mapNotNull { chapter ->
-						val uri = chapter.url.toUri()
-						val text = EpubParser.readEntryText(File(uri.schemeSpecificPart), uri.fragment.orEmpty())
-							?.let { HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_LEGACY).toString() }
-							?: return@mapNotNull null
-						val match = text.indexOf(query, ignoreCase = true).takeIf { it >= 0 } ?: return@mapNotNull null
-						val start = (match - 45).coerceAtLeast(0)
-						val end = (match + query.length + 70).coerceAtMost(text.length)
-						SearchResult(chapter.id, chapter.title.orEmpty(), text.substring(start, end).replace(Regex("\\s+"), " ").trim(), match * 1000 / text.length.coerceAtLeast(1))
-					}.take(MAX_SEARCH_RESULTS).toList()
+			val results = withContext(Dispatchers.Default) {
+				chapters.mapIndexedNotNull { index, chapter ->
+					val match = chapter.text.indexOf(query, ignoreCase = true).takeIf { it >= 0 } ?: return@mapIndexedNotNull null
+					val start = (match - 45).coerceAtLeast(0)
+					val end = (match + query.length + 70).coerceAtMost(chapter.text.length)
+					SearchResult(index, chapter.title, chapter.text.substring(start, end).replace(Regex("\\s+"), " ").trim(), match)
+				}.take(MAX_SEARCH_RESULTS)
 			}
 			if (results.isEmpty()) {
 				Toast.makeText(requireContext(), R.string.epub_no_search_results, Toast.LENGTH_SHORT).show()
@@ -346,27 +478,14 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
 					val row = super.getView(position, convertView, parent)
 					val result = getItem(position) ?: return row
-					row.findViewById<TextView>(android.R.id.text1).apply {
-						text = result.title.ifEmpty { getString(R.string.epub_untitled_chapter) }
-						gravity = Gravity.START or Gravity.CENTER_VERTICAL
-					}
-					row.findViewById<TextView>(android.R.id.text2).apply {
-						text = result.snippet
-						gravity = Gravity.START or Gravity.CENTER_VERTICAL
-						maxLines = 2
-					}
+					row.findViewById<TextView>(android.R.id.text1).text = result.title.ifEmpty { getString(R.string.epub_untitled_chapter) }
+					row.findViewById<TextView>(android.R.id.text2).apply { text = result.snippet; maxLines = 2 }
 					return row
 				}
 			}
-			val dialog = MaterialAlertDialogBuilder(requireContext())
-				.setTitle(R.string.search_results)
-				.setAdapter(adapter) { _, index ->
-					val result = results[index]
-					pendingSearchQuery = query
-					viewModel.switchChapter(result.chapterId, result.progress)
-				}
-				.setNegativeButton(android.R.string.cancel, null)
-				.show()
+			val dialog = MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.search_results)
+				.setAdapter(adapter) { _, index -> goTo(Locator(results[index].chapter, results[index].offset)) }
+				.setNegativeButton(android.R.string.cancel, null).show()
 			dialog.listView.apply {
 				divider = ColorDrawable(requireContext().getThemeColor(materialR.attr.colorOutlineVariant, Color.GRAY))
 				dividerHeight = resources.displayMetrics.density.toInt().coerceAtLeast(1)
@@ -374,359 +493,54 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 	}
 
-	private fun applyColors() {
-		val binding = viewBinding ?: return
-		val bg = resolveBackgroundColor()
-		val fg = foregroundFor(bg)
-		val accent = requireContext().getThemeColor(appcompatR.attr.colorPrimary, Color.BLUE)
-		binding.root.setBackgroundColor(bg)
-		binding.webView.setBackgroundColor(bg)
-		binding.webView.evaluateJavascript(
-			"var s=document.documentElement.style;" +
-				"s.setProperty('--ep-bg','${bg.toCssColor()}');" +
-				"s.setProperty('--ep-fg','${fg.toCssColor()}');" +
-				"s.setProperty('--ep-ac','${accent.toCssColor()}');",
-			null,
-		)
-	}
-
-	// page theme is epub-only (settings.epubTheme), independent from the manga reader background;
-	// "system" follows day/night mode, not the reader activity theme (which is always dark)
-	private fun resolveBackgroundColor(): Int {
+	private val isPagedMode get() = settings.epubReadingMode == EPUB_MODE_PAGED
+	private val backgroundColor: Int get() {
 		val dark = when (settings.epubTheme) {
 			"light" -> false
 			"dark" -> true
 			"black" -> return Color.BLACK
 			else -> resources.isNightMode
 		}
-		return if (dark) {
-			ContextThemeWrapper(requireContext(), materialR.style.ThemeOverlay_Material3_Dark)
-				.getThemeColor(android.R.attr.colorBackground, Color.BLACK)
-		} else {
-			ContextThemeWrapper(requireContext(), materialR.style.ThemeOverlay_Material3_Light)
-				.getThemeColor(android.R.attr.colorBackground, Color.WHITE)
+		return ContextThemeWrapper(requireContext(), if (dark) materialR.style.ThemeOverlay_Material3_Dark else materialR.style.ThemeOverlay_Material3_Light)
+			.getThemeColor(android.R.attr.colorBackground, if (dark) Color.BLACK else Color.WHITE)
+	}
+	private val foregroundColor get() = if (ColorUtils.calculateLuminance(backgroundColor) > .5) 0xFF1B1B1F.toInt() else 0xFFE4E4E8.toInt()
+	private val readerTypeface get() = Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
+	private val textAlignment get() = when (settings.epubTextAlign) {
+		"center" -> Layout.Alignment.ALIGN_CENTER
+		"right", "end" -> Layout.Alignment.ALIGN_OPPOSITE
+		else -> Layout.Alignment.ALIGN_NORMAL
+	}
+
+	private inner class ChapterAdapter : RecyclerView.Adapter<TextHolder>() {
+		override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = TextHolder(createTextView(parent, false))
+		override fun getItemCount() = chapters.size
+		override fun onBindViewHolder(holder: TextHolder, position: Int) { holder.text.text = chapters[position].text }
+	}
+
+	private inner class PageAdapter : RecyclerView.Adapter<TextHolder>() {
+		override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = TextHolder(createTextView(parent, true))
+		override fun getItemCount() = pages.size
+		override fun onBindViewHolder(holder: TextHolder, position: Int) {
+			val page = pages[position]
+			holder.text.text = chapters[page.chapter].text.subSequence(page.start, page.end)
 		}
 	}
 
-	// the reader activity theme can be dark while the app is in day mode, so pick the text
-	// color from the actual background luminance instead of the day/night flag
-	private fun foregroundFor(backgroundColor: Int): Int =
-		if (ColorUtils.calculateLuminance(backgroundColor) > 0.5) {
-			0xFF1B1B1F.toInt()
-		} else {
-			0xFFE4E4E8.toInt()
-		}
-
-	private fun Int.toCssColor(): String = String.format("#%06X", 0xFFFFFF and this)
-
-	private val isPagedMode: Boolean
-		get() = settings.epubReadingMode == EPUB_MODE_PAGED
-
-	private fun applyTypography() {
-		val webView = viewBinding?.webView ?: return
-		val family = settings.epubFontFamily.replace("'", "\\'")
-		webView.evaluateJavascript(
-			"if(window.__epub){__epub.style('${settings.epubFontSize}%','$family'," +
-				"'${settings.epubLineHeight / 100f}',${settings.epubHorizontalPadding}," +
-				"'${settings.epubTextAlign}',${settings.isEpubPublisherStyleEnabled},$isPagedMode,$progressPm);}",
-			null,
-		)
+	private class TextHolder(val text: TextView) : RecyclerView.ViewHolder(text)
+	private data class NativeChapter(val id: Long, val title: String, val text: Spanned)
+	private data class NativePage(val chapter: Int, val start: Int, val end: Int)
+	private data class SearchResult(val chapter: Int, val title: String, val snippet: String, val offset: Int)
+	private data class Locator(val chapter: Int, val offset: Int)
+	private fun Locator.clamped(): Locator {
+		if (chapters.isEmpty()) return Locator(0, 0)
+		val c = chapter.coerceIn(chapters.indices)
+		return Locator(c, offset.coerceIn(0, chapters[c].text.length.coerceAtLeast(1) - 1))
 	}
 
-	private fun injectHtml(source: String): String {
-		val bgColor = resolveBackgroundColor()
-		val bg = bgColor.toCssColor()
-		val fg = foregroundFor(bgColor).toCssColor()
-		val accent = requireContext().getThemeColor(appcompatR.attr.colorPrimary, Color.BLUE).toCssColor()
-		val nextLabel = JSONObject.quote(getString(R.string.pull_to_next_chapter))
-		val prevLabel = JSONObject.quote(getString(R.string.pull_to_prev_chapter))
-		val head = """
-			<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-			<style>
-			:root{--ep-bg:$bg;--ep-fg:$fg;--ep-ac:$accent;--ep-fs:${settings.epubFontSize}%;
-			--ep-font:${settings.epubFontFamily};--ep-lh:${settings.epubLineHeight / 100f};
-			--ep-pad:${settings.epubHorizontalPadding}px;--ep-align:${settings.epubTextAlign};}
-			html{background:var(--ep-bg) !important;}
-			html:not(.ep-publisher) body{background:var(--ep-bg) !important;color:var(--ep-fg) !important;
-			font-size:var(--ep-fs) !important;line-height:var(--ep-lh) !important;
-			font-family:var(--ep-font) !important;text-align:var(--ep-align) !important;}
-			body{margin:0 !important;padding:20px var(--ep-pad) !important;box-sizing:border-box;word-wrap:break-word;}
-			html:not(.ep-publisher) body *{color:var(--ep-fg) !important;background-color:transparent !important;
-			font-family:var(--ep-font) !important;line-height:var(--ep-lh) !important;}
-			html:not(.ep-publisher) p,html:not(.ep-publisher) div,html:not(.ep-publisher) section,
-			html:not(.ep-publisher) article,html:not(.ep-publisher) li{text-align:var(--ep-align) !important;
-			font-size:inherit !important;}
-			html:not(.ep-publisher) span{font-size:inherit !important;}
-			html:not(.ep-publisher) h1,html:not(.ep-publisher) h2,html:not(.ep-publisher) h3,
-			html:not(.ep-publisher) h4,html:not(.ep-publisher) h5,html:not(.ep-publisher) h6{text-align:left !important;}
-			html:not(.ep-publisher) a,html:not(.ep-publisher) a *{color:var(--ep-ac) !important;}
-			html.ep-paged{height:100%;overflow:hidden;touch-action:none;}
-			html.ep-paged body{height:100%;overflow:visible;
-			column-width:calc(100vw - (var(--ep-pad) * 2));
-			column-gap:calc(var(--ep-pad) * 2);column-fill:auto;
-			width:auto !important;max-width:none !important;will-change:transform;}
-			img,svg,image,video{max-width:100% !important;height:auto !important;}
-			#ep-edge{position:fixed;top:0;left:0;transform:translate(-50%,-50%);
-			opacity:0;transition:opacity .12s ease;pointer-events:none;z-index:2147483000;}
-			#ep-edge.show{opacity:1;}
-			#ep-edge .box{display:flex;flex-direction:column;align-items:center;gap:8px;}
-			#ep-edge svg{width:46px;height:46px;display:block;filter:drop-shadow(0 1px 3px rgba(0,0,0,.35));}
-			#ep-edge .track{fill:none;stroke:var(--ep-fg);opacity:.25;stroke-width:3;}
-			#ep-edge .prog{fill:none;stroke:var(--ep-ac);stroke-width:3;stroke-linecap:round;
-			stroke-dasharray:138.2;stroke-dashoffset:138.2;transition:stroke-dashoffset .06s linear;}
-			#ep-edge .arrow{fill:none;stroke:var(--ep-fg);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;
-			transform-box:fill-box;transform-origin:center;}
-			#ep-edge.full .arrow,#ep-edge.full .prog{stroke:var(--ep-ac);}
-			#ep-edge .label{color:var(--ep-fg);font-size:13px;font-family:var(--ep-font);
-			text-align:center;white-space:nowrap;opacity:.9;display:none;}
-			#ep-edge.with-label .label{display:block;}
-			</style>
-		""".trimIndent()
-		val script = """
-			<script>
-			(function(){
-			var nav={prev:false,next:false},paged=$isPagedMode;
-			var L_NEXT=$nextLabel,L_PREV=$prevLabel,RING=138.2; // 2*PI*22
-			// One chapter only. Paged: cur page in [0,totalPages); turn = translate by one viewport width.
-			// Dragging past an edge opens a gap and fills a progress ring shown IN that gap; when it
-			// completes, load the adjacent chapter (onEdgeSwipe).
-			var E={
-			 paged:paged,page:0,totalPages:1,edge:0,pull:0,startY:0,armed:false,fired:false,ov:null,prog:null,arrow:null,label:null,
-			 el:function(){return document.scrollingElement||document.documentElement;},
-			 stepW:function(){return document.documentElement.clientWidth||window.innerWidth;},
-			 measure:function(){this.totalPages=Math.max(1,Math.round(document.body.scrollWidth/this.stepW()));
-			  if(this.page>this.totalPages-1)this.page=this.totalPages-1;if(this.page<0)this.page=0;return this.totalPages;},
-			 apply:function(animate){var b=document.body.style;
-			  b.transition=animate?'transform .2s ease':'none';
-			  b.transform='translate3d(-'+(this.page*this.stepW())+'px,0,0)';},
-			 report:function(){var pm;
-			  if(paged){pm=this.totalPages<=1?1000:Math.round(this.page*1000/(this.totalPages-1));}
-			  else{var se=this.el(),m=se.scrollHeight-window.innerHeight;pm=m<=0?1000:Math.round(se.scrollTop*1000/m);}
-			  EpubBridge.onProgress(Math.min(1000,Math.max(0,pm)),paged?this.page:0,paged?this.totalPages:0);},
-			 restore:function(pm){
-			  if(paged){this.measure();this.page=Math.max(0,Math.min(this.totalPages-1,Math.round(pm/1000*(this.totalPages-1))));this.apply(false);}
-			  else{var se=this.el();se.scrollTop=pm/1000*Math.max(0,se.scrollHeight-window.innerHeight);}
-			  this.report();},
-			 goto:function(p){if(!paged)return;this.page=Math.max(0,Math.min(this.totalPages-1,p));this.apply(true);this.report();},
-			 fwd:function(){if(this.page<this.totalPages-1){this.page++;this.apply(true);this.report();}else{this.apply(true);}},
-			 back:function(){if(this.page>0){this.page--;this.apply(true);this.report();}else{this.apply(true);}},
-			 pullMax:function(){return paged?Math.max(80,this.stepW()*0.3):130;},
-			 setEdge:function(dir){if(this.edge===dir)return;this.edge=dir;
-			  if(this.label)this.label.textContent=dir>0?L_NEXT:L_PREV;
-			  if(this.arrow)this.arrow.style.transform='rotate('+(paged?(dir>0?0:180):(dir>0?90:-90))+'deg)';
-			  if(this.ov)this.ov.classList.add('show');},
-			 setPull:function(p){this.pull=Math.max(0,Math.min(1,p));
-			  if(this.prog)this.prog.style.strokeDashoffset=RING*(1-this.pull);
-			  var full=this.pull>=1;if(this.ov)this.ov.classList.toggle('full',full);
-			  // haptic once when the ring completes; lift the finger here to actually switch
-			  if(full&&!this.armed){this.armed=true;EpubBridge.onEdgeFull();}else if(!full){this.armed=false;}},
-			 place:function(cx,cy,withLabel){if(!this.ov)return;this.ov.style.left=cx+'px';this.ov.style.top=cy+'px';this.ov.classList.toggle('with-label',!!withLabel);},
-			 clearEdge:function(){this.edge=0;this.pull=0;this.startY=0;this.armed=false;
-			  if(this.ov)this.ov.classList.remove('show','full');
-			  if(!paged){document.body.style.transition='transform .2s ease';document.body.style.transform='translateY(0)';}},
-			 commitEdge:function(dir){if(this.fired)return;this.fired=true;this.setPull(1);EpubBridge.onEdgeSwipe(dir);},
-			 style:function(fs,font,lh,pad,align,publisher,isPaged,pm){var s=document.documentElement.style;
-			  s.setProperty('--ep-fs',fs);s.setProperty('--ep-font',font);s.setProperty('--ep-lh',lh);
-			  s.setProperty('--ep-pad',pad+'px');s.setProperty('--ep-align',align);
-			  paged=isPaged;this.paged=isPaged;document.documentElement.classList.toggle('ep-publisher',publisher);
-			  document.documentElement.classList.toggle('ep-paged',paged);
-			  if(!paged){document.body.style.transform='none';document.body.style.transition='none';}
-			  requestAnimationFrame(function(){E.restore(pm);});},
-			 setNav:function(p,n){nav.prev=p;nav.next=n;}
-			};
-			// ring/arrow indicator lives on <html> so the body's paging transform never moves it
-			(function(){var ov=document.createElement('div');ov.id='ep-edge';
-			 ov.innerHTML='<div class="box"><svg viewBox="0 0 52 52"><g transform="rotate(-90 26 26)">'+
-			  '<circle class="track" cx="26" cy="26" r="22"></circle><circle class="prog" cx="26" cy="26" r="22"></circle></g>'+
-			  '<path class="arrow" d="M21 17 L31 26 L21 35"></path></svg><div class="label"></div></div>';
-			 document.documentElement.appendChild(ov);
-			 E.ov=ov;E.prog=ov.querySelector('.prog');E.arrow=ov.querySelector('.arrow');E.label=ov.querySelector('.label');})();
-			document.documentElement.classList.toggle('ep-publisher',${settings.isEpubPublisherStyleEnabled});
-			document.documentElement.classList.toggle('ep-paged',paged);
-			// quick fade-in on load so a freshly-loaded chapter doesn't pop in
-			document.documentElement.style.transition='opacity .13s ease';
-			document.documentElement.style.opacity='0';
-			window.__epub=E;
-			var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(paged){E.measure();E.apply(false);}E.report();},120);});
-			var reporting=false;window.addEventListener('scroll',function(){if(paged)return;if(!reporting){reporting=true;requestAnimationFrame(function(){reporting=false;E.report();});}},{passive:true});
-			function atBottom(){var se=E.el();return se.scrollTop+window.innerHeight>=se.scrollHeight-2;}
-			function atTop(){return E.el().scrollTop<=2;}
-			var startX=null,startY=null,multi=false,dragging=false,dragDx=0;
-			document.addEventListener('touchstart',function(e){
-			 if(E.fired)return;
-			 if(e.touches.length>1){multi=true;startX=null;startY=null;dragging=false;return;}
-			 startX=e.touches[0].clientX;startY=e.touches[0].clientY;multi=false;dragging=false;dragDx=0;
-			 if(E.edge)E.clearEdge();},{passive:true});
-			document.addEventListener('touchmove',function(e){
-			 if(E.fired)return;
-			 if(e.touches.length>1){multi=true;startX=null;startY=null;dragging=false;return;}
-			 if(startY===null||multi)return;
-			 var dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY,cy=e.touches[0].clientY;
-			 if(paged){
-			  if(!dragging&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy))dragging=true;
-			  if(!dragging)return;
-			  dragDx=dx;
-			  var nextEdge=(E.page>=E.totalPages-1&&dx<0&&nav.next),prevEdge=(E.page<=0&&dx>0&&nav.prev);
-			  if(nextEdge||prevEdge){var dir=nextEdge?1:-1;E.setEdge(dir);E.setPull(Math.abs(dx)/E.pullMax());
-			   // let the content follow the finger, opening a gap at the edge; ring sits in the gap
-			   var reveal=Math.min(Math.abs(dx),E.stepW()*0.5),off=(dx<0?-reveal:reveal),W=E.stepW();
-			   document.body.style.transition='none';
-			   document.body.style.transform='translate3d('+(-(E.page*E.stepW()-off))+'px,0,0)';
-			   E.place(dir>0?(W-Math.max(30,reveal/2)):Math.max(30,reveal/2),window.innerHeight/2,false);
-			  }else{if(E.edge)E.clearEdge();var off=dx;
-			   if((E.page<=0&&dx>0)||(E.page>=E.totalPages-1&&dx<0))off=dx/3;
-			   document.body.style.transition='none';
-			   document.body.style.transform='translate3d('+(-(E.page*E.stepW()-off))+'px,0,0)';}
-			  return;
-			 }
-			 // scroll: drag past the edge -> shift the page to open a gap, ring shown in the gap
-			 if(atBottom()&&nav.next&&dy<0){if(E.edge!==1){E.setEdge(1);E.startY=cy;}
-			  var pl=Math.max(0,E.startY-cy);E.setPull(pl/E.pullMax());var g=Math.min(pl,160);
-			  document.body.style.transition='none';document.body.style.transform='translateY('+(-g)+'px)';
-			  E.place(E.stepW()/2,window.innerHeight-Math.max(34,g/2),true);}
-			 else if(atTop()&&nav.prev&&dy>0){if(E.edge!==-1){E.setEdge(-1);E.startY=cy;}
-			  var pl=Math.max(0,cy-E.startY);E.setPull(pl/E.pullMax());var g=Math.min(pl,160);
-			  document.body.style.transition='none';document.body.style.transform='translateY('+g+'px)';
-			  E.place(E.stepW()/2,Math.max(34,g/2),true);}
-			 else if(E.edge)E.clearEdge();
-			},{passive:true});
-			document.addEventListener('touchend',function(e){
-			 if(multi){if(e.touches.length===0)multi=false;startX=null;startY=null;dragging=false;return;}
-			 if(E.fired){startX=null;startY=null;dragging=false;dragDx=0;return;}
-			 if(startX===null)return;
-			 if(paged&&dragging){
-			  if(E.edge){if(E.pull>=1)E.commitEdge(E.edge);else{E.clearEdge();E.apply(true);}}
-			  else{var w=E.stepW();if(dragDx<=-w*0.2)E.fwd();else if(dragDx>=w*0.2)E.back();else E.apply(true);}
-			 }else if(!paged&&E.edge){if(E.pull>=1)E.commitEdge(E.edge);else E.clearEdge();}
-			 startX=null;startY=null;dragging=false;dragDx=0;
-			},{passive:true});
-			// first layout: after fonts load so column widths are final
-			function boot(){if(paged)E.measure();document.documentElement.style.opacity='1';EpubBridge.onReady();}
-			window.addEventListener('load',function(){
-			 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){requestAnimationFrame(boot);});}
-			 else{requestAnimationFrame(boot);}
-			});
-			setTimeout(function(){document.documentElement.style.opacity='1';},1000); // safety: never stay hidden
-			})();
-			</script>
-		""".trimIndent()
-		val headClose = source.indexOf("</head>", ignoreCase = true)
-		val sb = StringBuilder(source.length + head.length + script.length)
-		if (headClose >= 0) {
-			sb.append(source, 0, headClose).append(head).append(source, headClose, source.length)
-		} else {
-			sb.append(head).append(source)
-		}
-		val scriptAnchor = sb.lastIndexOf("</body>")
-		if (scriptAnchor >= 0) {
-			sb.insert(scriptAnchor, script)
-		} else {
-			sb.append(script)
-		}
-		return sb.toString()
+	companion object {
+		private const val EPUB_MODE_PAGED = "paged"
+		private const val MAX_SEARCH_RESULTS = 100
+		private const val PROGRESS_INTERVAL_MS = 50L
 	}
-
-	private fun encodePath(path: String): String = android.net.Uri.encode(path, "/")
-
-	private inner class Bridge {
-
-		@JavascriptInterface
-		fun onProgress(pm: Int, page: Int, pageCount: Int) {
-			progressPm = pm.coerceIn(0, 1000)
-			view?.post {
-				viewModel.onEpubProgressChanged(progressPm, page, pageCount)
-			}
-		}
-
-		@JavascriptInterface
-		fun onReady() {
-			view?.post {
-				viewBinding?.webView?.evaluateJavascript(
-					"if(window.__epub){__epub.setNav($canGoPrev,$canGoNext);__epub.restore($pendingPm);}",
-					null,
-				)
-				pendingSearchQuery?.let { query ->
-					pendingSearchQuery = null
-					viewBinding?.webView?.evaluateJavascript("window.find(${JSONObject.quote(query)});", null)
-				}
-			}
-		}
-
-		@JavascriptInterface
-		fun onEdgeFull() {
-			view?.post {
-				viewBinding?.webView?.hapticFeedback(HapticEffect.CONFIRM)
-			}
-		}
-
-		@JavascriptInterface
-		fun onEdgeSwipe(delta: Int) {
-			view?.post {
-				landAtEnd = delta < 0
-				viewModel.switchChapterBy(delta)
-			}
-		}
-
-	}
-
-	private inner class EpubWebViewClient : WebViewClient() {
-
-		override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-			val url = request.url
-			if (url.host != EPUB_HOST) {
-				// books are local: block any external resource
-				return WebResourceResponse("text/plain", "utf-8", null)
-			}
-			val entryName = url.path.orEmpty().removePrefix("/")
-			mainDocument?.let { (href, html) ->
-				if (entryName == href) {
-					return WebResourceResponse("text/html", "utf-8", html.byteInputStream())
-				}
-			}
-			val zip = zipFile ?: return null
-			val entry = zip.getEntry(entryName) ?: return null
-			return WebResourceResponse(guessMimeType(entryName), null, zip.getInputStream(entry))
-		}
-
-		override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-			val url = request.url
-			if (url.host != EPUB_HOST) {
-				return true // swallow external links
-			}
-			val entryName = url.path.orEmpty().removePrefix("/")
-			if (entryName == currentHref) {
-				return false // in-page anchor
-			}
-			val targetUrl = currentEpubFile?.toZipUri(entryName)?.toString()
-			val chapter = viewModel.getMangaOrNull()?.chapters?.find { it.url == targetUrl }
-			if (chapter != null) {
-				viewModel.switchChapter(chapter.id, 0)
-			}
-			return true
-		}
-	}
-
-	private companion object {
-
-		const val EPUB_HOST = "epub.book"
-		const val EPUB_MODE_PAGED = "paged"
-		const val MAX_SEARCH_RESULTS = 100
-		fun guessMimeType(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
-			"html", "htm", "xhtml", "xml" -> "text/html"
-			"css" -> "text/css"
-			"js" -> "application/javascript"
-			"jpg", "jpeg" -> "image/jpeg"
-			"png" -> "image/png"
-			"gif" -> "image/gif"
-			"webp" -> "image/webp"
-			"svg" -> "image/svg+xml"
-			"ttf" -> "font/ttf"
-			"otf" -> "font/otf"
-			"woff" -> "font/woff"
-			"woff2" -> "font/woff2"
-			else -> "application/octet-stream"
-		}
-	}
-
-	private data class SearchResult(val chapterId: Long, val title: String, val snippet: String, val progress: Int)
 }

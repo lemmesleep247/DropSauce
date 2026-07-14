@@ -4,10 +4,9 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent">
 
-	<WebView
-		android:id="@+id/webView"
+	<FrameLayout
+		android:id="@+id/readerContainer"
 		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		android:scrollbars="none" />
+		android:layout_height="match_parent" />
 
 </FrameLayout>

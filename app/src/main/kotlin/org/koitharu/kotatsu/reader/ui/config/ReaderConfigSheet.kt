@@ -948,14 +948,17 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
     }
 
-    // read-mode picker styled like the manga reader's segmented control, but with 2 options
+    // read-mode picker styled like the manga reader's segmented control
     @Composable
     private fun EpubReadModeSection(enabled: Boolean = true) {
         val modes = listOf(
             "scroll" to (R.string.epub_mode_scroll to R.drawable.ic_reader_vertical),
-            "paged" to (R.string.epub_mode_paged to R.drawable.ic_book_page),
+			"paged_ltr" to (R.string.epub_mode_paged_ltr to R.drawable.ic_reader_ltr),
+			"paged_rtl" to (R.string.epub_mode_paged_rtl to R.drawable.ic_reader_rtl),
         )
-        var current by remember { mutableStateOf(settings.epubReadingMode) }
+		var current by remember {
+			mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
+		}
         val selectedIndex = modes.indexOfFirst { it.first == current }.coerceAtLeast(0)
 
         Column(
@@ -977,7 +980,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 						.padding(6.dp),
                 ) {
                     val animatedBias by animateFloatAsState(
-                        targetValue = if (selectedIndex == 0) -1f else 1f,
+						targetValue = selectedIndex - 1f,
                         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                         label = "epub_mode_highlighter",
                     )
@@ -985,7 +988,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(0.5f)
+							.fillMaxWidth(1f / modes.size)
                             .align(BiasAlignment(horizontalBias = animatedBias, verticalBias = 0f))
 							.clip(RoundedCornerShape(22.dp))
                             .background(MaterialTheme.colorScheme.primary),

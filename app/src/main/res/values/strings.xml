@@ -469,7 +469,8 @@
 	<string name="epub_text_alignment">Text alignment</string>
 	<string name="epub_read_mode">Read mode</string>
 	<string name="epub_mode_scroll">Scroll</string>
-	<string name="epub_mode_paged">Paged</string>
+	<string name="epub_mode_paged_ltr">LTR</string>
+	<string name="epub_mode_paged_rtl">RTL</string>
 	<string name="epub_align_left">Left</string>
 	<string name="epub_align_justified">Justified</string>
 	<string name="epub_publisher_style">Use book formatting</string>

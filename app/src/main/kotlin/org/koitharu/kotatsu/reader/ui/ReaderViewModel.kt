@@ -522,7 +522,9 @@ class ReaderViewModel @Inject constructor(
         page: Int = 0,
         pageCount: Int = 0,
     ) {
-        val chapterChanged = readingState.value?.chapterId != chapterId
+        // Chapter buttons update readingState before the EPUB surface reports its position. The
+        // toolbar is UI state, so compare against that instead of the already-updated reader state.
+        val chapterChanged = uiState.value?.chapter?.id != chapterId
         readingState.update { it?.copy(chapterId = chapterId, scroll = chapterPm) }
         updateEpubProgressUi(chapterPm, page, pageCount)
         if (chapterChanged) {
@@ -558,7 +560,7 @@ class ReaderViewModel @Inject constructor(
         val isEpubPaged = isEpub && prevUi?.isEpubPaged == true
         val totalPages = when {
             !isEpub -> chaptersLoader.getPagesCount(chapter.id)
-            isEpubPaged -> prevUi?.totalPages ?: (EPUB_SLIDER_MAX + 1)
+            isEpubPaged -> prevUi.totalPages
             else -> EPUB_SLIDER_MAX + 1
         }
         val newState = ReaderUiState(
@@ -569,7 +571,7 @@ class ReaderViewModel @Inject constructor(
             totalPages = totalPages,
             currentPage = when {
                 !isEpub -> state.page
-                isEpubPaged -> (prevUi?.currentPage ?: 0).coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+                isEpubPaged -> prevUi.currentPage.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
                 else -> state.scroll.coerceIn(0, EPUB_SLIDER_MAX)
             },
             percent = computePercent(state.chapterId),

@@ -8,7 +8,9 @@ import android.text.Layout
 import android.text.Spanned
 import android.text.SpannedString
 import android.text.StaticLayout
+import android.text.TextDirectionHeuristics
 import android.text.TextPaint
+import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -50,7 +52,6 @@ import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
 import java.util.zip.ZipFile
 import javax.inject.Inject
-import androidx.appcompat.R as appcompatR
 import com.google.android.material.R as materialR
 
 /**
@@ -65,20 +66,26 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	lateinit var settings: AppSettings
 
 	private var chapters: List<NativeChapter> = emptyList()
-	private var chapterStarts: LongArray = LongArray(0)
-	private var totalCharacters = 0L
 	private var verticalView: RecyclerView? = null
 	private var pagerView: ViewPager2? = null
 	private var pages: List<NativePage> = emptyList()
 	private var paginationKey: String? = null
+	private var pageRange: IntRange? = null
+	private var extendingPages = false
 	private var lastLocator = Locator(0, 0)
 	private var loading = false
 	private var restoring = false
 	private var progressScheduled = false
 	private var renderGeneration = 0
+	private var repaginatePending = false
+	private var reflowLocator: Locator? = null
 
 	private val rebuildRunnable = Runnable {
-		if (chapters.isNotEmpty()) renderMode(currentLocator())
+		val repaginate = repaginatePending
+		repaginatePending = false
+		val locator = reflowLocator
+		reflowLocator = null
+		if (chapters.isNotEmpty()) refreshReader(repaginate, locator ?: currentLocator())
 	}
 
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?) =
@@ -87,23 +94,21 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	override fun onViewBindingCreated(binding: FragmentReaderEpubBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
 		settings.observeAsFlow(AppSettings.KEY_EPUB_THEME) { epubTheme }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
+			.observe(viewLifecycleOwner) { scheduleRefresh(false) }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_SIZE) { epubFontSize }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
+			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_FAMILY) { epubFontFamily }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
+			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_LINE_HEIGHT) { epubLineHeight }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
+			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_HORIZONTAL_PADDING) { epubHorizontalPadding }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
+			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_TEXT_ALIGN) { epubTextAlign }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
-		settings.observeAsFlow(AppSettings.KEY_EPUB_PUBLISHER_STYLE) { isEpubPublisherStyleEnabled }
-			.observe(viewLifecycleOwner) { scheduleRebuild() }
+			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }
 			.observe(viewLifecycleOwner) {
 				binding.root.requestApplyInsets()
-				scheduleRebuild()
+				scheduleRefresh(false)
 			}
 	}
 
@@ -113,6 +118,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		pagerView = null
 		pages = emptyList()
 		paginationKey = null
+		pageRange = null
+		reflowLocator = null
 		super.onDestroyView()
 	}
 
@@ -130,9 +137,11 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		if (mangaChapters.isEmpty()) return
 		if (chapters.isEmpty() && !loading) {
 			loading = true
-			chapters = withContext(Dispatchers.IO) { parseChapters(mangaChapters) }
-			loading = false
-			buildChapterIndex()
+			try {
+				chapters = withContext(Dispatchers.IO) { parseChapters(mangaChapters) }
+			} finally {
+				loading = false
+			}
 		}
 		if (chapters.isEmpty()) return
 		val state = pendingState ?: viewModel.getCurrentState()
@@ -176,20 +185,44 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		return subSequence(start, end)
 	}
 
-	private fun buildChapterIndex() {
-		chapterStarts = LongArray(chapters.size)
-		var cursor = 0L
-		chapters.forEachIndexed { index, chapter ->
-			chapterStarts[index] = cursor
-			cursor += chapter.text.length.coerceAtLeast(1)
+	private fun scheduleRefresh(repaginate: Boolean) {
+		val root = viewBinding?.root ?: return
+		repaginatePending = repaginatePending || repaginate
+		if (repaginate && reflowLocator == null && chapters.isNotEmpty()) reflowLocator = currentLocator()
+		root.removeCallbacks(rebuildRunnable)
+		if (repaginate) {
+			refreshVisibleStyles()
+			root.postDelayed(rebuildRunnable, REPAGINATE_DELAY_MS)
+		} else {
+			root.post(rebuildRunnable)
 		}
-		totalCharacters = cursor.coerceAtLeast(1)
 	}
 
-	private fun scheduleRebuild() {
-		val root = viewBinding?.root ?: return
-		root.removeCallbacks(rebuildRunnable)
-		root.post(rebuildRunnable)
+	private fun refreshVisibleStyles() {
+		viewBinding?.readerContainer?.setBackgroundColor(backgroundColor)
+		verticalView?.apply {
+			setBackgroundColor(backgroundColor)
+			adapter?.notifyDataSetChanged()
+		}
+		pagerView?.adapter?.notifyDataSetChanged()
+	}
+
+	private fun refreshReader(repaginate: Boolean, locator: Locator) {
+		if (isPagedMode) {
+			if (!repaginate && pagerView != null) {
+				viewBinding?.readerContainer?.setBackgroundColor(backgroundColor)
+				pagerView?.adapter?.notifyDataSetChanged()
+				return
+			}
+			if (repaginate) paginationKey = null
+			renderPaged(viewBinding?.readerContainer ?: return, locator)
+		} else if (verticalView != null) {
+			verticalView?.setBackgroundColor(backgroundColor)
+			verticalView?.adapter?.notifyDataSetChanged()
+			goTo(locator)
+		} else {
+			renderMode(locator)
+		}
 	}
 
 	private fun renderMode(locator: Locator) {
@@ -199,12 +232,27 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			return
 		}
 		lastLocator = locator.clamped()
+		if (!isPagedMode && verticalView != null) {
+			goTo(lastLocator)
+			return
+		}
+		if (isPagedMode && pagerView != null && pages.any {
+				it.chapter == lastLocator.chapter && lastLocator.offset in it.start until it.end
+			}
+		) {
+			goTo(lastLocator)
+			return
+		}
 		restoring = true
 		renderGeneration++
-		container.removeAllViews()
-		verticalView = null
-		pagerView = null
-		if (isPagedMode) renderPaged(container, lastLocator) else renderVertical(container, lastLocator)
+		if (isPagedMode) {
+			renderPaged(container, lastLocator)
+		} else {
+			container.removeAllViews()
+			verticalView = null
+			pagerView = null
+			renderVertical(container, lastLocator)
+		}
 	}
 
 	private fun renderVertical(container: FrameLayout, locator: Locator) {
@@ -238,34 +286,45 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun renderPaged(container: FrameLayout, locator: Locator) {
-		val generation = renderGeneration
+		val generation = ++renderGeneration
 		val key = "${container.width}:${container.height}:${settings.epubFontSize}:${settings.epubFontFamily}:" +
-			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:${settings.epubTextAlign}"
+			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:$effectiveTextAlign:${settings.epubReadingMode}"
 		container.setBackgroundColor(backgroundColor)
-		if (pages.isNotEmpty() && paginationKey == key) {
+		if (pages.isNotEmpty() && paginationKey == key && pageRange?.contains(locator.chapter) == true) {
 			renderPagedReady(container, locator)
 			return
 		}
+		val range = (locator.chapter - PAGE_LOOKAHEAD).coerceAtLeast(0)..
+			(locator.chapter + PAGE_LOOKAHEAD).coerceAtMost(chapters.lastIndex)
 		viewLifecycleOwner.lifecycleScope.launch {
-			val newPages = withContext(Dispatchers.Default) { paginate(container.width, container.height) }
+			val newPages = withContext(Dispatchers.Default) { paginate(container.width, container.height, range) }
 			if (generation != renderGeneration || !isPagedMode || viewBinding?.readerContainer !== container) return@launch
 			pages = newPages
 			paginationKey = key
+			pageRange = range
 			renderPagedReady(container, locator)
 		}
 	}
 
 	private fun renderPagedReady(container: FrameLayout, locator: Locator) {
+		restoring = true
+		container.removeAllViews()
+		verticalView = null
+		pagerView = null
 		val pager = ViewPager2(requireContext()).apply {
 			layoutParams = FrameLayout.LayoutParams(-1, -1)
 			orientation = ViewPager2.ORIENTATION_HORIZONTAL
+			layoutDirection = if (isRtlPagedMode) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
 			adapter = PageAdapter()
 			overScrollMode = View.OVER_SCROLL_NEVER
 			isClickable = false
 			isFocusable = false
 			registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
 				override fun onPageSelected(position: Int) {
-				if (!restoring) notifyProgress()
+				if (!restoring) {
+					notifyProgress()
+					extendPageWindow(position)
+				}
 			}
 			})
 		}
@@ -283,10 +342,44 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		pager.post {
 			restoring = false
 			notifyProgress()
+			extendPageWindow(pager.currentItem)
 		}
 	}
 
-	private fun paginate(viewWidth: Int, viewHeight: Int): List<NativePage> {
+	private fun extendPageWindow(position: Int) {
+		if (extendingPages) return
+		val range = pageRange ?: return
+		val chapter = pages.getOrNull(position)?.chapter ?: return
+		val prepend = chapter == range.first && range.first > 0
+		val append = chapter == range.last && range.last < chapters.lastIndex
+		if (!prepend && !append) return
+		val target = if (prepend) range.first - 1 else range.last + 1
+		val pager = pagerView ?: return
+		val generation = renderGeneration
+		extendingPages = true
+		viewLifecycleOwner.lifecycleScope.launch {
+			val added = withContext(Dispatchers.Default) { paginate(pager.width, pager.height, target..target) }
+			if (generation == renderGeneration && pagerView === pager) {
+				val adapter = pager.adapter ?: run { extendingPages = false; return@launch }
+				if (prepend) {
+					restoring = true
+					pages = added + pages
+					pageRange = target..range.last
+					adapter.notifyItemRangeInserted(0, added.size)
+					pager.setCurrentItem(position + added.size, false)
+					pager.post { restoring = false; notifyProgress() }
+				} else {
+					val start = pages.size
+					pages = pages + added
+					pageRange = range.first..target
+					adapter.notifyItemRangeInserted(start, added.size)
+				}
+			}
+			extendingPages = false
+		}
+	}
+
+	private fun paginate(viewWidth: Int, viewHeight: Int, range: IntRange): List<NativePage> {
 		val density = resources.displayMetrics.density
 		val horizontal = (settings.epubHorizontalPadding * density).toInt().coerceAtLeast(1)
 		val vertical = (16 * density).toInt()
@@ -294,16 +387,23 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val height = (viewHeight - vertical * 2).coerceAtLeast(1)
 		val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
 			color = foregroundColor
-			textSize = 16f * resources.displayMetrics.scaledDensity * settings.epubFontSize / 100f
+			textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics) *
+				settings.epubFontSize / 100f
 			typeface = readerTypeface
 		}
 		val result = ArrayList<NativePage>()
-		chapters.forEachIndexed { chapterIndex, chapter ->
+		range.forEach { chapterIndex ->
+			val chapter = chapters[chapterIndex]
 			val layout = StaticLayout.Builder.obtain(chapter.text, 0, chapter.text.length, paint, width)
 				.setAlignment(textAlignment)
+				.setTextDirection(if (isRtlPagedMode) TextDirectionHeuristics.RTL else TextDirectionHeuristics.FIRSTSTRONG_LTR)
 				.setIncludePad(true)
 				.setLineSpacing(0f, settings.epubLineHeight / 100f)
-				.build()
+				.apply {
+					if (android.os.Build.VERSION.SDK_INT >= 26 && effectiveTextAlign == "justify") {
+						setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD)
+					}
+				}.build()
 			var start = 0
 			while (start < chapter.text.length) {
 				val firstLine = layout.getLineForOffset(start)
@@ -314,36 +414,46 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				start = end
 			}
 		}
-		return result.ifEmpty { listOf(NativePage(0, 0, chapters.first().text.length)) }
+		return result.ifEmpty {
+			val chapter = range.first.coerceIn(chapters.indices)
+			listOf(NativePage(chapter, 0, chapters[chapter].text.length))
+		}
 	}
 
 	private fun createTextView(parent: ViewGroup, paged: Boolean): TextView = TextView(parent.context).apply {
 		layoutParams = if (paged) ViewGroup.LayoutParams(-1, -1) else ViewGroup.LayoutParams(-1, -2)
+		applyTextStyle(this, paged)
+		isClickable = false
+		isLongClickable = false
+	}
+
+	private fun applyTextStyle(textView: TextView, paged: Boolean) = with(textView) {
 		setTextColor(foregroundColor)
 		setBackgroundColor(backgroundColor)
 		textSize = 16f * settings.epubFontSize / 100f
 		typeface = readerTypeface
 		setLineSpacing(0f, settings.epubLineHeight / 100f)
 		includeFontPadding = true
-		gravity = Gravity.TOP or when (settings.epubTextAlign) {
+		textDirection = if (isRtlPagedMode) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_FIRST_STRONG
+		gravity = Gravity.TOP or when (effectiveTextAlign) {
 			"center" -> Gravity.CENTER_HORIZONTAL
-			"right", "end" -> Gravity.END
+			"right", "end" -> Gravity.RIGHT
+			"justify" -> if (isRtlPagedMode) Gravity.RIGHT else Gravity.LEFT
 			else -> Gravity.START
 		}
-		textAlignment = when (settings.epubTextAlign) {
+		textAlignment = when (effectiveTextAlign) {
 			"center" -> View.TEXT_ALIGNMENT_CENTER
 			"right", "end" -> View.TEXT_ALIGNMENT_VIEW_END
+			"justify" -> if (isRtlPagedMode) View.TEXT_ALIGNMENT_TEXT_START else View.TEXT_ALIGNMENT_VIEW_START
 			else -> View.TEXT_ALIGNMENT_VIEW_START
 		}
-		if (android.os.Build.VERSION.SDK_INT >= 26 && settings.epubTextAlign == "justify") {
+		if (android.os.Build.VERSION.SDK_INT >= 26 && effectiveTextAlign == "justify") {
 			justificationMode = Layout.JUSTIFICATION_MODE_INTER_WORD
 		}
 		val density = resources.displayMetrics.density
 		val h = (settings.epubHorizontalPadding * density).toInt()
 		val v = ((if (paged) 16 else 20) * density).toInt()
 		setPadding(h, v, h, if (paged) v else (36 * density).toInt())
-		isClickable = false
-		isLongClickable = false
 	}
 
 	private fun currentLocator(): Locator {
@@ -493,7 +603,9 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 	}
 
-	private val isPagedMode get() = settings.epubReadingMode == EPUB_MODE_PAGED
+	private val isPagedMode get() = settings.epubReadingMode != EPUB_MODE_SCROLL
+	private val isRtlPagedMode get() = settings.epubReadingMode == EPUB_MODE_PAGED_RTL
+	private val effectiveTextAlign get() = if (isRtlPagedMode) "justify" else settings.epubTextAlign
 	private val backgroundColor: Int get() {
 		val dark = when (settings.epubTheme) {
 			"light" -> false
@@ -506,16 +618,20 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 	private val foregroundColor get() = if (ColorUtils.calculateLuminance(backgroundColor) > .5) 0xFF1B1B1F.toInt() else 0xFFE4E4E8.toInt()
 	private val readerTypeface get() = Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
-	private val textAlignment get() = when (settings.epubTextAlign) {
+	private val textAlignment get() = when (effectiveTextAlign) {
 		"center" -> Layout.Alignment.ALIGN_CENTER
 		"right", "end" -> Layout.Alignment.ALIGN_OPPOSITE
+		"justify" -> Layout.Alignment.ALIGN_NORMAL
 		else -> Layout.Alignment.ALIGN_NORMAL
 	}
 
 	private inner class ChapterAdapter : RecyclerView.Adapter<TextHolder>() {
 		override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = TextHolder(createTextView(parent, false))
 		override fun getItemCount() = chapters.size
-		override fun onBindViewHolder(holder: TextHolder, position: Int) { holder.text.text = chapters[position].text }
+		override fun onBindViewHolder(holder: TextHolder, position: Int) {
+			applyTextStyle(holder.text, false)
+			holder.text.text = chapters[position].text
+		}
 	}
 
 	private inner class PageAdapter : RecyclerView.Adapter<TextHolder>() {
@@ -523,6 +639,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		override fun getItemCount() = pages.size
 		override fun onBindViewHolder(holder: TextHolder, position: Int) {
 			val page = pages[position]
+			applyTextStyle(holder.text, true)
 			holder.text.text = chapters[page.chapter].text.subSequence(page.start, page.end)
 		}
 	}
@@ -539,8 +656,11 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	companion object {
-		private const val EPUB_MODE_PAGED = "paged"
+		private const val EPUB_MODE_SCROLL = "scroll"
+		private const val EPUB_MODE_PAGED_RTL = "paged_rtl"
 		private const val MAX_SEARCH_RESULTS = 100
 		private const val PROGRESS_INTERVAL_MS = 50L
+		private const val PAGE_LOOKAHEAD = 1
+		private const val REPAGINATE_DELAY_MS = 180L
 	}
 }

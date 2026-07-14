@@ -18,6 +18,8 @@ import org.koitharu.kotatsu.core.util.ext.withArgs
 import org.koitharu.kotatsu.databinding.FragmentListBinding
 import org.koitharu.kotatsu.list.domain.ListSortOrder
 import org.koitharu.kotatsu.list.ui.MangaListFragment
+import org.koitharu.kotatsu.list.ui.adapter.MangaListAdapter
+import org.koitharu.kotatsu.list.ui.size.DynamicItemSizeResolver
 
 @AndroidEntryPoint
 class FavouritesListFragment : MangaListFragment(), PopupMenu.OnMenuItemClickListener {
@@ -33,6 +35,12 @@ class FavouritesListFragment : MangaListFragment(), PopupMenu.OnMenuItemClickLis
 		super.onViewBindingCreated(binding, savedInstanceState)
 		binding.recyclerView.isVP2BugWorkaroundEnabled = true
 	}
+
+	override fun onCreateAdapter() = MangaListAdapter(
+		listener = this,
+		sizeResolver = DynamicItemSizeResolver(resources, viewLifecycleOwner, settings, adjustWidth = false),
+		titleTapToRead = settings.isTitleTapToReadEnabled,
+	)
 
 	override fun onScrolledToEnd() = viewModel.requestMoreItems()
 

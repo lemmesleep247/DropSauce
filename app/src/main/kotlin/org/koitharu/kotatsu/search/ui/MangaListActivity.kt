@@ -34,7 +34,6 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.model.titleRes
-import org.koitharu.kotatsu.core.ui.util.FadingAppbarMediator
 import org.koitharu.kotatsu.core.util.ViewBadge
 import org.koitharu.kotatsu.core.util.ext.buildBundle
 import org.koitharu.kotatsu.core.util.ext.consumeSystemBarsInsets
@@ -90,9 +89,6 @@ class MangaListActivity :
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityMangaListBinding.inflate(layoutInflater))
-		viewBinding.collapsingToolbarLayout?.let { collapsingToolbarLayout ->
-			FadingAppbarMediator(viewBinding.appbar, collapsingToolbarLayout).bind()
-		}
 		val filter = intent.getParcelableExtraCompat<ParcelableMangaListFilter>(AppRouter.KEY_FILTER)?.filter
 		val sortOrder = intent.getSerializableExtraCompat<SortOrder>(AppRouter.KEY_SORT_ORDER)
 		// Collapse multi-language sources to their active variant so the screen always reflects the
@@ -194,12 +190,12 @@ class MangaListActivity :
 			topMargin = barsInsets.top + resources.getDimensionPixelOffset(R.dimen.grid_spacing_outer_double)
 			bottomMargin = barsInsets.bottom + resources.getDimensionPixelOffset(R.dimen.side_card_offset)
 		}
-		// Top inset is left unconsumed and not padded: the appbar's WindowInsetHolder fills it while
-		// expanded and scrolls away with the rest, so content goes edge-to-edge under the status bar
-		// (protected by the StatusBarBlurView).
+		// The collapsing appbar is pinned (exitUntilCollapsed), so it owns the status bar area via
+		// top padding, same as the Downloads screen. The landscape layout has no collapsing bar.
 		viewBinding.appbar.updatePaddingRelative(
 			end = if (viewBinding.cardSide == null) barsInsets.end(v) else 0,
 			start = barsInsets.start(v),
+			top = if (viewBinding.collapsingToolbarLayout != null) barsInsets.top else viewBinding.appbar.paddingTop,
 		)
 		return insets.consumeSystemBarsInsets(v, end = true)
 	}

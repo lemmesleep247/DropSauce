@@ -13,11 +13,17 @@ import org.koitharu.kotatsu.list.ui.model.MangaListModel
 
 fun mangaListItemAD(
 	clickListener: OnListItemClickListener<MangaListModel>,
+	titleClickListener: OnListItemClickListener<MangaListModel>? = null,
 ) = adapterDelegateViewBinding<MangaCompactListModel, ListModel, ItemMangaListBinding>(
 	{ inflater, parent -> ItemMangaListBinding.inflate(inflater, parent, false) },
 ) {
 
 	AdapterDelegateClickListenerAdapter(this, clickListener).attach(itemView)
+	if (titleClickListener != null) {
+		binding.textViewTitle.attachTitleClickToRead(itemView) { view ->
+			titleClickListener.onItemClick(item, view)
+		}
+	}
 
 	bind {
 		itemView.setTooltipCompat(item.getSummary(context))

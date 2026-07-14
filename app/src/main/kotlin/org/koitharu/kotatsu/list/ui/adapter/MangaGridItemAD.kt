@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.list.ui.adapter
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.core.graphics.ColorUtils
@@ -26,11 +27,17 @@ import androidx.appcompat.R as appcompatR
 fun mangaGridItemAD(
 	sizeResolver: ItemSizeResolver,
 	clickListener: OnListItemClickListener<MangaListModel>,
+	titleClickListener: OnListItemClickListener<MangaListModel>? = null,
 ) = adapterDelegateViewBinding<MangaGridModel, ListModel, ItemMangaGridBinding>(
 	{ inflater, parent -> ItemMangaGridBinding.inflate(inflater, parent, false) },
 ) {
 
 	AdapterDelegateClickListenerAdapter(this, clickListener).attach(itemView)
+	if (titleClickListener != null) {
+		val onTitleClick: (View) -> Unit = { view -> titleClickListener.onItemClick(item, view) }
+		binding.textViewTitleOverlay.attachTitleClickToRead(itemView, onTitleClick)
+		binding.textViewTitle.attachTitleClickToRead(itemView, onTitleClick)
+	}
 	// The overlay title is the one that adapts to the grid size (white, on the scrim).
 	sizeResolver.attachToView(itemView, binding.textViewTitleOverlay, binding.progressView)
 

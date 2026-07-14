@@ -14,6 +14,8 @@
     <string name="cover_only">Cover only</string>
     <string name="list_mode">List mode</string>
     <string name="title_over_cover">Show title over cover</string>
+    <string name="title_tap_to_read">Tap title to read</string>
+    <string name="title_tap_to_read_summary">In favorites and history, tapping a manga\'s name opens the reader directly</string>
     <string name="increase_cover_spacing">Increase cover spacing</string>
     <string name="settings">Settings</string>
     <string name="remote_sources">Manga sources</string>

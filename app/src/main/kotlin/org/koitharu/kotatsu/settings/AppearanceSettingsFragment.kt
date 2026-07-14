@@ -422,7 +422,7 @@ private fun AppearanceScreen(
 						checked = quickFilter,
 						onCheckedChange = { quickFilter = it },
 						icon = R.drawable.ic_filter_menu,
-						
+
 						shape = pos.shape,
 					)
 				}

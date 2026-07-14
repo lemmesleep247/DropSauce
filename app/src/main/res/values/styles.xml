@@ -173,16 +173,30 @@
 	<style name="Widget.Kotatsu.CollapsingToolbar" parent="Widget.Material3.CollapsingToolbar">
 		<item name="contentScrim">?android:attr/colorBackground</item>
 		<item name="statusBarScrim">?android:attr/colorBackground</item>
+		<item name="titleCollapseMode">scale</item>
+		<item name="collapsedTitleTextAppearance">@style/TextAppearance.Kotatsu.CollapsedTitle</item>
 	</style>
 
 	<style name="Widget.Kotatsu.CollapsingToolbar.Medium" parent="Widget.Material3.CollapsingToolbar.Medium">
 		<item name="contentScrim">?android:attr/colorBackground</item>
 		<item name="statusBarScrim">?android:attr/colorBackground</item>
+		<item name="titleCollapseMode">scale</item>
+		<item name="collapsedTitleTextAppearance">@style/TextAppearance.Kotatsu.CollapsedTitle</item>
 	</style>
 
 	<style name="Widget.Kotatsu.CollapsingToolbar.Large" parent="Widget.Material3.CollapsingToolbar.Large">
 		<item name="contentScrim">?android:attr/colorBackground</item>
 		<item name="statusBarScrim">?android:attr/colorBackground</item>
+		<item name="titleCollapseMode">scale</item>
+		<item name="collapsedTitleTextAppearance">@style/TextAppearance.Kotatsu.CollapsedTitle</item>
+	</style>
+
+	<!-- Collapsed state of the collapsing header title. Matches the expanded title's
+	     heading font/weight so the scale transition doesn't snap typefaces mid-flight. -->
+	<style name="TextAppearance.Kotatsu.CollapsedTitle" parent="TextAppearance.Kotatsu.TitleLarge">
+		<item name="android:fontFamily">@font/gflex_heading</item>
+		<item name="fontFamily">@font/gflex_heading</item>
+		<item name="android:textFontWeight" tools:targetApi="p">700</item>
 	</style>
 
 	<style name="Widget.Kotatsu.Button.More" parent="Widget.Material3Expressive.Button.TextButton">

@@ -27,14 +27,6 @@
 		android:layout_height="wrap_content"
 		android:fitsSystemWindows="false">
 
-		<org.koitharu.kotatsu.core.ui.widgets.WindowInsetHolder
-			android:id="@+id/insetsHolder"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_gravity="top"
-			android:fitsSystemWindows="true"
-			app:layout_scrollFlags="scroll|enterAlways" />
-
 		<com.google.android.material.appbar.CollapsingToolbarLayout
 			android:id="@+id/collapsingToolbarLayout"
 			style="?attr/collapsingToolbarLayoutMediumStyle"
@@ -42,7 +34,7 @@
 			android:layout_height="?attr/collapsingToolbarLayoutMediumSize"
 			app:expandedTitleMarginEnd="120dp"
 			app:maxLines="2"
-			app:layout_scrollFlags="scroll|enterAlways"
+			app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
 			app:toolbarId="@id/toolbar">
 
 			<LinearLayout
@@ -79,7 +71,6 @@
 			android:id="@+id/container_filter_header"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			app:layout_scrollFlags="scroll|enterAlways"
 			tools:layout="@layout/fragment_filter_header" />
 
 	</com.google.android.material.appbar.AppBarLayout>

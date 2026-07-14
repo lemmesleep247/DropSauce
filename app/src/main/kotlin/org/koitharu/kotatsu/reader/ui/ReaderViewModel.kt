@@ -427,7 +427,7 @@ class ReaderViewModel @Inject constructor(
                         val manga = details.toManga()
                         // obtain state
                         if (readingState.value == null) {
-                            val newState = getStateFromIntent(manga)
+                            val newState = getStateFromIntent(manga, details.isLoaded)
                             if (newState == null) {
                                 return@collect // manga not loaded yet if cannot get state
                             }
@@ -621,18 +621,23 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getStateFromIntent(manga: Manga): ReaderState? {
+    private suspend fun getStateFromIntent(manga: Manga, isLoaded: Boolean): ReaderState? {
         // check if we have at least some chapters loaded
         if (manga.chapters.isNullOrEmpty()) {
             return null
         }
+        // A referenced chapter can be missing from the pre-refresh database snapshot (isLoaded ==
+        // false) — return null and wait for the refreshed emission. Once the source list is loaded,
+        // a still-missing chapter means the source really dropped it (scanlator removed, url
+        // changed): fall through to the next strategy instead of failing the whole reader with
+        // "Unable to load manga. This should never happen".
+
         // specific state is requested
         val requestedState: ReaderState? = savedStateHandle[ReaderIntent.EXTRA_STATE]
         if (requestedState != null) {
-            return if (manga.findChapterById(requestedState.chapterId) != null) {
-                requestedState
-            } else {
-                null
+            when {
+                manga.findChapterById(requestedState.chapterId) != null -> return requestedState
+                !isLoaded -> return null
             }
         }
 
@@ -640,16 +645,17 @@ class ReaderViewModel @Inject constructor(
         // continue reading
         val history = historyRepository.getOne(manga)
         if (history != null) {
-            val chapter = manga.findChapterById(history.chapterId) ?: return null
-            // specified branch is requested
-            return if (ReaderIntent.EXTRA_BRANCH in savedStateHandle) {
-                if (chapter.branch == requestedBranch) {
+            val chapter = manga.findChapterById(history.chapterId)
+            when {
+                chapter == null -> if (!isLoaded) return null
+                // specified branch is requested
+                ReaderIntent.EXTRA_BRANCH in savedStateHandle -> return if (chapter.branch == requestedBranch) {
                     ReaderState(history)
                 } else {
                     ReaderState(manga, requestedBranch)
                 }
-            } else {
-                ReaderState(history)
+
+                else -> return ReaderState(history)
             }
         }
 

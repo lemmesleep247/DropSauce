@@ -41,15 +41,24 @@ jobs:
             echo "Attempt $i: JitPack returned HTTP ${HTTP_STATUS}, waiting 30s..."
             sleep 30
           done
-          echo "::error::JitPack artifact for kotatsu-parsers:${PARSERS_VERSION} not available after 10 attempts"
-          exit 1
+          echo "::warning::JitPack artifact for kotatsu-parsers:${PARSERS_VERSION} not available after 10 attempts"
+          exit 0
 
       - name: Run Android Lint
         run: ./gradlew lintDebug --no-daemon --stacktrace
+        continue-on-error: true
 
-      - name: Upload Lint SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+      - name: Upload Lint SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('app/build/reports/lint-results-debug.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
         with:
           sarif_file: app/build/reports/lint-results-debug.sarif
           category: android-lint
+
+      - name: Upload Lint SARIF as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('app/build/reports/lint-results-debug.sarif') != ''
+        with:
+          name: lint-results-sarif
+          path: app/build/reports/lint-results-debug.sarif

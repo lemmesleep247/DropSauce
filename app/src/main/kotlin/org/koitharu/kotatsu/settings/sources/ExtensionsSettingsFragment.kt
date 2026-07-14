@@ -200,7 +200,7 @@ private fun ExtensionsScreen(
 					ActionSettingsItem(
 						title = stringResource(R.string.migrate_broken_sources),
 						subtitle = stringResource(R.string.migrate_broken_sources_summary),
-						icon = R.drawable.ic_auto_fix,
+						icon = R.drawable.ic_migrate,
 						shape = pos.shape,
 						onClick = onOpenBrokenSourcesMigration,
 					)

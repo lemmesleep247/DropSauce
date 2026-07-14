@@ -74,6 +74,13 @@
     <string name="webtoon">Webtoon</string>
     <string name="read_mode">Read mode</string>
     <string name="grid_size">Grid size</string>
+    <string name="ui_scale">Display size</string>
+    <string name="ui_scale_summary">Scale the whole app interface</string>
+    <string name="ui_scale_smallest">Smallest</string>
+    <string name="ui_scale_smaller">Smaller</string>
+    <string name="ui_scale_default">Default</string>
+    <string name="ui_scale_larger">Larger</string>
+    <string name="ui_scale_largest">Largest</string>
     <string name="search_on_s">Search on %s</string>
     <string name="delete_manga">Delete manga</string>
     <string name="text_delete_local_manga">Permanently delete \"%s\" from device?</string>
@@ -431,6 +438,7 @@
     <string name="color_theme">Color scheme</string>
     <string name="show_in_grid_view">Show in grid view</string>
     <string name="theme_name_miku">Miku</string>
+    <string name="theme_name_lime">Remon</string>
     <string name="theme_name_asuka">Asuka</string>
     <string name="theme_name_mion">Mion</string>
     <string name="theme_name_rikka">Rikka</string>

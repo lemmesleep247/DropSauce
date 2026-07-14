@@ -93,7 +93,8 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 				AppCompatDelegate.setDefaultNightMode(settings.theme)
 			}
 			AppSettings.KEY_COLOR_THEME,
-			AppSettings.KEY_THEME_AMOLED -> {
+			AppSettings.KEY_THEME_AMOLED,
+			AppSettings.KEY_UI_SCALE -> {
 				Handler(Looper.getMainLooper()).postDelayed({
 					activityRecreationHandle.recreateAll()
 				}, 250)
@@ -246,6 +247,7 @@ private fun AppearanceScreen(
 	var colorScheme by rememberStringPref(AppSettings.KEY_COLOR_THEME, ColorScheme.default.name)
 	var theme by rememberStringPref(AppSettings.KEY_THEME, "-1")
 	var amoled by rememberBooleanPref(AppSettings.KEY_THEME_AMOLED, false)
+	var uiScale by rememberIntPref(AppSettings.KEY_UI_SCALE, 100)
 	var hapticFeedback by rememberBooleanPref(AppSettings.KEY_HAPTIC_FEEDBACK, true)
 	var hideStatusBar by rememberBooleanPref(AppSettings.KEY_HIDE_STATUS_BAR, false)
 	var locale by rememberStringPref(AppSettings.KEY_APP_LOCALE, "")
@@ -340,6 +342,27 @@ private fun AppearanceScreen(
 						onValueChange = { locale = it },
 						icon = R.drawable.ic_language,
 
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SliderSettingsItem(
+						title = stringResource(R.string.ui_scale),
+						value = uiScale,
+						valueFrom = 80,
+						valueTo = 120,
+						stepSize = 10,
+						valueLabel = { v ->
+							when {
+								v <= 80 -> ctx.getString(R.string.ui_scale_smallest)
+								v < 100 -> ctx.getString(R.string.ui_scale_smaller)
+								v == 100 -> ctx.getString(R.string.ui_scale_default)
+								v < 120 -> ctx.getString(R.string.ui_scale_larger)
+								else -> ctx.getString(R.string.ui_scale_largest)
+							}
+						},
+						onValueChange = { uiScale = it },
+						icon = R.drawable.ic_zoom_in,
 						shape = pos.shape,
 					)
 				}

@@ -149,6 +149,12 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getInt(KEY_GRID_SIZE, 100)
 		set(value) = prefs.edit { putInt(KEY_GRID_SIZE, value) }
 
+	// Global UI scale as a percent (85 = smaller, 100 = default, 115 = larger). Applied by
+	// overriding densityDpi in BaseActivity.attachBaseContext, so it scales everything.
+	var uiScalePercent: Int
+		get() = prefs.getInt(KEY_UI_SCALE, 100)
+		set(value) = prefs.edit { putInt(KEY_UI_SCALE, value) }
+
 	var isTitleOverCover: Boolean
 		get() = prefs.getBoolean(KEY_TITLE_OVER_COVER, true)
 		set(value) = prefs.edit { putBoolean(KEY_TITLE_OVER_COVER, value) }
@@ -986,6 +992,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_SEARCH_HISTORY_CLEAR = "search_history_clear"
 		const val KEY_UPDATES_FEED_CLEAR = "updates_feed_clear"
 		const val KEY_GRID_SIZE = "grid_size"
+		const val KEY_UI_SCALE = "ui_scale"
 		const val KEY_GRID_SIZE_PAGES = "grid_size_pages"
 		const val KEY_LOCAL_STORAGE = "local_storage"
 		const val KEY_READER_DOUBLE_PAGES = "reader_double_pages"

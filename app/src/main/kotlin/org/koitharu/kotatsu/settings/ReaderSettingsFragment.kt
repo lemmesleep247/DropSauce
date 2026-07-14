@@ -161,7 +161,7 @@ private fun ReaderScreen(
 						subtitle = stringResource(R.string.detect_reader_mode_summary),
 						checked = readerModeDetect,
 						onCheckedChange = { readerModeDetect = it },
-						icon = R.drawable.ic_auto_fix,
+						icon = R.drawable.ic_auto_detect,
 						
 						shape = pos.shape,
 						enabled = !isWebtoonMode,

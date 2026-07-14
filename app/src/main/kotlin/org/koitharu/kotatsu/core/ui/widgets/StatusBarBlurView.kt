@@ -153,16 +153,19 @@ class StatusBarBlurView @JvmOverloads constructor(
 	@RequiresApi(Build.VERSION_CODES.S)
 	private fun drawBlur(canvas: Canvas, blurNode: RenderNode, target: View) {
 		lastTargetTop = target.top
-		// Record a slightly taller slice than shown so the blur has real pixels to sample at the
-		// fade edge instead of clamping, which would smear a band there.
-		val captureHeight = height + BLUR_RADIUS.toInt()
-		blurNode.setPosition(0, 0, width, captureHeight)
-		val recording = blurNode.beginRecording(width, captureHeight)
+		// Record a slightly larger slice than shown (taller below, and wider on both sides) so the
+		// blur has real pixels to sample at every edge instead of clamping, which would otherwise
+		// leave an under-blurred strip down the left/right of the screen and a band at the fade.
+		val margin = BLUR_RADIUS.toInt()
+		val captureHeight = height + margin
+		val captureWidth = width + margin * 2
+		blurNode.setPosition(-margin, 0, width + margin, captureHeight)
+		val recording = blurNode.beginRecording(captureWidth, captureHeight)
 		try {
 			getLocationInWindow(myLocation)
 			target.getLocationInWindow(targetLocation)
 			recording.translate(
-				(targetLocation[0] - myLocation[0]).toFloat(),
+				(targetLocation[0] - myLocation[0] + margin).toFloat(),
 				(targetLocation[1] - myLocation[1]).toFloat(),
 			)
 			target.draw(recording)
@@ -177,7 +180,7 @@ class StatusBarBlurView @JvmOverloads constructor(
 	}
 
 	private companion object {
-		const val BLUR_RADIUS = 32f
+		const val BLUR_RADIUS = 50f
 		const val TINT_ALPHA = 90 // ~35%
 	}
 }

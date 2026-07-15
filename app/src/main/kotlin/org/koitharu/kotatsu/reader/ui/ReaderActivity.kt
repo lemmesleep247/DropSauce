@@ -305,10 +305,18 @@ class ReaderActivity :
         invalidateOptionsMenu()
     }
 
-    override fun onGridTouch(area: TapGridArea): Boolean {
+    override fun onGridTouch(area: TapGridArea, horizontalFraction: Float): Boolean {
         if (!isReaderResumed()) return false
         return if (readerManager.isEpub) {
-            toggleUiVisibility()
+            if (settings.isEpubPagedTapGesturesEnabled && settings.epubReadingMode != EPUB_MODE_SCROLL) {
+                when {
+                    horizontalFraction < 1f / 3f -> switchPageBy(-1)
+                    horizontalFraction > 2f / 3f -> switchPageBy(1)
+                    else -> toggleUiVisibility()
+                }
+            } else {
+                toggleUiVisibility()
+            }
             true
         } else {
             controlDelegate.onGridTouch(area)
@@ -489,9 +497,11 @@ class ReaderActivity :
     }
 
     override fun openMenu() {
-        viewModel.saveCurrentState(readerManager.currentReader?.getCurrentState())
         val currentMode = readerManager.currentMode ?: return
-        router.showReaderConfigSheet(currentMode)
+        viewBinding.root.post {
+            viewModel.saveCurrentState(readerManager.currentReader?.getCurrentState())
+            router.showReaderConfigSheet(currentMode)
+        }
     }
 
     override fun scrollBy(delta: Int, smooth: Boolean): Boolean {
@@ -652,6 +662,7 @@ class ReaderActivity :
     companion object {
 
         private const val TOAST_DURATION = 2000L
+		private const val EPUB_MODE_SCROLL = "scroll"
 		private const val EPUB_MODE_PAGED_RTL = "paged_rtl"
 
         private const val TOP_READER_BAR_ALPHA = 0.7f

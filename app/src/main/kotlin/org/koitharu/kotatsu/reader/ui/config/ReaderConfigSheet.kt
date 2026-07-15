@@ -1,9 +1,14 @@
 package org.koitharu.kotatsu.reader.ui.config
 
 import android.os.Bundle
+import android.graphics.Typeface
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -25,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +43,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,17 +68,24 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import android.content.res.Configuration
 import coil3.ImageLoader
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
@@ -88,6 +102,7 @@ import org.koitharu.kotatsu.reader.ui.ReaderViewModel
 import org.koitharu.kotatsu.reader.ui.ScreenOrientationHelper
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
 import javax.inject.Inject
+import java.io.File
 import kotlin.math.roundToInt
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -115,16 +130,62 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     private lateinit var mode: ReaderMode
     private lateinit var imageServerDelegate: ImageServerDelegate
 
-    @Inject
-    lateinit var settings: AppSettings
+	@Inject
+	lateinit var settings: AppSettings
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        mode = arguments?.getInt(AppRouter.KEY_READER_MODE)
-            ?.let { ReaderMode.valueOf(it) }
-            ?: ReaderMode.STANDARD
-        imageServerDelegate = ImageServerDelegate()
-    }
+	private var customFontUiRevision by mutableIntStateOf(0)
+	private val epubFontPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+		if (uri != null) importEpubFont(uri)
+	}
+
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
+		mode = arguments?.getInt(AppRouter.KEY_READER_MODE)
+			?.let { ReaderMode.valueOf(it) }
+			?: ReaderMode.STANDARD
+		imageServerDelegate = ImageServerDelegate()
+	}
+
+	private fun importEpubFont(uri: Uri) {
+		lifecycleScope.launch {
+			val name = withContext(Dispatchers.IO) { copyCompatibleFont(uri) }
+			if (name == null) {
+				Toast.makeText(requireContext(), R.string.epub_font_invalid, Toast.LENGTH_SHORT).show()
+				return@launch
+			}
+			settings.epubCustomFontName = name
+			settings.epubCustomFontRevision++
+			settings.epubFontFamily = EPUB_FONT_CUSTOM
+			customFontUiRevision++
+		}
+	}
+
+	private fun copyCompatibleFont(uri: Uri): String? {
+		val context = requireContext()
+		val resolver = context.contentResolver
+		val displayName = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+			if (cursor.moveToFirst()) cursor.getString(0) else null
+		}?.takeIf(String::isNotBlank) ?: getString(R.string.epub_font_custom)
+		val temporary = File(context.cacheDir, "epub_font_import")
+		return try {
+			resolver.openInputStream(uri)?.use { input -> temporary.outputStream().use(input::copyTo) } ?: return null
+			Typeface.createFromFile(temporary)
+			temporary.copyTo(File(context.filesDir, AppSettings.EPUB_CUSTOM_FONT_FILE), overwrite = true)
+			displayName
+		} catch (_: Exception) {
+			null
+		} finally {
+			temporary.delete()
+		}
+	}
+
+	private fun removeEpubCustomFont() {
+		File(requireContext().filesDir, AppSettings.EPUB_CUSTOM_FONT_FILE).delete()
+		settings.epubCustomFontName = ""
+		settings.epubCustomFontRevision++
+		if (settings.epubFontFamily == EPUB_FONT_CUSTOM) settings.epubFontFamily = "serif"
+		customFontUiRevision++
+	}
 
     override fun onCreateViewBinding(
         inflater: LayoutInflater,
@@ -769,6 +830,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     @Composable
     private fun EpubConfigContent() {
         val callback = remember { findParentCallback(Callback::class.java) }
+        val customFontName = remember(customFontUiRevision) { settings.epubCustomFontName }
         var readingMode by remember {
             mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
         }
@@ -803,20 +865,16 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             mode != "paged_rtl" && settings.epubTextAlign == "right" -> settings.epubTextAlign = "left"
                         }
                     }
-                    EpubChoiceSection(
-                        R.drawable.ic_title,
-                        stringResource(R.string.epub_font_family),
-                        listOf("serif" to stringResource(R.string.epub_font_serif), "sans-serif" to stringResource(R.string.epub_font_sans), "monospace" to stringResource(R.string.epub_font_mono)),
-                        settings.epubFontFamily,
+                    EpubTapGestureSection(enabled = readingMode != "scroll")
+                    EpubFontSection(
+                        selected = settings.epubFontFamily,
+                        customFontName = customFontName,
                         enabled = editable,
-                        fontOf = {
-                            when (it) {
-                                "sans-serif" -> androidx.compose.ui.text.font.FontFamily.SansSerif
-                                "monospace" -> androidx.compose.ui.text.font.FontFamily.Monospace
-                                else -> androidx.compose.ui.text.font.FontFamily.Serif
-                            }
-                        },
-                    ) { settings.epubFontFamily = it }
+                        onChooseCustom = {
+							epubFontPicker.launch(EPUB_FONT_MIME_TYPES)
+						},
+                        onRemoveCustom = ::removeEpubCustomFont,
+                    )
                     EpubChoiceSection(
                         R.drawable.ic_reader_ltr,
                         stringResource(R.string.epub_text_alignment),
@@ -930,7 +988,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         choices: List<Pair<String, String>>,
         selected: String,
         enabled: Boolean = true,
-        fontOf: ((String) -> androidx.compose.ui.text.font.FontFamily?)? = null,
         onSelected: (String) -> Unit,
     ) {
         var current by remember { mutableStateOf(selected) }
@@ -953,7 +1010,106 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                         ),
                         modifier = Modifier.weight(1f),
-                    ) { Text(label, textAlign = TextAlign.Center, fontFamily = fontOf?.invoke(value), modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)) }
+                    ) { Text(label, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)) }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun EpubTapGestureSection(enabled: Boolean) {
+        var checked by remember { mutableStateOf(settings.isEpubPagedTapGesturesEnabled) }
+        EpubSettingCard(
+            icon = R.drawable.ic_tap,
+            title = stringResource(R.string.epub_paged_tap_gestures),
+            value = null,
+            enabled = enabled,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.epub_paged_tap_gestures_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = checked,
+                    onCheckedChange = {
+                        checked = it
+                        settings.isEpubPagedTapGesturesEnabled = it
+                    },
+                    enabled = enabled,
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun EpubFontSection(
+        selected: String,
+        customFontName: String,
+        enabled: Boolean,
+        onChooseCustom: () -> Unit,
+        onRemoveCustom: () -> Unit,
+    ) {
+        var current by remember(selected, customFontName) { mutableStateOf(selected) }
+        val choices = listOf(
+            "serif" to stringResource(R.string.epub_font_serif),
+            "sans-serif" to stringResource(R.string.epub_font_sans),
+            "monospace" to stringResource(R.string.epub_font_mono),
+            EPUB_FONT_CUSTOM to customFontName.substringBeforeLast('.').ifBlank { stringResource(R.string.epub_font_choose) },
+        )
+        EpubSettingCard(R.drawable.ic_title, stringResource(R.string.epub_font_family), null, enabled = enabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                choices.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (value, label) ->
+                            val isSelected = current == value
+                            Surface(
+                                onClick = {
+                                    if (value == EPUB_FONT_CUSTOM && customFontName.isBlank()) {
+                                        onChooseCustom()
+                                    } else {
+                                        current = value
+                                        settings.epubFontFamily = value
+                                    }
+                                },
+                                enabled = enabled,
+                                shape = RoundedCornerShape(18.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(
+                                    text = label,
+                                    textAlign = TextAlign.Center,
+                                    fontFamily = when (value) {
+                                        "sans-serif" -> androidx.compose.ui.text.font.FontFamily.SansSerif
+                                        "monospace" -> androidx.compose.ui.text.font.FontFamily.Monospace
+                                        EPUB_FONT_CUSTOM -> null
+                                        else -> androidx.compose.ui.text.font.FontFamily.Serif
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+                if (customFontName.isNotBlank()) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onChooseCustom, enabled = enabled) {
+                            Text(stringResource(R.string.epub_font_replace))
+                        }
+                        TextButton(onClick = onRemoveCustom, enabled = enabled) {
+                            Text(stringResource(R.string.remove))
+                        }
+                    }
                 }
             }
         }
@@ -980,6 +1136,24 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 .alpha(if (enabled) 1f else 0.38f),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_book_page),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.epub_read_mode),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -1056,32 +1230,227 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
     }
 
-    // cycles the epub page theme: follow system -> light -> dark
     @Composable
     private fun EpubThemeCard(modifier: Modifier = Modifier) {
-        var theme by remember { mutableStateOf(settings.epubTheme) }
-        val label = when (theme) {
-            "light" -> R.string.epub_theme_light
-            "dark" -> R.string.epub_theme_dark
-            "black" -> R.string.epub_theme_black
-            else -> R.string.epub_theme_system
-        }
+        var showDialog by remember { mutableStateOf(false) }
         ToolGridCard(
             icon = R.drawable.ic_appearance,
-            label = stringResource(label),
-            checked = theme != "system",
-            onClick = {
-                theme = when (theme) {
-                    "system" -> "light"
-                    "light" -> "dark"
-                    "dark" -> "black"
-                    else -> "system"
-                }
-                settings.epubTheme = theme
-            },
+            label = stringResource(R.string.theme),
+            checked = settings.epubTheme == EPUB_THEME_CUSTOM,
+            onClick = { showDialog = true },
             modifier = modifier,
             iconSize = 22.dp,
         )
+        if (showDialog) EpubThemeDialog { showDialog = false }
+    }
+
+    @Composable
+    private fun EpubThemeDialog(onDismiss: () -> Unit) {
+        var theme by remember { mutableStateOf(canonicalEpubTheme(settings.epubTheme)) }
+        var background by remember { mutableIntStateOf(settings.epubCustomBackgroundColor) }
+        var foreground by remember { mutableIntStateOf(settings.epubCustomTextColor) }
+        var highlighter by remember { mutableIntStateOf(settings.epubCustomHighlightColor) }
+        var colorTarget by remember { mutableStateOf(EPUB_COLOR_BACKGROUND) }
+        val activeColor = when (colorTarget) {
+            EPUB_COLOR_TEXT -> foreground
+            EPUB_COLOR_HIGHLIGHT -> highlighter
+            else -> background
+        }
+        val hsv = remember(activeColor) {
+            FloatArray(3).also { android.graphics.Color.colorToHSV(activeColor, it) }
+        }
+        val updateActiveColor: (Int) -> Unit = { color ->
+            when (colorTarget) {
+                EPUB_COLOR_TEXT -> foreground = color
+                EPUB_COLOR_HIGHLIGHT -> highlighter = color
+                else -> background = color
+            }
+        }
+        val customSelected = theme == EPUB_THEME_CUSTOM
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .widthIn(max = 600.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .heightIn(max = 720.dp),
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(stringResource(R.string.theme), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            "white" to R.string.epub_theme_light,
+                            "gray" to R.string.epub_theme_dark,
+                            "black" to R.string.epub_theme_black,
+                        ).forEach { (value, label) ->
+                            val selected = theme == value
+                            Surface(
+                                onClick = { theme = value },
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(
+                                    text = stringResource(label),
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
+                                )
+                            }
+                        }
+                    }
+                    Surface(
+                        onClick = { theme = EPUB_THEME_CUSTOM },
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        border = androidx.compose.foundation.BorderStroke(
+                            if (customSelected) 2.dp else 1.dp,
+                            if (customSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp).alpha(if (customSelected) 1f else 0.38f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.epub_theme_custom),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(
+                                    EPUB_COLOR_BACKGROUND to R.string.epub_theme_background,
+                                    EPUB_COLOR_TEXT to R.string.epub_theme_text,
+                                    EPUB_COLOR_HIGHLIGHT to R.string.epub_theme_highlighter,
+                                ).forEach { (value, label) ->
+                                    val selected = colorTarget == value
+                                    Surface(
+                                        onClick = { colorTarget = value },
+                                        enabled = customSelected,
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color.Transparent,
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            if (selected) 2.dp else 1.dp,
+                                            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                        ),
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(
+                                            text = stringResource(label),
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp),
+                                        )
+                                    }
+                                }
+                            }
+                            EPUB_COLOR_PRESETS.chunked(6).forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    row.forEach { color ->
+                                        Surface(
+                                            onClick = { updateActiveColor(color) },
+                                            enabled = customSelected,
+                                            shape = CircleShape,
+                                            color = Color.Transparent,
+                                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color(color),
+                                                    border = androidx.compose.foundation.BorderStroke(
+                                                        if (activeColor == color) 3.dp else 1.dp,
+                                                        if (activeColor == color) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                                    ),
+                                                    modifier = Modifier.size(28.dp),
+                                                ) {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            EpubSaturationSlider(hsv[1], customSelected) {
+                                updateActiveColor(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], it, hsv[2])))
+                            }
+                            Text(stringResource(R.string.epub_theme_preview), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Surface(
+                                shape = RoundedCornerShape(18.dp),
+                                color = Color(background),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                val preview = stringResource(R.string.epub_theme_preview_text)
+                                val highlightedWord = stringResource(R.string.epub_theme_preview_highlighted)
+                                val highlightStart = preview.indexOf(highlightedWord).coerceAtLeast(0)
+                                Text(
+                                    text = buildAnnotatedString {
+                                        append(preview)
+                                        addStyle(
+                                            SpanStyle(background = Color(highlighter).copy(alpha = 0.4f)),
+                                            highlightStart,
+                                            (highlightStart + highlightedWord.length).coerceAtMost(preview.length),
+                                        )
+                                    },
+                                    color = Color(foreground),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(18.dp),
+                                )
+                            }
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+                        TextButton(
+                            onClick = {
+                                settings.epubCustomBackgroundColor = background
+                                settings.epubCustomTextColor = foreground
+                                settings.epubCustomHighlightColor = highlighter
+                                settings.epubTheme = theme
+                                onDismiss()
+                            },
+                        ) { Text(stringResource(R.string.apply)) }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun EpubSaturationSlider(value: Float, enabled: Boolean, onChange: (Float) -> Unit) {
+        Column {
+            Text(stringResource(R.string.epub_color_saturation), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Slider(value = value, onValueChange = onChange, enabled = enabled, valueRange = 0f..1f)
+        }
+    }
+
+    private fun canonicalEpubTheme(value: String): String = when (value) {
+        "light", "white" -> "white"
+        "dark", "gray" -> "gray"
+        "black" -> "black"
+        EPUB_THEME_CUSTOM -> EPUB_THEME_CUSTOM
+        else -> if (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+            "gray"
+        } else {
+            "white"
+        }
     }
 
     @Composable
@@ -1440,6 +1809,27 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             }
         }
     }
+
+	private companion object {
+		const val EPUB_FONT_CUSTOM = "custom"
+		const val EPUB_THEME_CUSTOM = "custom"
+		const val EPUB_COLOR_BACKGROUND = "background"
+		const val EPUB_COLOR_TEXT = "text"
+		const val EPUB_COLOR_HIGHLIGHT = "highlight"
+		val EPUB_COLOR_PRESETS = listOf(
+			0xFFFFFFFF.toInt(), 0xFFE0E0E0.toInt(), 0xFF9E9E9E.toInt(), 0xFF424242.toInt(), 0xFF121212.toInt(), 0xFF6D4C41.toInt(),
+			0xFFE53935.toInt(), 0xFFF4511E.toInt(), 0xFFFB8C00.toInt(), 0xFFFDD835.toInt(), 0xFFC0CA33.toInt(), 0xFF43A047.toInt(),
+			0xFF00A86B.toInt(), 0xFF00897B.toInt(), 0xFF00ACC1.toInt(), 0xFF039BE5.toInt(), 0xFF1E88E5.toInt(), 0xFF3949AB.toInt(),
+			0xFF5E35B1.toInt(), 0xFF8E24AA.toInt(), 0xFFD81B60.toInt(), 0xFFE91E63.toInt(), 0xFFFF7043.toInt(), 0xFFC99A00.toInt(),
+		)
+		val EPUB_FONT_MIME_TYPES = arrayOf(
+			"font/ttf",
+			"font/otf",
+			"application/x-font-ttf",
+			"application/x-font-opentype",
+			"application/octet-stream",
+		)
+	}
 
     interface Callback {
 

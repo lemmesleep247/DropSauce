@@ -108,6 +108,7 @@ class FeedFragment :
 					// the row stays in place (the swipe never commits); the dot clears via the content flow
 					viewModel.markAsRead(item)
 				} else {
+					feedAdapter.setItems(feedAdapter.items.filterNot { it is FeedItem && it.id == item.id })
 					viewModel.remove(item)
 				}
 			},

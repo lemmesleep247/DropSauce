@@ -80,6 +80,17 @@ class FeedSwipeCallback(
 	override fun getSwipeVelocityThreshold(defaultValue: Float): Float =
 		if (lastDx < 0f) Float.MAX_VALUE else super.getSwipeVelocityThreshold(defaultValue)
 
+	override fun getAnimationDuration(
+		recyclerView: RecyclerView,
+		animationType: Int,
+		animateDx: Float,
+		animateDy: Float,
+	): Long = if (animationType == SWIPE_SUCCESS_ANIMATION_TYPE) {
+		DELETE_ANIMATION_DURATION_MS
+	} else {
+		super.getAnimationDuration(recyclerView, animationType, animateDx, animateDy)
+	}
+
 	override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
 		super.onSelectedChanged(viewHolder, actionState)
 		if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && viewHolder != null) {
@@ -208,5 +219,10 @@ class FeedSwipeCallback(
 		isCurrentItemRead = false
 		// currentItem/pendingMarkRead are reset in onSelectedChanged(IDLE) at release; resetting
 		// them here too would clobber a new gesture that starts while this row is still settling
+	}
+
+	private companion object {
+		const val SWIPE_SUCCESS_ANIMATION_TYPE = 2
+		const val DELETE_ANIMATION_DURATION_MS = 0L
 	}
 }

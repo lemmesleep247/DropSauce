@@ -21,10 +21,10 @@ import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
 import android.text.style.AlignmentSpan
-import android.text.style.BackgroundColorSpan
 import android.text.style.CharacterStyle
 import android.text.style.LineBackgroundSpan
 import android.text.style.StyleSpan
+import android.text.style.UpdateAppearance
 import android.util.TypedValue
 import android.view.ActionMode
 import android.view.ContextThemeWrapper
@@ -45,6 +45,7 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnNextLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
@@ -134,6 +135,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private var highlights: List<Bookmark> = emptyList()
 	private var highlightsJob: Job? = null
 	private var highlightMangaId = 0L
+	private var cachedCustomTypeface: Typeface? = null
+	private var cachedCustomTypefaceStamp = Long.MIN_VALUE
 
 	private val rebuildRunnable = Runnable {
 		val locator = reflowLocator
@@ -148,11 +151,26 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		super.onViewBindingCreated(binding, savedInstanceState)
 		binding.root.post(::updateTopClearances)
 		settings.observeAsFlow(AppSettings.KEY_EPUB_THEME) { epubTheme }
-			.observe(viewLifecycleOwner) { animateColors() }
+			.observe(viewLifecycleOwner) {
+				animateColors()
+				refreshHighlightColors()
+			}
+		settings.observeAsFlow(AppSettings.KEY_EPUB_CUSTOM_BACKGROUND_COLOR) { epubCustomBackgroundColor }
+			.observe(viewLifecycleOwner) { if (settings.epubTheme == EPUB_THEME_CUSTOM) animateColors() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_CUSTOM_TEXT_COLOR) { epubCustomTextColor }
+			.observe(viewLifecycleOwner) { if (settings.epubTheme == EPUB_THEME_CUSTOM) animateColors() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_CUSTOM_HIGHLIGHT_COLOR) { epubCustomHighlightColor }
+			.observe(viewLifecycleOwner) { if (settings.epubTheme == EPUB_THEME_CUSTOM) refreshHighlightColors() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_SIZE) { epubFontSize }
 			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_FAMILY) { epubFontFamily }
 			.observe(viewLifecycleOwner) { scheduleReflow() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_CUSTOM_FONT_REVISION) { epubCustomFontRevision }
+			.observe(viewLifecycleOwner) {
+				cachedCustomTypeface = null
+				cachedCustomTypefaceStamp = Long.MIN_VALUE
+				if (settings.epubFontFamily == EPUB_FONT_CUSTOM) scheduleReflow()
+			}
 		settings.observeAsFlow(AppSettings.KEY_EPUB_LINE_HEIGHT) { epubLineHeight }
 			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_HORIZONTAL_PADDING) { epubHorizontalPadding }
@@ -176,6 +194,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		highlightMangaId = 0L
 		colorAnimator?.cancel()
 		colorAnimator = null
+		cachedCustomTypeface = null
+		cachedCustomTypefaceStamp = Long.MIN_VALUE
 		verticalView = null
 		pagerView = null
 		pages = emptyList()
@@ -194,10 +214,10 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val density = resources.displayMetrics.density
-		scrollTopClipPx = activity?.findViewById<View>(R.id.infoBar)?.height
+		val scrollClearance = activity?.findViewById<View>(R.id.infoBar)?.height
 			?.takeIf { it > 0 }
 			?: (SCROLL_INFO_BAR_HEIGHT_DP * density).toInt()
-		verticalView?.setPadding(0, scrollTopClipPx, 0, 0)
+		updateScrollTopClearance(scrollClearance)
 		v.updatePadding(0, 0, 0, 0)
 		v.post(::updateTopClearances)
 		return insets
@@ -206,10 +226,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private fun updateTopClearances() {
 		val density = resources.displayMetrics.density
 		activity?.findViewById<View>(R.id.infoBar)?.height?.takeIf { it > 0 }?.let { height ->
-			if (height != scrollTopClipPx) {
-				scrollTopClipPx = height
-				verticalView?.setPadding(0, height, 0, 0)
-			}
+			updateScrollTopClearance(height)
 		}
 		val topBarBottom = activity?.findViewById<View>(R.id.appbar_top)?.bottom ?: 0
 		val clearance = topBarBottom.takeIf { it > 0 }
@@ -217,6 +234,19 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		if (clearance != pagedTopBarClearancePx) {
 			pagedTopBarClearancePx = clearance
 			if (isPagedMode && pagerView != null) scheduleReflow()
+		}
+	}
+
+	private fun updateScrollTopClearance(height: Int) {
+		if (height == scrollTopClipPx) return
+		val recycler = verticalView
+		val manager = recycler?.layoutManager as? LinearLayoutManager
+		val first = manager?.findFirstVisibleItemPosition()?.takeIf { it >= 0 }
+		val childTop = first?.let(manager::findViewByPosition)?.top
+		scrollTopClipPx = height
+		recycler?.setPadding(0, height, 0, 0)
+		if (first != null && childTop != null) {
+			manager.scrollToPositionWithOffset(first, childTop - height)
 		}
 	}
 
@@ -388,6 +418,19 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		(verticalView?.getChildAt(0) as? TextView)
 			?: ((pagerView?.getChildAt(0) as? RecyclerView)?.getChildAt(0) as? TextView)
 
+	private fun refreshHighlightColors() {
+		fun recolor(recycler: RecyclerView?) {
+			if (recycler != null) for (index in 0 until recycler.childCount) {
+				val textView = recycler.getChildAt(index) as? TextView ?: continue
+				val text = textView.text as? Spanned ?: continue
+				text.getSpans(0, text.length, HighlightColorSpan::class.java).forEach { it.color = highlightColor }
+				textView.invalidate()
+			}
+		}
+		recolor(verticalView)
+		recolor(pagerView?.getChildAt(0) as? RecyclerView)
+	}
+
 	private fun refreshAlignment() {
 		fun update(recycler: RecyclerView?) {
 			if (recycler != null) for (index in 0 until recycler.childCount) {
@@ -469,22 +512,13 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 		verticalView = recycler
 		container.addView(recycler)
-		val manager = recycler.layoutManager as LinearLayoutManager
-		manager.scrollToPositionWithOffset(locator.chapter, 0)
-		recycler.post {
-			val child = manager.findViewByPosition(locator.chapter)
-			if (child != null) {
-				val fraction = locator.offset.toFloat() / chapters[locator.chapter].text.length.coerceAtLeast(1)
-				recycler.scrollBy(0, (child.height * fraction).toInt())
-			}
-			restoring = false
-			notifyProgress()
-		}
+		positionVertical(locator)
 	}
 
 	private fun renderPaged(container: FrameLayout, locator: Locator) {
 		val generation = ++renderGeneration
 		val key = "${container.width}:${container.height}:${settings.epubFontSize}:${settings.epubFontFamily}:" +
+			"${settings.epubCustomFontRevision}:" +
 			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:${settings.epubVerticalPadding}:" +
 			"$effectiveTextAlign:${settings.epubReadingMode}"
 		container.setBackgroundColor(backgroundColor)
@@ -647,7 +681,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			val start = highlight.start.coerceIn(0, text.length)
 			val end = highlight.end.coerceIn(start, text.length)
 			if (start == end) return@forEach
-			text.setSpan(BackgroundColorSpan(HIGHLIGHT_COLOR), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+			text.setSpan(HighlightColorSpan(highlightColor), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 			text.setSpan(HighlightMarker(bookmark.pageId), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 		}
 		return text
@@ -940,8 +974,9 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			val manager = recycler.layoutManager as? LinearLayoutManager ?: return lastLocator
 			val index = manager.findFirstVisibleItemPosition().takeIf { it >= 0 } ?: return lastLocator
 			val child = manager.findViewByPosition(index) ?: return Locator(index, 0)
-			val visibleOffset = (recycler.paddingTop - child.top).coerceAtLeast(0)
-			val charOffset = (chapters[index].text.length.toLong() * visibleOffset / child.height.coerceAtLeast(1)).toInt()
+			val layout = (child as? TextView)?.layout ?: return lastLocator
+			val visibleOffset = (recycler.paddingTop - child.top).coerceIn(0, layout.height)
+			val charOffset = layout.getLineStart(layout.getLineForVertical(visibleOffset))
 			return Locator(index, charOffset).clamped()
 		}
 		return lastLocator.clamped()
@@ -1010,16 +1045,27 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			val page = pages.indexOfFirst { it.chapter == lastLocator.chapter && lastLocator.offset in it.start until it.end }
 			if (page >= 0) pagerView?.setCurrentItem(page, smooth && isAnimationEnabled())
 		} else {
-			val recycler = verticalView ?: return
-			val manager = recycler.layoutManager as LinearLayoutManager
-			manager.scrollToPositionWithOffset(lastLocator.chapter, 0)
-			recycler.post {
-				val child = manager.findViewByPosition(lastLocator.chapter) ?: return@post
-				val fraction = lastLocator.offset.toFloat() / chapters[lastLocator.chapter].text.length.coerceAtLeast(1)
-				recycler.scrollBy(0, (child.height * fraction).toInt())
-				notifyProgress()
-			}
+			positionVertical(lastLocator)
 		}
+	}
+
+	private fun positionVertical(locator: Locator) {
+		val target = locator.clamped()
+		val recycler = verticalView ?: return
+		val manager = recycler.layoutManager as LinearLayoutManager
+		lastLocator = target
+		restoring = true
+		recycler.doOnNextLayout {
+			val textView = manager.findViewByPosition(target.chapter) as? TextView
+			val layout = textView?.layout
+			if (layout != null) {
+				val offset = target.offset.coerceIn(0, textView.text.length)
+				recycler.scrollBy(0, layout.getLineTop(layout.getLineForOffset(offset)))
+			}
+			restoring = false
+			notifyProgress()
+		}
+		manager.scrollToPositionWithOffset(target.chapter, 0)
 	}
 
 	override fun onZoomIn() = Unit
@@ -1092,17 +1138,45 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private val verticalBottomPaddingPx get() =
 		(MAX_BOTTOM_MARGIN_DP * verticalMarginFraction * resources.displayMetrics.density).toInt()
 	private val backgroundColor: Int get() {
+		if (settings.epubTheme == EPUB_THEME_CUSTOM) {
+			return ColorUtils.setAlphaComponent(settings.epubCustomBackgroundColor, 255)
+		}
 		val dark = when (settings.epubTheme) {
-			"light" -> false
-			"dark" -> true
+			"white", "light" -> false
+			"gray", "dark" -> true
 			"black" -> return Color.BLACK
 			else -> resources.isNightMode
 		}
 		return ContextThemeWrapper(requireContext(), if (dark) materialR.style.ThemeOverlay_Material3_Dark else materialR.style.ThemeOverlay_Material3_Light)
 			.getThemeColor(android.R.attr.colorBackground, if (dark) Color.BLACK else Color.WHITE)
 	}
-	private val foregroundColor get() = if (ColorUtils.calculateLuminance(backgroundColor) > .5) 0xFF1B1B1F.toInt() else 0xFFE4E4E8.toInt()
-	private val readerTypeface get() = Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
+	private val foregroundColor get() = if (settings.epubTheme == EPUB_THEME_CUSTOM) {
+		ColorUtils.setAlphaComponent(settings.epubCustomTextColor, 255)
+	} else if (ColorUtils.calculateLuminance(backgroundColor) > .5) {
+		0xFF1B1B1F.toInt()
+	} else {
+		0xFFE4E4E8.toInt()
+	}
+	private val highlightColor get() = if (settings.epubTheme == EPUB_THEME_CUSTOM) {
+		ColorUtils.setAlphaComponent(settings.epubCustomHighlightColor, HIGHLIGHT_ALPHA)
+	} else {
+		DEFAULT_HIGHLIGHT_COLOR
+	}
+	private val readerTypeface get() = if (settings.epubFontFamily == EPUB_FONT_CUSTOM) {
+		customReaderTypeface()
+	} else {
+		Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
+	}
+
+	private fun customReaderTypeface(): Typeface {
+		val file = File(requireContext().filesDir, AppSettings.EPUB_CUSTOM_FONT_FILE)
+		val stamp = if (file.isFile) file.lastModified() xor file.length() else Long.MIN_VALUE
+		if (stamp != cachedCustomTypefaceStamp) {
+			cachedCustomTypefaceStamp = stamp
+			cachedCustomTypeface = file.takeIf(File::isFile)?.let { runCatching { Typeface.createFromFile(it) }.getOrNull() }
+		}
+		return cachedCustomTypeface ?: Typeface.SERIF
+	}
 	private val textAlignment get() = when (effectiveTextAlign) {
 		"center" -> Layout.Alignment.ALIGN_CENTER
 		"right", "end" -> if (isRtlPagedMode) Layout.Alignment.ALIGN_NORMAL else Layout.Alignment.ALIGN_OPPOSITE
@@ -1133,6 +1207,12 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private class TextHolder(val text: TextView) : RecyclerView.ViewHolder(text)
+	private class HighlightColorSpan(var color: Int) : CharacterStyle(), UpdateAppearance {
+		override fun updateDrawState(tp: TextPaint) {
+			tp.bgColor = color
+		}
+	}
+
 	private class EpubSelectableTextView(context: Context) : AppCompatTextView(context) {
 		private val selectionBackgroundColor = highlightColor
 		private var selectionBackgroundSpan: SelectionBackgroundSpan? = null
@@ -1290,6 +1370,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	companion object {
 		private const val EPUB_MODE_SCROLL = "scroll"
 		private const val EPUB_MODE_PAGED_RTL = "paged_rtl"
+		private const val EPUB_THEME_CUSTOM = "custom"
+		private const val EPUB_FONT_CUSTOM = "custom"
 		private const val MAX_SEARCH_RESULTS = 100
 		private const val PROGRESS_INTERVAL_MS = 50L
 		private const val PAGE_LOOKAHEAD = 1
@@ -1304,7 +1386,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		private const val ACTION_DICTIONARY = 0x455001
 		private const val ACTION_HIGHLIGHT = 0x455002
 		private const val ACTION_REMOVE_HIGHLIGHT = 0x455003
-		private const val HIGHLIGHT_COLOR = 0x66FFD54F
+		private const val HIGHLIGHT_ALPHA = 0x66
+		private const val DEFAULT_HIGHLIGHT_COLOR = 0x66FFD54F
 		private const val DICTIONARY_URL = "https://api.dictionaryapi.dev/api/v2/entries/en"
 		private const val MAX_MEANINGS = 4
 		private const val MAX_DEFINITIONS_PER_MEANING = 3

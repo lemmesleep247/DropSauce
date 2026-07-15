@@ -2,11 +2,7 @@ package org.koitharu.kotatsu.settings.sources.catalog
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.app.DownloadManager
 import android.content.ActivityNotFoundException
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.view.Menu
 import android.view.MenuItem
@@ -36,17 +32,21 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.chip.Chip
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.combine
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
+import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseActivity
-import org.koitharu.kotatsu.core.ui.util.FadingAppbarMediator
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView.ChipModel
 import org.koitharu.kotatsu.core.util.LocaleComparator
@@ -65,6 +65,7 @@ import org.koitharu.kotatsu.list.ui.model.ListHeader
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.parsers.model.ContentType
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -87,6 +88,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	@Inject
 	lateinit var extensionUpdateScheduler: ExtensionUpdateWorker.Scheduler
 
+	@Inject
+	@BaseHttpClient
+	lateinit var httpClient: OkHttpClient
+
 	private val viewModel by viewModels<SourcesCatalogViewModel>()
 	private val isExternalOnly by lazy(LazyThreadSafetyMode.NONE) {
 		intent?.getBooleanExtra(AppRouter.KEY_SOURCE_CATALOG_EXTERNAL_ONLY, false) == true
@@ -94,32 +99,17 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	private var isScrollToTopShown = false
 	private var hasPendingUpdates = false
 	private var lastSystemBarsInsets = Insets.NONE
-	private val downloadManager by lazy(LazyThreadSafetyMode.NONE) {
-		getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-	}
 	private val pendingInstallQueue = ArrayDeque<SourcesCatalogViewModel.InstallRequest>()
-	private val pendingInstallerDownloads = HashSet<Long>()
 	private val pendingDownloadedInstalls = ArrayDeque<Long>()
 	private val downloadRequestsById = HashMap<Long, PendingDownload>()
+	private var nextDownloadId = 1L
 	private var activeInstallerPackage: String? = null
+	private var activeInstallerFileName: String? = null
 	private var activeInstallerDownloadId = 0L
 	private var isInstallerActive = false
 	private var pendingUninstallPackage: String? = null
 	private val appBarOffsetListener = AppBarLayout.OnOffsetChangedListener { _, _ ->
 		syncFastScrollerOffset()
-	}
-	private val extensionDownloadReceiver = ExtensionDownloadReceiver { downloadId ->
-		if (pendingInstallerDownloads.remove(downloadId)) {
-			if (isDownloadSuccessful(downloadId)) {
-				pendingDownloadedInstalls += downloadId
-			} else {
-				viewModel.clearExtensionInProgress(downloadRequestsById.remove(downloadId)?.packageName)
-				removeDownloadedApk(downloadId)
-				Toast.makeText(this, R.string.extension_download_failed, Toast.LENGTH_LONG).show()
-			}
-			settings.pendingExtensionDownloads = pendingInstallerDownloads
-			processDownloadedInstallerQueue()
-		}
 	}
 	private val storagePermissionRequest = registerForActivityResult(
 		ActivityResultContracts.RequestPermission(),
@@ -167,8 +157,6 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			syncFastScrollerOffset()
 		}
 		viewBinding.chipsFilter.onChipClickListener = this
-		pendingInstallerDownloads.addAll(settings.pendingExtensionDownloads)
-		FadingAppbarMediator(viewBinding.appbar, viewBinding.toolbar).bind()
 		viewModel.content.observe(this, sourcesAdapter)
 		viewModel.hasUpdates.observe(this) { hasUpdates ->
 			hasPendingUpdates = hasUpdates
@@ -225,13 +213,6 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			updateFilers(it.filter, it.contentTypes, it.locales, it.isNsfwDisabled)
 		}
 		addMenuProvider(SourcesCatalogMenuProvider(this, viewModel, this, isExternalOnly))
-		ContextCompat.registerReceiver(
-			this,
-			extensionDownloadReceiver,
-			IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-			ContextCompat.RECEIVER_EXPORTED,
-		)
-		checkPendingInstallerDownloads()
 		if (!settings.isShizukuInstallerEnabled) {
 			ensureInstallPermissionAccess()
 		}
@@ -250,7 +231,6 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 
 	override fun onDestroy() {
 		viewBinding.appbar.removeOnOffsetChangedListener(appBarOffsetListener)
-		unregisterReceiver(extensionDownloadReceiver)
 		super.onDestroy()
 	}
 
@@ -519,25 +499,59 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	private fun downloadAndInstallExtension(requestModel: SourcesCatalogViewModel.InstallRequest) {
 		val uri = Uri.parse(requestModel.url)
 		val fileName = uri.lastPathSegment?.takeIf { it.isNotBlank() } ?: "extension.apk"
-		val request = DownloadManager.Request(uri)
-			.setTitle(fileName)
-			.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName)
-			.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-			.setMimeType("application/vnd.android.package-archive")
-		val downloadId = downloadManager.enqueue(request)
+		val downloadId = nextDownloadId++
 		downloadRequestsById[downloadId] = PendingDownload(
 			packageName = requestModel.packageName,
 			fileName = fileName,
 		)
-		pendingInstallerDownloads += downloadId
-		settings.pendingExtensionDownloads = pendingInstallerDownloads
 		Toast.makeText(this, R.string.download_started, Toast.LENGTH_SHORT).show()
+		// Download via the app's OkHttp client so proxy/DoH/SSL settings apply,
+		// unlike the system DownloadManager which ignores them
+		lifecycleScope.launch {
+			val result = runCatching {
+				withContext(Dispatchers.IO) {
+					downloadApk(requestModel.url, fileName)
+				}
+			}
+			if (result.isSuccess) {
+				pendingDownloadedInstalls += downloadId
+				processDownloadedInstallerQueue()
+			} else {
+				viewModel.clearExtensionInProgress(downloadRequestsById.remove(downloadId)?.packageName)
+				Toast.makeText(this@SourcesCatalogActivity, R.string.extension_download_failed, Toast.LENGTH_LONG).show()
+			}
+		}
 		processInstallQueue()
+	}
+
+	private fun downloadApk(url: String, fileName: String) {
+		val destDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+			?: throw IOException("External storage is not available")
+		val destination = File(destDir, fileName)
+		val tmp = File(destDir, "$fileName.tmp")
+		try {
+			val request = Request.Builder().url(url).get().build()
+			httpClient.newCall(request).execute().use { response ->
+				if (!response.isSuccessful) {
+					throw IOException("HTTP ${response.code}")
+				}
+				response.body.byteStream().use { input ->
+					tmp.outputStream().buffered().use { output ->
+						input.copyTo(output)
+					}
+				}
+			}
+			if (!tmp.renameTo(destination)) {
+				tmp.copyTo(destination, overwrite = true)
+			}
+		} finally {
+			tmp.delete()
+		}
 	}
 
 	private fun installDownloadedApk(downloadId: Long) {
 		val pendingDownload = downloadRequestsById.remove(downloadId)
-		val apkFile = getDownloadedApkFile(downloadId, pendingDownload?.fileName)
+		val apkFile = getDownloadedApkFile(pendingDownload?.fileName)
 		val expectedPackage = pendingDownload?.packageName ?: apkFile?.let(::getArchivePackageName)
 		if (
 			settings.isShizukuInstallerEnabled &&
@@ -545,6 +559,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			apkFile?.isFile == true
 		) {
 			activeInstallerPackage = expectedPackage
+			activeInstallerFileName = pendingDownload?.fileName
 			activeInstallerDownloadId = downloadId
 			isInstallerActive = true
 			lifecycleScope.launch {
@@ -587,7 +602,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		if (settings.isShizukuInstallerEnabled) {
 			Toast.makeText(this, R.string.shizuku_invalid_package, Toast.LENGTH_LONG).show()
 			viewModel.clearExtensionInProgress(expectedPackage ?: pendingDownload?.packageName)
-			removeDownloadedApk(downloadId)
+			removeDownloadedApk(pendingDownload?.fileName)
 			processDownloadedInstallerQueue()
 			return
 		}
@@ -603,9 +618,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		}
 		val pendingDownload = downloadRequestsById.remove(downloadId)
 		activeInstallerPackage = pendingDownload?.packageName
+		activeInstallerFileName = pendingDownload?.fileName
 		activeInstallerDownloadId = downloadId
 		isInstallerActive = true
-		val apkUri = getDownloadedApkUri(downloadId, pendingDownload?.fileName) ?: run {
+		val apkUri = getDownloadedApkUri(pendingDownload?.fileName) ?: run {
 			finishActiveInstaller(refresh = false)
 			return
 		}
@@ -616,8 +632,9 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		} catch (_: ActivityNotFoundException) {
 			isInstallerActive = false
 			viewModel.clearExtensionInProgress(activeInstallerPackage)
-			removeDownloadedApk(activeInstallerDownloadId)
+			removeDownloadedApk(activeInstallerFileName)
 			activeInstallerPackage = null
+			activeInstallerFileName = null
 			activeInstallerDownloadId = 0L
 			Toast.makeText(this, R.string.operation_not_supported, Toast.LENGTH_SHORT).show()
 		} catch (_: SecurityException) {
@@ -625,6 +642,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			pendingDownload?.let { downloadRequestsById[downloadId] = it }
 			pendingDownloadedInstalls.addFirst(downloadId)
 			activeInstallerPackage = null
+			activeInstallerFileName = null
 			activeInstallerDownloadId = 0L
 			requestInstallPackagesPermission()
 			Toast.makeText(this, R.string.extension_install_permission_required_message, Toast.LENGTH_LONG).show()
@@ -643,35 +661,19 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		return installIntent
 	}
 
-	private fun getDownloadedApkUri(downloadId: Long, fileName: String?): Uri? {
-		getDownloadedApkFile(downloadId, fileName)?.takeIf { it.isFile }?.let { file ->
+	private fun getDownloadedApkUri(fileName: String?): Uri? {
+		getDownloadedApkFile(fileName)?.takeIf { it.isFile }?.let { file ->
 			return FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.files", file)
 		}
-		return downloadManager.getUriForDownloadedFile(downloadId)
+		return null
 	}
 
-	private fun getDownloadedApkFile(downloadId: Long, fileName: String?): File? {
-		val downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-		if (downloadsDir != null && !fileName.isNullOrBlank()) {
-			File(downloadsDir, fileName).takeIf { it.exists() }?.let { return it }
+	private fun getDownloadedApkFile(fileName: String?): File? {
+		val downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: return null
+		if (fileName.isNullOrBlank()) {
+			return null
 		}
-		val cursor = downloadManager.query(DownloadManager.Query().setFilterById(downloadId)) ?: return null
-		cursor.use {
-			if (!it.moveToFirst()) {
-				return null
-			}
-			val localUriColumn = it.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-			if (localUriColumn < 0) {
-				return null
-			}
-			val localUri = it.getString(localUriColumn)?.takeIf { value -> value.isNotBlank() } ?: return null
-			val uri = Uri.parse(localUri)
-			return if (uri.scheme == "file") {
-				uri.path?.let(::File)
-			} else {
-				null
-			}
-		}
+		return File(downloadsDir, fileName).takeIf { it.exists() }
 	}
 
 	private fun getArchivePackageName(apkFile: File): String? {
@@ -709,9 +711,10 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			isInstallerActive = false
 		}
 		viewModel.clearExtensionInProgress(packageName)
-		removeDownloadedApk(downloadId)
+		removeDownloadedApk(activeInstallerFileName)
 		if (isCurrentInstaller) {
 			activeInstallerPackage = null
+			activeInstallerFileName = null
 			activeInstallerDownloadId = 0L
 		}
 		if (refresh) {
@@ -719,59 +722,8 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		}
 	}
 
-	private fun removeDownloadedApk(downloadId: Long) {
-		if (downloadId != 0L) {
-			runCatching { downloadManager.remove(downloadId) }
-		}
-	}
-
-	private fun checkPendingInstallerDownloads() {
-		if (pendingInstallerDownloads.isEmpty()) {
-			return
-		}
-		val pendingSnapshot = pendingInstallerDownloads.toLongArray()
-		val query = DownloadManager.Query().setFilterById(*pendingSnapshot)
-		val cursor = downloadManager.query(query) ?: return
-		var anyFailed = false
-		cursor.use {
-			val idColumn = it.getColumnIndex(DownloadManager.COLUMN_ID)
-			val statusColumn = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
-			while (it.moveToNext()) {
-				val id = if (idColumn >= 0) it.getLong(idColumn) else continue
-				val status = if (statusColumn >= 0) it.getInt(statusColumn) else continue
-				if (!pendingInstallerDownloads.remove(id)) {
-					continue
-				}
-				if (status == DownloadManager.STATUS_SUCCESSFUL) {
-					pendingDownloadedInstalls += id
-				} else if (status == DownloadManager.STATUS_FAILED) {
-					viewModel.clearExtensionInProgress(downloadRequestsById.remove(id)?.packageName)
-					removeDownloadedApk(id)
-					anyFailed = true
-				} else {
-					pendingInstallerDownloads += id
-				}
-			}
-		}
-		if (anyFailed) {
-			Toast.makeText(this, R.string.extension_download_failed, Toast.LENGTH_LONG).show()
-		}
-		settings.pendingExtensionDownloads = pendingInstallerDownloads
-		processDownloadedInstallerQueue()
-	}
-
-	private fun isDownloadSuccessful(downloadId: Long): Boolean {
-		val cursor = downloadManager.query(DownloadManager.Query().setFilterById(downloadId)) ?: return false
-		cursor.use {
-			if (!it.moveToFirst()) {
-				return false
-			}
-			val statusColumn = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
-			if (statusColumn < 0) {
-				return false
-			}
-			return it.getInt(statusColumn) == DownloadManager.STATUS_SUCCESSFUL
-		}
+	private fun removeDownloadedApk(fileName: String?) {
+		getDownloadedApkFile(fileName)?.delete()
 	}
 
 	private fun processDownloadedInstallerQueue() {
@@ -850,18 +802,5 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 
 	private companion object {
 		const val STALE_APK_AGE_MS = 24L * 60L * 60L * 1000L
-	}
-
-	private class ExtensionDownloadReceiver(
-		private val onComplete: (Long) -> Unit,
-	) : BroadcastReceiver() {
-		override fun onReceive(context: Context, intent: Intent) {
-			if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
-				val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0L)
-				if (downloadId != 0L) {
-					onComplete(downloadId)
-				}
-			}
-		}
 	}
 }

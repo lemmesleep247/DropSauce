@@ -302,7 +302,6 @@
     <string name="prefetch_content">Precargar el contenido</string>
     <string name="mark_as_current">Marcar como actual</string>
     <string name="language">Idioma</string>
-    <string name="theme_name_dynamic">Dinámico</string>
     <string name="color_theme">Esquema de colores</string>
     <string name="show_in_grid_view">Mostrar en vista de cuadrícula</string>
     <string name="theme_name_asuka">Asuka</string>

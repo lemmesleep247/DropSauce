@@ -15,7 +15,6 @@ enum class ColorScheme(
 
 	DEFAULT(R.style.ThemeOverlay_Kotatsu_Totoro, R.string.theme_name_totoro),
 	EXPRESSIVE(R.style.ThemeOverlay_Kotatsu_Expressive, R.string.theme_name_expressive),
-	MONET(R.style.ThemeOverlay_Kotatsu_Monet, R.string.theme_name_dynamic),
 	MIKU(R.style.ThemeOverlay_Kotatsu_Miku, R.string.theme_name_miku),
 	RENA(R.style.ThemeOverlay_Kotatsu_Asuka, R.string.theme_name_asuka),
 	FROG(R.style.ThemeOverlay_Kotatsu_Mion, R.string.theme_name_mion),
@@ -26,6 +25,8 @@ enum class ColorScheme(
 	ITSUKA(R.style.ThemeOverlay_Kotatsu_Itsuka, R.string.theme_name_itsuka),
 	SHANA(R.style.ThemeOverlay_Kotatsu_Shana, R.string.theme_name_shana),
 	LIME(R.style.ThemeOverlay_Kotatsu_Lime, R.string.theme_name_lime),
+	AMBER(R.style.ThemeOverlay_Kotatsu_Amber, R.string.theme_name_amber),
+	SKY(R.style.ThemeOverlay_Kotatsu_Sky, R.string.theme_name_sky),
 	;
 
 	companion object {
@@ -40,7 +41,6 @@ enum class ColorScheme(
 		fun getAvailableList(): List<ColorScheme> {
 			val list = ColorScheme.entries.toMutableList()
 			if (!DynamicColors.isDynamicColorAvailable()) {
-				list.remove(MONET)
 				list.remove(EXPRESSIVE)
 			}
 			return list

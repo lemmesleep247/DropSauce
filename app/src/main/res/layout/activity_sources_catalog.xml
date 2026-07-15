@@ -19,12 +19,22 @@
 		app:liftOnScroll="false"
 		app:liftOnScrollColor="@null">
 
-		<com.google.android.material.appbar.MaterialToolbar
-			android:id="@id/toolbar"
+		<com.google.android.material.appbar.CollapsingToolbarLayout
+			android:id="@+id/collapsingToolbarLayout"
+			style="?attr/collapsingToolbarLayoutMediumStyle"
 			android:layout_width="match_parent"
-			android:layout_height="?attr/actionBarSize"
-			android:background="@null"
-			app:layout_scrollFlags="scroll|enterAlways|snap" />
+			android:layout_height="?attr/collapsingToolbarLayoutMediumSize"
+			app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
+			app:toolbarId="@id/toolbar">
+
+			<com.google.android.material.appbar.MaterialToolbar
+				android:id="@id/toolbar"
+				android:layout_width="match_parent"
+				android:layout_height="?attr/actionBarSize"
+				android:background="@null"
+				app:layout_collapseMode="pin" />
+
+		</com.google.android.material.appbar.CollapsingToolbarLayout>
 
 		<HorizontalScrollView
 			android:id="@+id/scrollView_chips"

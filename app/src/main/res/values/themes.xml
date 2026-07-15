@@ -176,9 +176,6 @@
 		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
 	</style>
 
-	<!-- Monet theme only supports S+ -->
-	<style name="ThemeOverlay.Kotatsu.Monet" parent="ThemeOverlay.Material3.DynamicColors.Light" />
-
 	<!-- Expressive Monet theme -->
 	<style name="ThemeOverlay.Kotatsu.Expressive" parent="ThemeOverlay.Material3Expressive.DynamicColors.DayNight">
 		<item name="appBarLayoutStyle">@style/Widget.Kotatsu.AppBarLayout</item>

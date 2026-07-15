@@ -1,18 +1,28 @@
 package org.koitharu.kotatsu.list.ui.adapter
 
 import org.koitharu.kotatsu.core.ui.BaseListAdapter
+import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.list.ui.model.ListModel
+import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.list.ui.size.ItemSizeResolver
 
 open class MangaListAdapter(
 	listener: MangaListListener,
 	sizeResolver: ItemSizeResolver,
+	titleTapToRead: Boolean = false,
 ) : BaseListAdapter<ListModel>() {
 
 	init {
-		addDelegate(ListItemType.MANGA_LIST, mangaListItemAD(listener))
-		addDelegate(ListItemType.MANGA_LIST_DETAILED, mangaListDetailedItemAD(listener))
-		addDelegate(ListItemType.MANGA_GRID, mangaGridItemAD(sizeResolver, listener))
+		val titleClickListener = if (titleTapToRead) {
+			OnListItemClickListener<MangaListModel> { item, view ->
+				listener.onReadClick(item.toMangaWithOverride(), view)
+			}
+		} else {
+			null
+		}
+		addDelegate(ListItemType.MANGA_LIST, mangaListItemAD(listener, titleClickListener))
+		addDelegate(ListItemType.MANGA_LIST_DETAILED, mangaListDetailedItemAD(listener, titleClickListener))
+		addDelegate(ListItemType.MANGA_GRID, mangaGridItemAD(sizeResolver, listener, titleClickListener))
 		addDelegate(ListItemType.FOOTER_LOADING, loadingFooterAD())
 		addDelegate(ListItemType.STATE_LOADING, loadingStateAD())
 		addDelegate(ListItemType.STATE_ERROR, errorStateListAD(listener))

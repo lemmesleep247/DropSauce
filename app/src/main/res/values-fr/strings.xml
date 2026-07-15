@@ -302,7 +302,6 @@
     <string name="prefetch_content">Préchargement du contenu</string>
     <string name="mark_as_current">Marquer comme actuel</string>
     <string name="language">Langue</string>
-    <string name="theme_name_dynamic">Dynamique</string>
     <string name="color_theme">Schéma de couleurs</string>
     <string name="show_in_grid_view">Afficher en vue grille</string>
     <string name="scrobbling_empty_hint">Pour suivre la progression de la lecture, sélectionnez Menu → Suivre sur l\'écran des détails du manga.</string>

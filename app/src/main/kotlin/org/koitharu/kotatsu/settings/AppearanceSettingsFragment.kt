@@ -5,8 +5,6 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings as SystemSettings
 import android.view.LayoutInflater
 import android.view.View
@@ -95,9 +93,7 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 			AppSettings.KEY_COLOR_THEME,
 			AppSettings.KEY_THEME_AMOLED,
 			AppSettings.KEY_UI_SCALE -> {
-				Handler(Looper.getMainLooper()).postDelayed({
-					activityRecreationHandle.recreateAll()
-				}, 250)
+				activityRecreationHandle.recreateAll()
 			}
 			AppSettings.KEY_APP_LOCALE -> {
 				AppCompatDelegate.setApplicationLocales(settings.appLocales)
@@ -426,7 +422,7 @@ private fun AppearanceScreen(
 						checked = quickFilter,
 						onCheckedChange = { quickFilter = it },
 						icon = R.drawable.ic_filter_menu,
-						
+
 						shape = pos.shape,
 					)
 				}

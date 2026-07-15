@@ -329,7 +329,6 @@
     <string name="no_access_to_file">您沒有權限存取此檔案或資料夾</string>
     <string name="local_manga_directories">本機漫畫目錄</string>
     <string name="authorization_optional">授權 (可選)</string>
-    <string name="theme_name_dynamic">動態</string>
     <string name="color_theme">顏色方案</string>
     <string name="theme_name_miku">Miku</string>
     <string name="theme_name_asuka">Asuka</string>

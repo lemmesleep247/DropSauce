@@ -14,6 +14,8 @@
     <string name="cover_only">Cover only</string>
     <string name="list_mode">List mode</string>
     <string name="title_over_cover">Show title over cover</string>
+    <string name="title_tap_to_read">Tap title to read</string>
+    <string name="title_tap_to_read_summary">In favorites and history, tapping a manga\'s name opens the reader directly</string>
     <string name="increase_cover_spacing">Increase cover spacing</string>
     <string name="settings">Settings</string>
     <string name="remote_sources">Manga sources</string>
@@ -433,12 +435,13 @@
     <string name="prefetch_content">Content preloading</string>
     <string name="mark_as_current">Mark as current</string>
     <string name="language">Language</string>
-    <string name="theme_name_dynamic">Dynamic</string>
     <string name="theme_name_expressive">Expressive</string>
     <string name="color_theme">Color scheme</string>
     <string name="show_in_grid_view">Show in grid view</string>
     <string name="theme_name_miku">Miku</string>
     <string name="theme_name_lime">Remon</string>
+    <string name="theme_name_amber">Amber</string>
+    <string name="theme_name_sky">Sky</string>
     <string name="theme_name_asuka">Asuka</string>
     <string name="theme_name_mion">Mion</string>
     <string name="theme_name_rikka">Rikka</string>
@@ -466,7 +469,8 @@
 	<string name="epub_text_alignment">Text alignment</string>
 	<string name="epub_read_mode">Read mode</string>
 	<string name="epub_mode_scroll">Scroll</string>
-	<string name="epub_mode_paged">Paged</string>
+	<string name="epub_mode_paged_ltr">LTR</string>
+	<string name="epub_mode_paged_rtl">RTL</string>
 	<string name="epub_align_left">Left</string>
 	<string name="epub_align_justified">Justified</string>
 	<string name="epub_publisher_style">Use book formatting</string>

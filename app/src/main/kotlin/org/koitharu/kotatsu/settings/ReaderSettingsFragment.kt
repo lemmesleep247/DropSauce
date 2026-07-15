@@ -27,7 +27,9 @@ import org.koitharu.kotatsu.core.prefs.ReaderAnimation
 import org.koitharu.kotatsu.core.prefs.ReaderBackground
 import org.koitharu.kotatsu.core.prefs.ReaderControl
 import org.koitharu.kotatsu.core.prefs.ReaderMode
+import org.koitharu.kotatsu.core.ui.util.ActivityRecreationHandle
 import org.koitharu.kotatsu.parsers.util.mapToSet
+import javax.inject.Inject
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
 import org.koitharu.kotatsu.settings.compose.CategoryPalette
@@ -47,6 +49,9 @@ import org.koitharu.kotatsu.settings.compose.rememberStringSetPref
 @AndroidEntryPoint
 class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_settings) {
 
+	@Inject
+	lateinit var activityRecreationHandle: ActivityRecreationHandle
+
 	override fun onCreateView(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
@@ -58,6 +63,7 @@ class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_setti
 				ReaderScreen(
 					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onTapActions = router::openReaderTapGridSettings,
+					onTitleTapToReadChanged = { activityRecreationHandle.recreateAll() },
 				)
 			}
 		}
@@ -73,6 +79,7 @@ class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_setti
 private fun ReaderScreen(
 	onBack: () -> Unit,
 	onTapActions: () -> Unit,
+	onTitleTapToReadChanged: () -> Unit,
 ) {
 	val ctx = LocalContext.current
 	val colors = CategoryPalette.forKey("reader")
@@ -136,6 +143,7 @@ private fun ReaderScreen(
 		ReaderBackground.DEFAULT.name,
 	)
 	var pagesNumbers by rememberBooleanPref(AppSettings.KEY_PAGES_NUMBERS, false)
+	var titleTapToRead by rememberBooleanPref(AppSettings.KEY_TITLE_TAP_TO_READ, true)
 	var pagesPreload by rememberStringPref(AppSettings.KEY_PAGES_PRELOAD, "2")
 
 	val isWebtoonMode = readerMode == ReaderMode.WEBTOON.name
@@ -162,9 +170,23 @@ private fun ReaderScreen(
 						checked = readerModeDetect,
 						onCheckedChange = { readerModeDetect = it },
 						icon = R.drawable.ic_auto_detect,
-						
+
 						shape = pos.shape,
 						enabled = !isWebtoonMode,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.title_tap_to_read),
+						subtitle = stringResource(R.string.title_tap_to_read_summary),
+						checked = titleTapToRead,
+						onCheckedChange = {
+							titleTapToRead = it
+							onTitleTapToReadChanged()
+						},
+						icon = R.drawable.ic_read,
+
+						shape = pos.shape,
 					)
 				}
 			}

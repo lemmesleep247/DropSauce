@@ -42,13 +42,16 @@ abstract class FragmentContainerActivity(private val fragmentClass: Class<out Fr
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-		// Top inset is not consumed and not padded here: the appbar's WindowInsetHolder occupies it
-		// while expanded and scrolls away with the toolbar, letting content go edge-to-edge under
-		// the status bar (protected by the StatusBarBlurView).
+		// The collapsing appbar is pinned (exitUntilCollapsed), so it owns the status bar area via
+		// top padding, same as the Downloads screen. The landscape layout has no collapsing bar
+		// and uses fitsSystemWindows instead.
 		viewBinding.appbar.updatePadding(
 			left = bars.left,
 			right = bars.right,
 		)
+		if (viewBinding.collapsingToolbarLayout != null) {
+			viewBinding.appbar.updatePadding(top = bars.top)
+		}
 		return insets
 	}
 

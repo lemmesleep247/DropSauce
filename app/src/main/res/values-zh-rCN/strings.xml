@@ -302,7 +302,6 @@
     <string name="prefetch_content">内容预加载</string>
     <string name="mark_as_current">标为当前进度</string>
     <string name="language">语言</string>
-    <string name="theme_name_dynamic">动态</string>
     <string name="color_theme">配色主题</string>
     <string name="show_in_grid_view">网格视图</string>
     <string name="theme_name_miku">Miku</string>

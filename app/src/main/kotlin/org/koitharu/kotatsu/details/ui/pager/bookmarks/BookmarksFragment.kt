@@ -38,6 +38,7 @@ import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
 import org.koitharu.kotatsu.databinding.FragmentMangaBookmarksBinding
 import org.koitharu.kotatsu.details.ui.DetailsViewModel
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesViewModel
+import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.list.ui.GridSpanResolver
 import org.koitharu.kotatsu.list.ui.adapter.ListItemType
 import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
@@ -179,6 +180,7 @@ class BookmarksFragment : BaseFragment<FragmentMangaBookmarksBinding>(),
 		menu: Menu,
 	): Boolean {
 		menuInflater.inflate(R.menu.mode_bookmarks, menu)
+		menu.findItem(R.id.action_save)?.isVisible = activityViewModel.getMangaOrNull()?.isEpub != true
 		return true
 	}
 

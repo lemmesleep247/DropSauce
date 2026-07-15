@@ -560,8 +560,8 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-						.height(112.dp)
-						.padding(8.dp),
+                        .height(112.dp)
+                        .padding(8.dp),
                 ) {
                     val targetBias = when (selectedIndex) {
                         0 -> -1f
@@ -581,7 +581,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             .fillMaxHeight()
                             .fillMaxWidth(0.25f)
                             .align(BiasAlignment(horizontalBias = animatedBias, verticalBias = 0f))
-							.clip(RoundedCornerShape(22.dp))
+                            .clip(RoundedCornerShape(22.dp))
                             .background(MaterialTheme.colorScheme.primary),
                     )
 
@@ -614,13 +614,13 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                     Icon(
                                         painter = painterResource(iconRes),
                                         contentDescription = null,
-										modifier = Modifier.size(34.dp),
+                                        modifier = Modifier.size(34.dp),
                                         tint = contentColor,
                                     )
-									Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = stringResource(labelRes),
-										style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -778,6 +778,9 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     @Composable
     private fun EpubConfigContent() {
         val callback = remember { findParentCallback(Callback::class.java) }
+        var readingMode by remember {
+            mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
+        }
         val pagerState = rememberPagerState(pageCount = { 2 })
         val scope = rememberCoroutineScope()
         // book formatting on -> publisher styles win, so our formatting options are inert: grey
@@ -799,8 +802,16 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     EpubTextSizeSection(enabled = editable)
                     EpubSliderSection(R.drawable.ic_reader_vertical, stringResource(R.string.epub_line_height), settings.epubLineHeight, 100..240, "%", defaultValue = 160, enabled = editable) { settings.epubLineHeight = it }
                     EpubSliderSection(R.drawable.ic_move_horizontal, stringResource(R.string.epub_horizontal_margin), settings.epubHorizontalPadding, 0..64, " dp", defaultValue = 20, enabled = editable) { settings.epubHorizontalPadding = it }
+                    EpubSliderSection(R.drawable.ic_gesture_vertical, stringResource(R.string.epub_vertical_margin), settings.epubVerticalPadding, 0..112, " dp", defaultValue = 112, enabled = editable && readingMode != "scroll") { settings.epubVerticalPadding = it }
                 } else {
-                    EpubReadModeSection()
+                    EpubReadModeSection(readingMode) { mode ->
+                        readingMode = mode
+                        settings.epubReadingMode = mode
+                        when {
+                            mode == "paged_rtl" && settings.epubTextAlign == "left" -> settings.epubTextAlign = "right"
+                            mode != "paged_rtl" && settings.epubTextAlign == "right" -> settings.epubTextAlign = "left"
+                        }
+                    }
                     EpubChoiceSection(
                         R.drawable.ic_title,
                         stringResource(R.string.epub_font_family),
@@ -818,8 +829,16 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     EpubChoiceSection(
                         R.drawable.ic_reader_ltr,
                         stringResource(R.string.epub_text_alignment),
-                        listOf("left" to stringResource(R.string.epub_align_left), "justify" to stringResource(R.string.epub_align_justified)),
-                        settings.epubTextAlign,
+                        listOf(
+                            if (readingMode == "paged_rtl") "right" to stringResource(R.string.epub_align_right)
+                            else "left" to stringResource(R.string.epub_align_left),
+                            "justify" to stringResource(R.string.epub_align_justified),
+                        ),
+                        when {
+                            readingMode == "paged_rtl" && settings.epubTextAlign == "left" -> "right"
+                            readingMode != "paged_rtl" && settings.epubTextAlign == "right" -> "left"
+                            else -> settings.epubTextAlign
+                        },
                         enabled = editable,
                     ) { settings.epubTextAlign = it }
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -883,11 +902,11 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             icon, title, "$current$suffix", enabled = enabled,
             onReset = { current = defaultValue.also(onChange) },
         ) {
-			EpubContinuousSlider(
+            EpubContinuousSlider(
                 value = current.toFloat(),
-				onValueChange = { value ->
-					val rounded = value.roundToInt()
-					if (rounded != current) current = rounded.also(onChange)
+                onValueChange = { value ->
+                    val rounded = value.roundToInt()
+                    if (rounded != current) current = rounded.also(onChange)
                 },
                 valueRange = range.first.toFloat()..range.last.toFloat(),
                 enabled = enabled,
@@ -895,23 +914,23 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
     }
 
-	@OptIn(ExperimentalMaterial3Api::class)
-	@Composable
-	private fun EpubContinuousSlider(
-		value: Float,
-		onValueChange: (Float) -> Unit,
-		valueRange: ClosedFloatingPointRange<Float>,
-		enabled: Boolean,
-	) {
-		Slider(
-			value = value,
-			onValueChange = onValueChange,
-			valueRange = valueRange,
-			steps = 0,
-			enabled = enabled,
-			modifier = Modifier.fillMaxWidth(),
-		)
-	}
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun EpubContinuousSlider(
+        value: Float,
+        onValueChange: (Float) -> Unit,
+        valueRange: ClosedFloatingPointRange<Float>,
+        enabled: Boolean,
+    ) {
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = 0,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 
     @Composable
     private fun EpubChoiceSection(
@@ -924,6 +943,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         onSelected: (String) -> Unit,
     ) {
         var current by remember { mutableStateOf(selected) }
+        LaunchedEffect(selected) { current = selected }
         EpubSettingCard(icon, title, null, enabled = enabled) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 choices.forEach { (value, label) ->
@@ -950,15 +970,16 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 
     // read-mode picker styled like the manga reader's segmented control
     @Composable
-    private fun EpubReadModeSection(enabled: Boolean = true) {
+    private fun EpubReadModeSection(
+        current: String,
+        enabled: Boolean = true,
+        onSelected: (String) -> Unit,
+    ) {
         val modes = listOf(
             "scroll" to (R.string.epub_mode_scroll to R.drawable.ic_reader_vertical),
-			"paged_ltr" to (R.string.epub_mode_paged_ltr to R.drawable.ic_reader_ltr),
-			"paged_rtl" to (R.string.epub_mode_paged_rtl to R.drawable.ic_reader_rtl),
+            "paged_ltr" to (R.string.epub_mode_paged_ltr to R.drawable.ic_reader_ltr),
+            "paged_rtl" to (R.string.epub_mode_paged_rtl to R.drawable.ic_reader_rtl),
         )
-		var current by remember {
-			mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
-		}
         val selectedIndex = modes.indexOfFirst { it.first == current }.coerceAtLeast(0)
 
         Column(
@@ -976,11 +997,11 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-						.height(64.dp)
-						.padding(6.dp),
+                        .height(64.dp)
+                        .padding(6.dp),
                 ) {
                     val animatedBias by animateFloatAsState(
-						targetValue = selectedIndex - 1f,
+                        targetValue = selectedIndex - 1f,
                         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                         label = "epub_mode_highlighter",
                     )
@@ -988,9 +1009,9 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-							.fillMaxWidth(1f / modes.size)
+                            .fillMaxWidth(1f / modes.size)
                             .align(BiasAlignment(horizontalBias = animatedBias, verticalBias = 0f))
-							.clip(RoundedCornerShape(22.dp))
+                            .clip(RoundedCornerShape(22.dp))
                             .background(MaterialTheme.colorScheme.primary),
                     )
 
@@ -1014,7 +1035,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                         enabled = enabled,
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null,
-                                    ) { current = value; settings.epubReadingMode = value },
+                                    ) { onSelected(value) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Row(
@@ -1023,13 +1044,13 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                     Icon(
                                         painter = painterResource(iconRes),
                                         contentDescription = null,
-										modifier = Modifier.size(22.dp),
+                                        modifier = Modifier.size(22.dp),
                                         tint = contentColor,
                                     )
-									Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(labelRes),
-										style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,

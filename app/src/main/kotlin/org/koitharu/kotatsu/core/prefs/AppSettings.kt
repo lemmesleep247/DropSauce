@@ -254,6 +254,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getInt(KEY_EPUB_HORIZONTAL_PADDING, 20)
 		set(value) = prefs.edit { putInt(KEY_EPUB_HORIZONTAL_PADDING, value.coerceIn(0, 64)) }
 
+	var epubVerticalPadding: Int
+		get() = prefs.getInt(KEY_EPUB_VERTICAL_PADDING, 112).coerceIn(0, 112)
+		set(value) = prefs.edit { putInt(KEY_EPUB_VERTICAL_PADDING, value.coerceIn(0, 112)) }
+
 	var epubTextAlign: String
 		get() = prefs.getString(KEY_EPUB_TEXT_ALIGN, "justify") ?: "justify"
 		set(value) = prefs.edit { putString(KEY_EPUB_TEXT_ALIGN, value) }
@@ -1027,6 +1031,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_EPUB_FONT_FAMILY = "epub_font_family"
 		const val KEY_EPUB_LINE_HEIGHT = "epub_line_height"
 		const val KEY_EPUB_HORIZONTAL_PADDING = "epub_horizontal_padding"
+		const val KEY_EPUB_VERTICAL_PADDING = "epub_vertical_padding"
 		const val KEY_EPUB_TEXT_ALIGN = "epub_text_align"
 		const val KEY_EPUB_READING_MODE = "epub_reading_mode"
 		const val KEY_EPUB_PUBLISHER_STYLE = "epub_publisher_style"

@@ -296,7 +296,7 @@ class ReaderViewModel @Inject constructor(
         }?.toMangaPage()
     }
 
-    fun switchChapter(id: Long, page: Int) {
+    fun switchChapter(id: Long, page: Int, scroll: Int = 0) {
         val prevJob = loadingJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
@@ -304,7 +304,7 @@ class ReaderViewModel @Inject constructor(
             if (!chaptersLoader.loadSingleChapter(id)) {
                 return@launchLoadingJob
             }
-            val newState = ReaderState(id, page, 0)
+            val newState = ReaderState(id, page, scroll)
             content.value = ReaderContent(chaptersLoader.snapshot(), newState)
             saveCurrentState(newState)
         }

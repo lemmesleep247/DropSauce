@@ -76,11 +76,11 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 		val args = arguments ?: Bundle.EMPTY
 		var defaultTab = args.getInt(AppRouter.KEY_TAB, settings.defaultDetailsTab)
-		// EPUB books have text chapters only - no page thumbnails or bookmarks
+		// EPUB books have text chapters and highlights, but no page thumbnails.
 		val isEpub = viewModel.getMangaOrNull()?.isEpub == true
-		val adapter = ChaptersPagesAdapter(this, settings.isPagesTabEnabled && !isEpub, isChaptersOnly = isEpub)
+		val adapter = ChaptersPagesAdapter(this, settings.isPagesTabEnabled && !isEpub)
 		if (isEpub) {
-			defaultTab = TAB_CHAPTERS
+			defaultTab = if (defaultTab == TAB_BOOKMARKS) 1 else TAB_CHAPTERS
 		} else if (!adapter.isPagesTabEnabled) {
 			defaultTab = (defaultTab - 1).coerceAtLeast(TAB_CHAPTERS)
 		}
@@ -94,8 +94,7 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		TabLayoutMediator(binding.tabs, binding.pager, adapter).attach()
 		binding.tabs.addOnTabSelectedListener(this)
 		binding.pager.setCurrentItem(defaultTab, false)
-		// epub keeps its single Chapters tab visible so the header layout stays put
-		keepTabsVisible = isEpub
+		keepTabsVisible = false
 		binding.tabs.isVisible = adapter.itemCount > 1 || keepTabsVisible
 
 		val menuProvider = ChapterPagesMenuProvider(this, binding.pager, settings, viewModel, binding.layoutToolbarContent)

@@ -1,19 +1,33 @@
 package org.koitharu.kotatsu.reader.ui.epub
 
+import android.animation.ValueAnimator
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.text.Selection
+import android.text.Spannable
+import android.text.SpannableStringBuilder
 import android.text.Layout
+import android.text.SpannableString
 import android.text.Spanned
 import android.text.SpannedString
 import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
+import android.text.style.AlignmentSpan
+import android.text.style.BackgroundColorSpan
+import android.text.style.CharacterStyle
+import android.text.style.StyleSpan
 import android.util.TypedValue
+import android.view.ActionMode
 import android.view.ContextThemeWrapper
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -24,34 +38,56 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jsoup.Jsoup
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.bookmarks.domain.Bookmark
+import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
+import org.koitharu.kotatsu.bookmarks.domain.epubHighlight
+import org.koitharu.kotatsu.bookmarks.domain.epubHighlightUrl
+import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
+import org.koitharu.kotatsu.core.ui.widgets.SelectableTextView
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.isNightMode
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.databinding.FragmentReaderEpubBinding
+import org.koitharu.kotatsu.databinding.SheetEpubDictionaryBinding
+import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.ui.ReaderState
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderAdapter
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
+import java.time.Instant
+import java.util.UUID
 import java.util.zip.ZipFile
 import javax.inject.Inject
+import kotlin.math.ceil
 import com.google.android.material.R as materialR
 
 /**
@@ -64,8 +100,16 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	@Inject
 	lateinit var settings: AppSettings
+	@Inject
+	lateinit var bookmarksRepository: BookmarksRepository
+	@Inject
+	@BaseHttpClient
+	lateinit var httpClient: OkHttpClient
 
 	private var chapters: List<NativeChapter> = emptyList()
+	private var archiveFiles: Map<File, ZipFile> = emptyMap()
+	private val archiveLock = Any()
+	private val loadingChapters = HashSet<Int>()
 	private var verticalView: RecyclerView? = null
 	private var pagerView: ViewPager2? = null
 	private var pages: List<NativePage> = emptyList()
@@ -77,15 +121,18 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private var restoring = false
 	private var progressScheduled = false
 	private var renderGeneration = 0
-	private var repaginatePending = false
 	private var reflowLocator: Locator? = null
+	private var colorAnimator: ValueAnimator? = null
+	private var scrollTopClipPx = 0
+	private var pagedTopBarClearancePx = 0
+	private var highlights: List<Bookmark> = emptyList()
+	private var highlightsJob: Job? = null
+	private var highlightMangaId = 0L
 
 	private val rebuildRunnable = Runnable {
-		val repaginate = repaginatePending
-		repaginatePending = false
 		val locator = reflowLocator
 		reflowLocator = null
-		if (chapters.isNotEmpty()) refreshReader(repaginate, locator ?: currentLocator())
+		if (chapters.isNotEmpty()) refreshReader(locator ?: currentLocator())
 	}
 
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?) =
@@ -93,52 +140,91 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	override fun onViewBindingCreated(binding: FragmentReaderEpubBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
+		binding.root.post(::updateTopClearances)
 		settings.observeAsFlow(AppSettings.KEY_EPUB_THEME) { epubTheme }
-			.observe(viewLifecycleOwner) { scheduleRefresh(false) }
+			.observe(viewLifecycleOwner) { animateColors() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_SIZE) { epubFontSize }
-			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_FONT_FAMILY) { epubFontFamily }
-			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_LINE_HEIGHT) { epubLineHeight }
-			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_HORIZONTAL_PADDING) { epubHorizontalPadding }
-			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_VERTICAL_PADDING) { epubVerticalPadding }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_TEXT_ALIGN) { epubTextAlign }
-			.observe(viewLifecycleOwner) { scheduleRefresh(true) }
+			.observe(viewLifecycleOwner) { refreshAlignment() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }
 			.observe(viewLifecycleOwner) {
 				binding.root.requestApplyInsets()
-				scheduleRefresh(false)
+				switchReadingMode()
 			}
 	}
 
 	override fun onDestroyView() {
 		viewBinding?.root?.removeCallbacks(rebuildRunnable)
+		highlightsJob?.cancel()
+		highlightsJob = null
+		highlights = emptyList()
+		highlightMangaId = 0L
+		colorAnimator?.cancel()
+		colorAnimator = null
 		verticalView = null
 		pagerView = null
 		pages = emptyList()
 		paginationKey = null
 		pageRange = null
 		reflowLocator = null
+		loadingChapters.clear()
+		synchronized(archiveLock) {
+			archiveFiles.values.forEach(ZipFile::close)
+			archiveFiles = emptyMap()
+		}
 		super.onDestroyView()
 	}
 
 	override fun onCreateAdapter(): BaseReaderAdapter<*>? = null
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
-		// Reader controls overlay the book. Reserving their size here leaves permanent blank bands
-		// whenever the controls are hidden.
+		val density = resources.displayMetrics.density
+		scrollTopClipPx = activity?.findViewById<View>(R.id.infoBar)?.height
+			?.takeIf { it > 0 }
+			?: (SCROLL_INFO_BAR_HEIGHT_DP * density).toInt()
+		verticalView?.setPadding(0, scrollTopClipPx, 0, 0)
 		v.updatePadding(0, 0, 0, 0)
+		v.post(::updateTopClearances)
 		return insets
 	}
 
+	private fun updateTopClearances() {
+		val density = resources.displayMetrics.density
+		activity?.findViewById<View>(R.id.infoBar)?.height?.takeIf { it > 0 }?.let { height ->
+			if (height != scrollTopClipPx) {
+				scrollTopClipPx = height
+				verticalView?.setPadding(0, height, 0, 0)
+			}
+		}
+		val topBarBottom = activity?.findViewById<View>(R.id.appbar_top)?.bottom ?: 0
+		val clearance = topBarBottom.takeIf { it > 0 }
+			?: (PAGED_TOP_BAR_FALLBACK_DP * density).toInt()
+		if (clearance != pagedTopBarClearancePx) {
+			pagedTopBarClearancePx = clearance
+			if (isPagedMode && pagerView != null) scheduleReflow()
+		}
+	}
+
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
-		val mangaChapters = viewModel.getMangaOrNull()?.chapters.orEmpty()
+		val manga = viewModel.getMangaOrNull() ?: return
+		observeHighlights(manga)
+		val mangaChapters = manga.chapters.orEmpty()
 		if (mangaChapters.isEmpty()) return
 		if (chapters.isEmpty() && !loading) {
 			loading = true
 			try {
-				chapters = withContext(Dispatchers.IO) { parseChapters(mangaChapters) }
+				val prepared = withContext(Dispatchers.IO) { prepareBook(mangaChapters) }
+				chapters = prepared.chapters
+				archiveFiles = prepared.archives
 			} finally {
 				loading = false
 			}
@@ -147,34 +233,69 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val state = pendingState ?: viewModel.getCurrentState()
 		val chapter = state?.chapterId?.let { id -> chapters.indexOfFirst { it.id == id } }
 			?.takeIf { it >= 0 } ?: lastLocator.chapter.coerceIn(chapters.indices)
+		withContext(Dispatchers.IO) { ensureChaptersLoaded(chapter.preloadRange()) }
 		val offset = state?.scroll?.let { pm -> chapters[chapter].text.length * pm.coerceIn(0, 1000) / 1000 }
 			?: lastLocator.offset
 		renderMode(Locator(chapter, offset))
 	}
 
-	private fun parseChapters(source: List<MangaChapter>): List<NativeChapter> {
-		val archives = HashMap<File, ZipFile>()
-		return try {
-			source.map { chapter ->
+	private fun observeHighlights(manga: Manga) {
+		if (highlightMangaId == manga.id) return
+		highlightMangaId = manga.id
+		highlightsJob?.cancel()
+		highlightsJob = viewLifecycleOwner.lifecycleScope.launch {
+			bookmarksRepository.observeBookmarks(manga).collect { bookmarks ->
+				highlights = bookmarks.filter { it.epubHighlight != null }
+				verticalView?.adapter?.notifyDataSetChanged()
+				pagerView?.adapter?.notifyDataSetChanged()
+			}
+		}
+	}
+
+	private fun prepareBook(source: List<MangaChapter>): PreparedBook {
+		val items = source.map { chapter ->
 				val uri = chapter.url.toUri()
-				val file = File(uri.schemeSpecificPart)
-				val zip = archives.getOrPut(file) { ZipFile(file) }
-				val entryName = uri.fragment.orEmpty()
-				val entry = zip.getEntry(entryName) ?: zip.getEntry(entryName.removePrefix("/"))
-				val raw = entry?.let { zip.getInputStream(it).bufferedReader().use { reader -> reader.readText() } }.orEmpty()
-				val document = Jsoup.parse(raw)
-				document.select("script,style,noscript").remove()
-				val parsed = HtmlCompat.fromHtml(document.body().html(), HtmlCompat.FROM_HTML_MODE_LEGACY)
-				val text = SpannedString(parsed.trimmed())
 				NativeChapter(
 					id = chapter.id,
 					title = chapter.title.orEmpty(),
-					text = if (text.isNotEmpty()) text else SpannedString("\u2014"),
+					file = File(uri.schemeSpecificPart),
+					entryName = uri.fragment.orEmpty(),
 				)
 			}
-		} finally {
+		val archives = HashMap<File, ZipFile>()
+		try {
+			items.map(NativeChapter::file).distinct().forEach { archives[it] = ZipFile(it) }
+		} catch (error: Throwable) {
 			archives.values.forEach(ZipFile::close)
+			throw error
 		}
+		return PreparedBook(items, archives)
+	}
+
+	private fun ensureChaptersLoaded(range: IntRange) {
+		range.forEach(::ensureChapterLoaded)
+	}
+
+	private fun ensureChapterLoaded(index: Int) {
+		val chapter = chapters.getOrNull(index) ?: return
+		if (chapter.content != null) return
+		synchronized(chapter) {
+			if (chapter.content != null) return
+			val raw = synchronized(archiveLock) {
+				val zip = archiveFiles[chapter.file] ?: return
+				val entry = zip.getEntry(chapter.entryName) ?: zip.getEntry(chapter.entryName.removePrefix("/"))
+				entry?.let { zip.getInputStream(it).bufferedReader().use { reader -> reader.readText() } }.orEmpty()
+			}
+			chapter.content = parseChapter(raw)
+		}
+	}
+
+	private fun parseChapter(raw: String): Spanned {
+		val document = Jsoup.parse(raw)
+		document.select("script,style,noscript").remove()
+		val parsed = SpannableString(HtmlCompat.fromHtml(document.body().html(), HtmlCompat.FROM_HTML_MODE_LEGACY).trimmed())
+		parsed.getSpans(0, parsed.length, AlignmentSpan::class.java).forEach(parsed::removeSpan)
+		return SpannedString(parsed).takeIf { it.isNotEmpty() } ?: EMPTY_CHAPTER_TEXT
 	}
 
 	private fun Spanned.trimmed(): CharSequence {
@@ -185,17 +306,31 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		return subSequence(start, end)
 	}
 
-	private fun scheduleRefresh(repaginate: Boolean) {
-		val root = viewBinding?.root ?: return
-		repaginatePending = repaginatePending || repaginate
-		if (repaginate && reflowLocator == null && chapters.isNotEmpty()) reflowLocator = currentLocator()
-		root.removeCallbacks(rebuildRunnable)
-		if (repaginate) {
-			refreshVisibleStyles()
-			root.postDelayed(rebuildRunnable, REPAGINATE_DELAY_MS)
-		} else {
-			root.post(rebuildRunnable)
+	private fun Int.preloadRange(): IntRange =
+		(this - PRELOAD_RADIUS).coerceAtLeast(0)..(this + PRELOAD_RADIUS).coerceAtMost(chapters.lastIndex)
+
+	private fun preloadAround(center: Int) {
+		center.preloadRange().forEach { index ->
+			if (chapters[index].content != null || !loadingChapters.add(index)) return@forEach
+			viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+				try {
+					ensureChapterLoaded(index)
+				} finally {
+					withContext(Dispatchers.Main) {
+						loadingChapters.remove(index)
+						verticalView?.adapter?.notifyItemChanged(index)
+					}
+				}
+			}
 		}
+	}
+
+	private fun scheduleReflow() {
+		val root = viewBinding?.root ?: return
+		if (reflowLocator == null && chapters.isNotEmpty()) reflowLocator = currentLocator()
+		root.removeCallbacks(rebuildRunnable)
+		refreshVisibleStyles()
+		root.postDelayed(rebuildRunnable, REPAGINATE_DELAY_MS)
 	}
 
 	private fun refreshVisibleStyles() {
@@ -207,14 +342,68 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		pagerView?.adapter?.notifyDataSetChanged()
 	}
 
-	private fun refreshReader(repaginate: Boolean, locator: Locator) {
-		if (isPagedMode) {
-			if (!repaginate && pagerView != null) {
-				viewBinding?.readerContainer?.setBackgroundColor(backgroundColor)
-				pagerView?.adapter?.notifyDataSetChanged()
-				return
+	private fun animateColors() {
+		val container = viewBinding?.readerContainer ?: return
+		val targetBackground = backgroundColor
+		val targetForeground = foregroundColor
+		val startBackground = (container.background as? ColorDrawable)?.color ?: targetBackground
+		val startForeground = firstVisibleTextView()?.currentTextColor ?: targetForeground
+		colorAnimator?.cancel()
+		colorAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+			duration = COLOR_ANIMATION_MS
+			addUpdateListener { animator ->
+				val fraction = animator.animatedFraction
+				applyVisibleColors(
+					ColorUtils.blendARGB(startBackground, targetBackground, fraction),
+					ColorUtils.blendARGB(startForeground, targetForeground, fraction),
+				)
 			}
-			if (repaginate) paginationKey = null
+			start()
+		}
+	}
+
+	private fun applyVisibleColors(background: Int, foreground: Int) {
+		viewBinding?.root?.setBackgroundColor(background)
+		viewBinding?.readerContainer?.setBackgroundColor(background)
+		fun recolor(recycler: RecyclerView?) {
+			recycler?.setBackgroundColor(background)
+			if (recycler != null) for (index in 0 until recycler.childCount) {
+				(recycler.getChildAt(index) as? TextView)?.apply {
+					setBackgroundColor(background)
+					setTextColor(foreground)
+				}
+			}
+		}
+		recolor(verticalView)
+		recolor(pagerView?.getChildAt(0) as? RecyclerView)
+	}
+
+	private fun firstVisibleTextView(): TextView? =
+		(verticalView?.getChildAt(0) as? TextView)
+			?: ((pagerView?.getChildAt(0) as? RecyclerView)?.getChildAt(0) as? TextView)
+
+	private fun refreshAlignment() {
+		fun update(recycler: RecyclerView?) {
+			if (recycler != null) for (index in 0 until recycler.childCount) {
+				(recycler.getChildAt(index) as? TextView)?.let(::applyTextAlignment)
+			}
+		}
+		update(verticalView)
+		update(pagerView?.getChildAt(0) as? RecyclerView)
+	}
+
+	private fun switchReadingMode() {
+		if (chapters.isEmpty()) return
+		val locator = currentLocator()
+		viewBinding?.root?.removeCallbacks(rebuildRunnable)
+		reflowLocator = null
+		paginationKey = null
+		refreshReader(locator)
+	}
+
+	private fun refreshReader(locator: Locator) {
+		if (isPagedMode) {
+			paginationKey = null
 			renderPaged(viewBinding?.readerContainer ?: return, locator)
 		} else if (verticalView != null) {
 			verticalView?.setBackgroundColor(backgroundColor)
@@ -264,8 +453,10 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			overScrollMode = View.OVER_SCROLL_NEVER
 			isClickable = false
 			isFocusable = false
-			descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+			descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 			setBackgroundColor(backgroundColor)
+			clipToPadding = true
+			setPadding(0, scrollTopClipPx, 0, 0)
 			addOnScrollListener(object : RecyclerView.OnScrollListener() {
 				override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) = scheduleProgress()
 			})
@@ -288,7 +479,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private fun renderPaged(container: FrameLayout, locator: Locator) {
 		val generation = ++renderGeneration
 		val key = "${container.width}:${container.height}:${settings.epubFontSize}:${settings.epubFontFamily}:" +
-			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:$effectiveTextAlign:${settings.epubReadingMode}"
+			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:${settings.epubVerticalPadding}:" +
+			"$effectiveTextAlign:${settings.epubReadingMode}"
 		container.setBackgroundColor(backgroundColor)
 		if (pages.isNotEmpty() && paginationKey == key && pageRange?.contains(locator.chapter) == true) {
 			renderPagedReady(container, locator)
@@ -331,7 +523,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		(pager.getChildAt(0) as? RecyclerView)?.apply {
 			isClickable = false
 			isFocusable = false
-			descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+			descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 		}
 		pagerView = pager
 		container.addView(pager)
@@ -380,17 +572,22 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun paginate(viewWidth: Int, viewHeight: Int, range: IntRange): List<NativePage> {
+		ensureChaptersLoaded(range)
 		val density = resources.displayMetrics.density
 		val horizontal = (settings.epubHorizontalPadding * density).toInt().coerceAtLeast(1)
-		val vertical = (16 * density).toInt()
+		val verticalTop = verticalTopPaddingPx
+		val verticalBottom = verticalBottomPaddingPx
 		val width = (viewWidth - horizontal * 2).coerceAtLeast(1)
-		val height = (viewHeight - vertical * 2).coerceAtLeast(1)
 		val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
 			color = foregroundColor
 			textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics) *
 				settings.epubFontSize / 100f
 			typeface = readerTypeface
 		}
+		// A page fragment gets its own font padding when rendered. Reserving one line prevents the
+		// final baseline from being clipped when the vertical margins leave a tight viewport.
+		val bottomSafety = ceil(paint.fontSpacing * settings.epubLineHeight / 100f).toInt()
+		val height = (viewHeight - verticalTop - verticalBottom - bottomSafety).coerceAtLeast(1)
 		val result = ArrayList<NativePage>()
 		range.forEach { chapterIndex ->
 			val chapter = chapters[chapterIndex]
@@ -401,7 +598,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				.setLineSpacing(0f, settings.epubLineHeight / 100f)
 				.apply {
 					if (android.os.Build.VERSION.SDK_INT >= 26 && effectiveTextAlign == "justify") {
-						setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD)
+						setJustificationMode(1) // JUSTIFICATION_MODE_INTER_WORD on API 26+
 					}
 				}.build()
 			var start = 0
@@ -420,11 +617,28 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 	}
 
-	private fun createTextView(parent: ViewGroup, paged: Boolean): TextView = TextView(parent.context).apply {
+	private fun createTextView(parent: ViewGroup, paged: Boolean): TextView = SelectableTextView(parent.context).apply {
 		layoutParams = if (paged) ViewGroup.LayoutParams(-1, -1) else ViewGroup.LayoutParams(-1, -2)
 		applyTextStyle(this, paged)
-		isClickable = false
-		isLongClickable = false
+		setTextIsSelectable(true)
+		setTag(R.id.tag_epub_selectable_text, true)
+		customSelectionActionModeCallback = TextSelectionCallback(this)
+		installHighlightTapHandler(this)
+	}
+
+	private fun styledChapterText(chapterIndex: Int): Spanned {
+		val chapter = chapters[chapterIndex]
+		val text = SpannableString(chapter.text)
+		highlights.forEach { bookmark ->
+			if (bookmark.chapterId != chapter.id) return@forEach
+			val highlight = bookmark.epubHighlight ?: return@forEach
+			val start = highlight.start.coerceIn(0, text.length)
+			val end = highlight.end.coerceIn(start, text.length)
+			if (start == end) return@forEach
+			text.setSpan(BackgroundColorSpan(HIGHLIGHT_COLOR), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+			text.setSpan(HighlightMarker(bookmark.pageId), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+		}
+		return text
 	}
 
 	private fun applyTextStyle(textView: TextView, paged: Boolean) = with(textView) {
@@ -434,26 +648,299 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		typeface = readerTypeface
 		setLineSpacing(0f, settings.epubLineHeight / 100f)
 		includeFontPadding = true
+		applyTextAlignment(this)
+		val density = resources.displayMetrics.density
+		val h = (settings.epubHorizontalPadding * density).toInt()
+		val top = if (paged) verticalTopPaddingPx else (20 * density).toInt()
+		val bottom = if (paged) verticalBottomPaddingPx else (36 * density).toInt()
+		setPadding(h, top, h, bottom)
+	}
+
+	private fun applyTextAlignment(textView: TextView) = with(textView) {
+		layoutDirection = View.LAYOUT_DIRECTION_LTR
 		textDirection = if (isRtlPagedMode) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_FIRST_STRONG
 		gravity = Gravity.TOP or when (effectiveTextAlign) {
 			"center" -> Gravity.CENTER_HORIZONTAL
-			"right", "end" -> Gravity.RIGHT
-			"justify" -> if (isRtlPagedMode) Gravity.RIGHT else Gravity.LEFT
+			"right", "end" -> Gravity.END
+			"justify" -> if (isRtlPagedMode) Gravity.END else Gravity.START
 			else -> Gravity.START
 		}
 		textAlignment = when (effectiveTextAlign) {
 			"center" -> View.TEXT_ALIGNMENT_CENTER
-			"right", "end" -> View.TEXT_ALIGNMENT_VIEW_END
+			"right", "end" -> View.TEXT_ALIGNMENT_GRAVITY
 			"justify" -> if (isRtlPagedMode) View.TEXT_ALIGNMENT_TEXT_START else View.TEXT_ALIGNMENT_VIEW_START
 			else -> View.TEXT_ALIGNMENT_VIEW_START
 		}
-		if (android.os.Build.VERSION.SDK_INT >= 26 && effectiveTextAlign == "justify") {
-			justificationMode = Layout.JUSTIFICATION_MODE_INTER_WORD
+		if (android.os.Build.VERSION.SDK_INT >= 26) {
+			justificationMode = if (effectiveTextAlign == "justify") {
+				Layout.JUSTIFICATION_MODE_INTER_WORD
+			} else {
+				Layout.JUSTIFICATION_MODE_NONE
+			}
 		}
-		val density = resources.displayMetrics.density
-		val h = (settings.epubHorizontalPadding * density).toInt()
-		val v = ((if (paged) 16 else 20) * density).toInt()
-		setPadding(h, v, h, if (paged) v else (36 * density).toInt())
+	}
+
+	private inner class TextSelectionCallback(
+		private val textView: TextView,
+	) : ActionMode.Callback {
+
+		override fun onCreateActionMode(mode: ActionMode?, menu: Menu): Boolean {
+			snapInitialSelectionToWord(textView)
+			textView.parent?.requestDisallowInterceptTouchEvent(true)
+			pagerView?.isUserInputEnabled = false
+			menu.add(Menu.NONE, ACTION_DICTIONARY, Menu.NONE, R.string.dictionary)
+				.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+			menu.add(Menu.NONE, ACTION_HIGHLIGHT, Menu.NONE, R.string.highlight)
+				.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+			menu.add(Menu.NONE, ACTION_REMOVE_HIGHLIGHT, Menu.NONE, R.string.remove_highlight_action)
+				.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+			return updateSelectionActions(menu)
+		}
+
+		override fun onPrepareActionMode(mode: ActionMode?, menu: Menu): Boolean = updateSelectionActions(menu)
+
+		override fun onActionItemClicked(mode: ActionMode?, item: MenuItem): Boolean {
+			val selection = selectedText(textView) ?: return false
+			return when (item.itemId) {
+				ACTION_DICTIONARY -> {
+					showDictionary(selection.text)
+					mode?.finish()
+					true
+				}
+
+				ACTION_HIGHLIGHT -> {
+					addHighlight(selection)
+					mode?.finish()
+					true
+				}
+
+				ACTION_REMOVE_HIGHLIGHT -> {
+					selectedHighlight(selection)?.let { removeHighlight(it.pageId) } ?: return false
+					mode?.finish()
+					true
+				}
+
+				else -> false
+			}
+		}
+
+		override fun onDestroyActionMode(mode: ActionMode?) {
+			textView.parent?.requestDisallowInterceptTouchEvent(false)
+			pagerView?.isUserInputEnabled = true
+		}
+
+		private fun updateSelectionActions(menu: Menu): Boolean {
+			val selection = selectedText(textView)
+			val highlight = selection?.let(::selectedHighlight)
+			menu.findItem(ACTION_DICTIONARY)?.isVisible = selection?.text?.matches(WORD_PATTERN) == true
+			menu.findItem(ACTION_HIGHLIGHT)?.isVisible = selection != null && highlight == null
+			menu.findItem(ACTION_REMOVE_HIGHLIGHT)?.isVisible = highlight != null
+			return true
+		}
+	}
+
+	private fun snapInitialSelectionToWord(textView: TextView) {
+		val text = textView.text as? Spannable ?: return
+		var start = minOf(textView.selectionStart, textView.selectionEnd).coerceAtLeast(0)
+		var end = maxOf(textView.selectionStart, textView.selectionEnd).coerceAtMost(text.length)
+		if (start >= end || text.subSequence(start, end).any(Char::isWhitespace)) return
+		val anchor = ((start + end - 1) / 2).coerceIn(text.indices)
+		if (!text[anchor].isSelectionWordCharacter()) return
+		start = anchor
+		end = anchor + 1
+		while (start > 0 && text[start - 1].isSelectionWordCharacter()) start--
+		while (end < text.length && text[end].isSelectionWordCharacter()) end++
+		Selection.setSelection(text, start, end)
+	}
+
+	private fun Char.isSelectionWordCharacter(): Boolean = isLetterOrDigit() || this == '\'' || this == '’' || this == '-' ||
+		when (Character.getType(this)) {
+			Character.NON_SPACING_MARK.toInt(),
+			Character.COMBINING_SPACING_MARK.toInt(),
+			Character.ENCLOSING_MARK.toInt() -> true
+			else -> false
+		}
+
+	private fun selectedText(textView: TextView): SelectedText? {
+		val location = textView.tag as? TextLocation ?: return null
+		val value = textView.text
+		var start = minOf(textView.selectionStart, textView.selectionEnd).coerceAtLeast(0)
+		var end = maxOf(textView.selectionStart, textView.selectionEnd).coerceAtMost(value.length)
+		while (start < end && value[start].isWhitespace()) start++
+		while (end > start && value[end - 1].isWhitespace()) end--
+		if (start == end) return null
+		return SelectedText(
+			chapter = location.chapter,
+			start = location.baseOffset + start,
+			end = location.baseOffset + end,
+			text = value.subSequence(start, end).toString(),
+		)
+	}
+
+	private fun addHighlight(selection: SelectedText) {
+		val manga = viewModel.getMangaOrNull() ?: return
+		val chapter = chapters.getOrNull(selection.chapter) ?: return
+		if (highlights.any {
+				it.chapterId == chapter.id && it.epubHighlight?.let { h ->
+					h.start == selection.start && h.end == selection.end
+				} == true
+			}) return
+		val bookmark = Bookmark(
+			manga = manga,
+			pageId = UUID.randomUUID().leastSignificantBits and Long.MAX_VALUE,
+			chapterId = chapter.id,
+			page = selection.start,
+			scroll = selection.start * 1000 / chapter.text.length.coerceAtLeast(1),
+			imageUrl = epubHighlightUrl(selection.end, selection.text),
+			createdAt = Instant.now(),
+			percent = selection.start / chapter.text.length.coerceAtLeast(1).toFloat(),
+		)
+		viewLifecycleOwner.lifecycleScope.launch {
+			withContext(Dispatchers.IO) { bookmarksRepository.addBookmark(bookmark) }
+			Toast.makeText(requireContext(), R.string.highlight_added, Toast.LENGTH_SHORT).show()
+		}
+	}
+
+	private fun selectedHighlight(selection: SelectedText): Bookmark? {
+		val chapterId = chapters.getOrNull(selection.chapter)?.id ?: return null
+		return highlights.firstOrNull { bookmark ->
+			bookmark.chapterId == chapterId && bookmark.epubHighlight?.let { highlight ->
+				selection.start < highlight.end && selection.end > highlight.start
+			} == true
+		}
+	}
+
+	private fun removeHighlight(bookmarkId: Long) {
+		viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+			bookmarksRepository.removeBookmarks(setOf(bookmarkId))
+		}
+	}
+
+	private fun installHighlightTapHandler(textView: TextView) {
+		var consumeHighlightGesture = false
+		val detector = GestureDetector(textView.context, object : GestureDetector.SimpleOnGestureListener() {
+			override fun onDown(e: MotionEvent): Boolean = true
+
+			override fun onDoubleTap(e: MotionEvent): Boolean {
+				val marker = findHighlightAt(textView, e) ?: return false
+				consumeHighlightGesture = true
+				showRemoveHighlight(marker.bookmarkId)
+				return true
+			}
+		})
+		textView.setOnTouchListener { _, event ->
+			detector.onTouchEvent(event)
+			val consumed = consumeHighlightGesture
+			if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+				consumeHighlightGesture = false
+			}
+			consumed
+		}
+	}
+
+	private fun findHighlightAt(textView: TextView, event: MotionEvent): HighlightMarker? {
+		val text = textView.text as? Spanned ?: return null
+		if (text.isEmpty()) return null
+		val layout = textView.layout ?: return null
+		val x = (event.x - textView.totalPaddingLeft + textView.scrollX).toInt()
+		val y = (event.y - textView.totalPaddingTop + textView.scrollY).toInt()
+		if (x !in 0..layout.width || y !in 0..layout.height) return null
+		val line = layout.getLineForVertical(y)
+		val offset = layout.getOffsetForHorizontal(line, x.toFloat()).coerceIn(0, text.length - 1)
+		return text.getSpans(offset, offset + 1, HighlightMarker::class.java).firstOrNull()
+	}
+
+	private fun showRemoveHighlight(bookmarkId: Long) {
+		val bookmark = highlights.firstOrNull { it.pageId == bookmarkId } ?: return
+		MaterialAlertDialogBuilder(requireContext())
+			.setTitle(R.string.remove_highlight)
+			.setMessage(bookmark.epubHighlight?.text)
+			.setNegativeButton(android.R.string.cancel, null)
+			.setPositiveButton(R.string.remove) { _, _ ->
+				removeHighlight(bookmarkId)
+			}
+			.show()
+	}
+
+	private fun showDictionary(word: String) {
+		val binding = SheetEpubDictionaryBinding.inflate(layoutInflater)
+		val dialog = BottomSheetDialog(requireContext())
+		binding.textViewWord.text = word
+		binding.buttonClose.setOnClickListener { dialog.dismiss() }
+		dialog.setContentView(binding.root)
+		dialog.show()
+		viewLifecycleOwner.lifecycleScope.launch {
+			val result = runCatching {
+				withContext(Dispatchers.IO) { loadDictionary(word) }
+			}
+			if (!dialog.isShowing) return@launch
+			binding.progressBar.isVisible = false
+			binding.scrollViewContent.isVisible = true
+			val entry = result.getOrNull()
+			binding.textViewContent.text = when {
+				result.isFailure -> getString(R.string.dictionary_error)
+				entry == null -> getString(R.string.dictionary_not_found)
+				else -> formatDictionaryEntry(entry)
+			}
+			binding.textViewPhonetic.text = entry?.phonetic.orEmpty()
+			binding.textViewPhonetic.isVisible = !entry?.phonetic.isNullOrBlank()
+			binding.textViewSource.isVisible = entry != null
+		}
+	}
+
+	private fun loadDictionary(word: String): DictionaryEntry? {
+		val url = DICTIONARY_URL.toHttpUrl().newBuilder().addPathSegment(word).build()
+		val request = Request.Builder().url(url).build()
+		val body = httpClient.newCall(request).execute().use { response ->
+			if (response.code == 404) return null
+			check(response.isSuccessful) { "Dictionary request failed: ${response.code}" }
+			response.body.string()
+		}
+		return parseDictionaryEntry(body)
+	}
+
+	private fun parseDictionaryEntry(body: String): DictionaryEntry? {
+		val entry = Json.parseToJsonElement(body).jsonArray.firstOrNull()?.jsonObject ?: return null
+		val meanings = entry["meanings"]?.jsonArray.orEmpty().mapNotNull { meaningElement ->
+			val meaning = meaningElement.jsonObject
+			val definitions = meaning["definitions"]?.jsonArray.orEmpty().mapNotNull { definitionElement ->
+				val definition = definitionElement.jsonObject
+				val text = definition["definition"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+				DictionaryDefinition(text, definition["example"]?.jsonPrimitive?.contentOrNull)
+			}.take(MAX_DEFINITIONS_PER_MEANING)
+			if (definitions.isEmpty()) return@mapNotNull null
+			DictionaryMeaning(
+				partOfSpeech = meaning["partOfSpeech"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+				definitions = definitions,
+				synonyms = meaning["synonyms"]?.jsonArray.orEmpty()
+					.mapNotNull { it.jsonPrimitive.contentOrNull }.take(MAX_SYNONYMS),
+			)
+		}.take(MAX_MEANINGS)
+		if (meanings.isEmpty()) return null
+		return DictionaryEntry(
+			phonetic = entry["phonetic"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+			meanings = meanings,
+		)
+	}
+
+	private fun formatDictionaryEntry(entry: DictionaryEntry): CharSequence {
+		val text = SpannableStringBuilder()
+		entry.meanings.forEachIndexed { meaningIndex, meaning ->
+			if (meaningIndex > 0) text.append("\n\n")
+			val headingStart = text.length
+			text.append(meaning.partOfSpeech.ifBlank { getString(R.string.dictionary) })
+			text.setSpan(StyleSpan(Typeface.BOLD), headingStart, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+			meaning.definitions.forEachIndexed { index, definition ->
+				text.append("\n${index + 1}. ${definition.text}")
+				definition.example?.takeIf(String::isNotBlank)?.let {
+					text.append("\n   ${getString(R.string.dictionary_example)}: “$it”")
+				}
+			}
+			if (meaning.synonyms.isNotEmpty()) {
+				text.append("\n${getString(R.string.dictionary_synonyms)}: ${meaning.synonyms.joinToString()}")
+			}
+		}
+		return text
 	}
 
 	private fun currentLocator(): Locator {
@@ -464,7 +951,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			val manager = recycler.layoutManager as? LinearLayoutManager ?: return lastLocator
 			val index = manager.findFirstVisibleItemPosition().takeIf { it >= 0 } ?: return lastLocator
 			val child = manager.findViewByPosition(index) ?: return Locator(index, 0)
-			val visibleOffset = (-child.top).coerceAtLeast(0)
+			val visibleOffset = (recycler.paddingTop - child.top).coerceAtLeast(0)
 			val charOffset = (chapters[index].text.length.toLong() * visibleOffset / child.height.coerceAtLeast(1)).toInt()
 			return Locator(index, charOffset).clamped()
 		}
@@ -572,7 +1059,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		if (query.isEmpty() || chapters.isEmpty()) return
 		Toast.makeText(requireContext(), R.string.loading_, Toast.LENGTH_SHORT).show()
 		viewLifecycleOwner.lifecycleScope.launch {
-			val results = withContext(Dispatchers.Default) {
+			val results = withContext(Dispatchers.IO) {
+				ensureChaptersLoaded(chapters.indices)
 				chapters.mapIndexedNotNull { index, chapter ->
 					val match = chapter.text.indexOf(query, ignoreCase = true).takeIf { it >= 0 } ?: return@mapIndexedNotNull null
 					val start = (match - 45).coerceAtLeast(0)
@@ -605,7 +1093,15 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	private val isPagedMode get() = settings.epubReadingMode != EPUB_MODE_SCROLL
 	private val isRtlPagedMode get() = settings.epubReadingMode == EPUB_MODE_PAGED_RTL
-	private val effectiveTextAlign get() = if (isRtlPagedMode) "justify" else settings.epubTextAlign
+	private val effectiveTextAlign get() = if (isRtlPagedMode && settings.epubTextAlign == "left") "right" else settings.epubTextAlign
+	private val verticalMarginFraction get() = (settings.epubVerticalPadding / VERTICAL_MARGIN_MAX.toFloat()).coerceIn(0f, 1f)
+	private val verticalTopPaddingPx get(): Int {
+		val maximum = pagedTopBarClearancePx +
+			(PAGED_TOP_EXTRA_MARGIN_DP * resources.displayMetrics.density).toInt()
+		return scrollTopClipPx + ((maximum - scrollTopClipPx) * verticalMarginFraction).toInt()
+	}
+	private val verticalBottomPaddingPx get() =
+		(MAX_BOTTOM_MARGIN_DP * verticalMarginFraction * resources.displayMetrics.density).toInt()
 	private val backgroundColor: Int get() {
 		val dark = when (settings.epubTheme) {
 			"light" -> false
@@ -620,7 +1116,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private val readerTypeface get() = Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
 	private val textAlignment get() = when (effectiveTextAlign) {
 		"center" -> Layout.Alignment.ALIGN_CENTER
-		"right", "end" -> Layout.Alignment.ALIGN_OPPOSITE
+		"right", "end" -> if (isRtlPagedMode) Layout.Alignment.ALIGN_NORMAL else Layout.Alignment.ALIGN_OPPOSITE
 		"justify" -> Layout.Alignment.ALIGN_NORMAL
 		else -> Layout.Alignment.ALIGN_NORMAL
 	}
@@ -630,7 +1126,9 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		override fun getItemCount() = chapters.size
 		override fun onBindViewHolder(holder: TextHolder, position: Int) {
 			applyTextStyle(holder.text, false)
-			holder.text.text = chapters[position].text
+			holder.text.tag = TextLocation(position, 0)
+			holder.text.text = styledChapterText(position)
+			preloadAround(position)
 		}
 	}
 
@@ -640,15 +1138,38 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		override fun onBindViewHolder(holder: TextHolder, position: Int) {
 			val page = pages[position]
 			applyTextStyle(holder.text, true)
-			holder.text.text = chapters[page.chapter].text.subSequence(page.start, page.end)
+			holder.text.tag = TextLocation(page.chapter, page.start)
+			holder.text.text = styledChapterText(page.chapter).subSequence(page.start, page.end)
 		}
 	}
 
 	private class TextHolder(val text: TextView) : RecyclerView.ViewHolder(text)
-	private data class NativeChapter(val id: Long, val title: String, val text: Spanned)
+	private class HighlightMarker(val bookmarkId: Long) : CharacterStyle() {
+		override fun updateDrawState(tp: TextPaint) = Unit
+	}
+	private class NativeChapter(
+		val id: Long,
+		val title: String,
+		val file: File,
+		val entryName: String,
+	) {
+		@Volatile
+		var content: Spanned? = null
+		val text: Spanned get() = content ?: EMPTY_CHAPTER_TEXT
+	}
+	private data class PreparedBook(val chapters: List<NativeChapter>, val archives: Map<File, ZipFile>)
 	private data class NativePage(val chapter: Int, val start: Int, val end: Int)
 	private data class SearchResult(val chapter: Int, val title: String, val snippet: String, val offset: Int)
 	private data class Locator(val chapter: Int, val offset: Int)
+	private data class TextLocation(val chapter: Int, val baseOffset: Int)
+	private data class SelectedText(val chapter: Int, val start: Int, val end: Int, val text: String)
+	private data class DictionaryEntry(val phonetic: String, val meanings: List<DictionaryMeaning>)
+	private data class DictionaryMeaning(
+		val partOfSpeech: String,
+		val definitions: List<DictionaryDefinition>,
+		val synonyms: List<String>,
+	)
+	private data class DictionaryDefinition(val text: String, val example: String?)
 	private fun Locator.clamped(): Locator {
 		if (chapters.isEmpty()) return Locator(0, 0)
 		val c = chapter.coerceIn(chapters.indices)
@@ -661,6 +1182,23 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		private const val MAX_SEARCH_RESULTS = 100
 		private const val PROGRESS_INTERVAL_MS = 50L
 		private const val PAGE_LOOKAHEAD = 1
+		private const val PRELOAD_RADIUS = 2
+		private const val SCROLL_INFO_BAR_HEIGHT_DP = 24
+		private const val PAGED_TOP_BAR_FALLBACK_DP = 80
+		private const val PAGED_TOP_EXTRA_MARGIN_DP = 16
 		private const val REPAGINATE_DELAY_MS = 180L
+		private const val COLOR_ANIMATION_MS = 180L
+		private const val VERTICAL_MARGIN_MAX = 112
+		private const val MAX_BOTTOM_MARGIN_DP = 96
+		private const val ACTION_DICTIONARY = 0x455001
+		private const val ACTION_HIGHLIGHT = 0x455002
+		private const val ACTION_REMOVE_HIGHLIGHT = 0x455003
+		private const val HIGHLIGHT_COLOR = 0x66FFD54F
+		private const val DICTIONARY_URL = "https://api.dictionaryapi.dev/api/v2/entries/en"
+		private const val MAX_MEANINGS = 4
+		private const val MAX_DEFINITIONS_PER_MEANING = 3
+		private const val MAX_SYNONYMS = 8
+		private val WORD_PATTERN = Regex("[\\p{L}\\p{M}]+(?:['’\\-][\\p{L}\\p{M}]+)*")
+		private val EMPTY_CHAPTER_TEXT = SpannedString("\u2014")
 	}
 }

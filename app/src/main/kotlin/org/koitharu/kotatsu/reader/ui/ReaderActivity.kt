@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.bookmarks.domain.Bookmark
+import org.koitharu.kotatsu.bookmarks.domain.epubHighlight
 import org.koitharu.kotatsu.core.exceptions.resolve.DialogErrorObserver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -304,11 +306,17 @@ class ReaderActivity :
     }
 
     override fun onGridTouch(area: TapGridArea): Boolean {
-        return isReaderResumed() && controlDelegate.onGridTouch(area)
+        if (!isReaderResumed()) return false
+        return if (readerManager.isEpub) {
+            toggleUiVisibility()
+            true
+        } else {
+            controlDelegate.onGridTouch(area)
+        }
     }
 
     override fun onGridLongTouch(area: TapGridArea): Boolean {
-        return isReaderResumed() && controlDelegate.onGridLongTouch(area)
+        return !readerManager.isEpub && isReaderResumed() && controlDelegate.onGridLongTouch(area)
     }
 
     override fun onProcessTouch(rawX: Int, rawY: Int): Boolean {
@@ -323,7 +331,9 @@ class ReaderActivity :
             false
         } else {
             val touchables = window.peekDecorView()?.touchables
-            touchables?.none { it.hasGlobalPoint(rawX, rawY) } != false
+            touchables?.none {
+                it.hasGlobalPoint(rawX, rawY) && it.getTag(R.id.tag_epub_selectable_text) != true
+            } != false
         }
     }
 
@@ -346,6 +356,15 @@ class ReaderActivity :
     override fun onChapterSelected(chapter: MangaChapter): Boolean {
         viewModel.switchChapter(chapter.id, 0)
         return true
+    }
+
+    override fun onBookmarkSelected(bookmark: Bookmark): Boolean {
+        return if (bookmark.epubHighlight != null) {
+            viewModel.switchChapter(bookmark.chapterId, 0, bookmark.scroll)
+            true
+        } else {
+            onPageSelected(ReaderPage(bookmark.toMangaPage(), bookmark.page, bookmark.chapterId))
+        }
     }
 
     override fun onPageSelected(page: ReaderPage): Boolean {

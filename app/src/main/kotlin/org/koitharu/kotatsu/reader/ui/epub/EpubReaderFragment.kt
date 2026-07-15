@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.reader.ui.epub
 
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -12,8 +13,8 @@ import android.os.Bundle
 import android.text.Layout
 import android.text.NoCopySpan
 import android.text.Spannable
-import android.text.SpannableStringBuilder
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.SpannedString
 import android.text.StaticLayout
@@ -39,6 +40,7 @@ import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.ColorUtils
 import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
@@ -601,8 +603,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				.setIncludePad(true)
 				.setLineSpacing(0f, settings.epubLineHeight / 100f)
 				.apply {
-					if (android.os.Build.VERSION.SDK_INT >= 26 && effectiveTextAlign == "justify") {
-						setJustificationMode(1) // JUSTIFICATION_MODE_INTER_WORD on API 26+
+					if (effectiveTextAlign == "justify") {
+						enableInterWordJustificationCompat()
 					}
 				}.build()
 			var start = 0
@@ -619,6 +621,12 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			val chapter = range.first.coerceIn(chapters.indices)
 			listOf(NativePage(chapter, 0, chapters[chapter].text.length))
 		}
+	}
+
+	@SuppressLint("WrongConstant")
+	private fun StaticLayout.Builder.enableInterWordJustificationCompat() {
+		// StaticLayout supports this value from API 26, but its current annotation only names API 29 constants.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) setJustificationMode(1)
 	}
 
 	private fun createTextView(parent: ViewGroup, paged: Boolean): TextView = EpubSelectableTextView(parent.context).apply {
@@ -1125,15 +1133,14 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private class TextHolder(val text: TextView) : RecyclerView.ViewHolder(text)
-	private class EpubSelectableTextView(context: Context) : TextView(context) {
-		private var selectionBackgroundColor = 0
+	private class EpubSelectableTextView(context: Context) : AppCompatTextView(context) {
+		private val selectionBackgroundColor = highlightColor
 		private var selectionBackgroundSpan: SelectionBackgroundSpan? = null
 		private val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 		private val handleRadius = 9f * resources.displayMetrics.density
 		private val handleStemWidth = 2f * resources.displayMetrics.density
 
 		init {
-			selectionBackgroundColor = highlightColor
 			handlePaint.color = ColorUtils.setAlphaComponent(selectionBackgroundColor, 255)
 			setHighlightColor(Color.TRANSPARENT)
 		}

@@ -22,6 +22,7 @@ concurrency:
 jobs:
   preview:
     name: Build preview APK
+    if: github.actor == github.repository_owner
     runs-on: ubuntu-latest
 
     steps:

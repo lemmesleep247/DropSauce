@@ -8,10 +8,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import eu.kanade.tachiyomi.network.JavaScriptEngine
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor
-import eu.kanade.tachiyomi.network.interceptor.IgnoreGzipInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UncaughtExceptionInterceptor
 import eu.kanade.tachiyomi.network.interceptor.UserAgentInterceptor
-import okhttp3.brotli.BrotliInterceptor
 import kotlinx.serialization.SerialFormat
 import kotlinx.serialization.StringFormat
 import kotlinx.serialization.json.Json
@@ -78,14 +76,10 @@ class KotoNetworkHelper(
 		// runs before the challenge check sees the request.
 		addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
 
-		// Decompression parity with Mihon: handle gzip+brotli at the network layer. Many modern
-		// CDNs (e.g. those fronting Comick/MangaDex) negotiate Brotli; without these the body is
-		// delivered still-compressed and parsing fails silently. IgnoreGzipInterceptor strips a
-		// manually-set "Accept-Encoding: gzip" so BrotliInterceptor can advertise "gzip, br" and
-		// transparently decode both. Added as network interceptors, like Mihon, so they observe
-		// the actual on-wire encoding. (The app's own GZipInterceptor is skipped below.)
-		addNetworkInterceptor(IgnoreGzipInterceptor())
-		addNetworkInterceptor(BrotliInterceptor)
+		// Do NOT add IgnoreGzipInterceptor/BrotliInterceptor here: current Mihon removed them,
+		// and new keiyoushi extensions (KeiSource core) add their own CompressionInterceptor and
+		// hard-fail with "must not be present in default client" if the host still injects them.
+		// OkHttp handles gzip transparently on its own. (The app's GZipInterceptor is skipped below.)
 
 		baseClient.interceptors.forEach { interceptor ->
 			// Skip GZip (handled by OkHttp) and Kotatsu's CloudFlareInterceptor: the latter throws

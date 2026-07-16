@@ -548,7 +548,13 @@ class ReaderViewModel @Inject constructor(
         // Chapter buttons update readingState before the EPUB surface reports its position. The
         // toolbar is UI state, so compare against that instead of the already-updated reader state.
         val chapterChanged = uiState.value?.chapter?.id != chapterId
-        readingState.update { it?.copy(chapterId = chapterId, scroll = chapterPm) }
+        readingState.update {
+            it?.copy(
+                chapterId = chapterId,
+                page = if (pageCount > 0) page.coerceIn(0, pageCount - 1) else 0,
+                scroll = chapterPm,
+            )
+        }
         updateEpubProgressUi(chapterPm, page, pageCount)
         if (chapterChanged) {
             launchJob(Dispatchers.Default) {

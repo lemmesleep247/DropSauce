@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import eu.kanade.tachiyomi.util.lang.Hash
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 /**
@@ -39,6 +40,27 @@ internal class MihonSourceMetadataStore(context: Context) {
 			putString(prefix + KEY_MEMO, manga.memo.toString())
 			putString(prefix + KEY_UPDATE_STRATEGY, manga.update_strategy.name)
 			putBoolean(prefix + KEY_INITIALIZED, manga.initialized)
+		}
+	}
+
+	/**
+	 * New-API extensions (KeiSource/Iken) store the chapter id in SChapter.memo and throw
+	 * "Refresh Chapter List" in getPageList when it is missing. Kotatsu's chapter model cannot
+	 * carry it, so persist it per (source, chapter url) like the manga sidecar above.
+	 */
+	fun restoreChapterMemo(sourceId: Long, chapterUrl: String): JsonObject? =
+		preferences.getString(keyPrefix(sourceId, chapterUrl) + KEY_MEMO, null)?.let { encoded ->
+			runCatching { json.parseToJsonElement(encoded).jsonObject }.getOrNull()
+		}
+
+	// ponytail: one prefs entry per chapter, unbounded growth; move to a Room table if the
+	// prefs file ever gets noticeably large.
+	fun saveChapterMemos(sourceId: Long, memos: Map<String, JsonObject>) {
+		if (memos.isEmpty()) return
+		preferences.edit {
+			for ((chapterUrl, memo) in memos) {
+				putString(keyPrefix(sourceId, chapterUrl) + KEY_MEMO, memo.toString())
+			}
 		}
 	}
 

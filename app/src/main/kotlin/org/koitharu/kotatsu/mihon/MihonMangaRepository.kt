@@ -159,7 +159,7 @@ class MihonMangaRepository(
 
 	private suspend fun getDetailsInner(manga: Manga): Manga {
 		val sManga = manga.toSourceManga()
-		val existingChapters = manga.chapters.orEmpty().map { it.toSChapter() }
+		val existingChapters = manga.chapters.orEmpty().map { it.toSourceChapter() }
 		// Route through the extension's combined API exactly like Mihon. Modern sources can override
 		// this directly; CatalogueSource's legacy default concurrently bridges both RxJava calls.
 		// Swallowing a detail failure and returning stale data makes broken sources appear healthy,
@@ -193,6 +193,13 @@ class MihonMangaRepository(
 		}
 
 		Log.d(TAG, "rawChapters count: ${rawChapters.size} (unique: ${uniqueChapters.size}), source: ${source.name}")
+
+		// New-API extensions carry the chapter id in SChapter.memo (getPageList throws "Refresh
+		// Chapter List" without it). Kotatsu's chapter model drops it, so sidecar it by chapter url.
+		sourceMetadata.saveChapterMemos(
+			source.sourceId,
+			uniqueChapters.filter { it.memo.isNotEmpty() }.associate { it.url to it.memo },
+		)
 
 		val mangaTitle = try { sManga.title } catch (_: UninitializedPropertyAccessException) { "" }
 
@@ -243,7 +250,7 @@ class MihonMangaRepository(
 	}
 
 	override suspend fun getPagesImpl(chapter: MangaChapter): List<MangaPage> = withContext(Dispatchers.IO) {
-		val sChapter = chapter.toSChapter()
+		val sChapter = chapter.toSourceChapter()
 		// Match Mihon and delegate retry policy to the source's own OkHttp client.
 		val rawPages = try {
 			mihonSource.getPageList(sChapter)
@@ -500,6 +507,10 @@ class MihonMangaRepository(
 
 	private fun Manga.toSourceManga() = toSManga().also {
 		sourceMetadata.restore(this@MihonMangaRepository.source.sourceId, url, it)
+	}
+
+	private fun MangaChapter.toSourceChapter() = toSChapter().also { sChapter ->
+		sourceMetadata.restoreChapterMemo(this@MihonMangaRepository.source.sourceId, url)?.let { sChapter.memo = it }
 	}
 }
 

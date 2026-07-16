@@ -28,7 +28,7 @@ class ChaptersPagesAdapter(
 		tab.setIcon(
 			when (position) {
 				0 -> R.drawable.ic_list
-				1 -> if (isPagesTabEnabled) R.drawable.ic_grid else R.drawable.ic_bookmark
+				1 -> if (isPagesTabEnabled) R.drawable.ic_grid_outline else R.drawable.ic_bookmark
 				2 -> R.drawable.ic_bookmark
 				else -> 0
 			},

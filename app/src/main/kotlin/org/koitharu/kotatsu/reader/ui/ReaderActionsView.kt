@@ -32,6 +32,7 @@ import org.koitharu.kotatsu.core.util.ext.setTooltipCompat
 import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.databinding.LayoutReaderActionsBinding
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
+import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_BOOKMARKS
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_PAGES
 import org.koitharu.kotatsu.reader.ui.ReaderControlDelegate.OnInteractionListener
 import javax.inject.Inject
@@ -237,13 +238,19 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 
 	private fun updatePagesSheetButton() {
-		val isPagesMode = settings.defaultDetailsTab == TAB_PAGES
 		val button = binding.buttonPagesThumbs
-		button.setIconResource(
-			if (isPagesMode) R.drawable.ic_grid else R.drawable.ic_list,
-		)
+		val tab = settings.defaultDetailsTab
+		button.setIconResource(when (tab) {
+			TAB_PAGES -> R.drawable.ic_grid
+			TAB_BOOKMARKS -> R.drawable.ic_bookmark
+			else -> R.drawable.ic_list
+		})
 		button.setContentDescriptionAndTooltip(
-			if (isPagesMode) R.string.pages else R.string.chapters,
+			when (tab) {
+				TAB_PAGES -> R.string.pages
+				TAB_BOOKMARKS -> R.string.bookmarks
+				else -> R.string.chapters
+			},
 		)
 	}
 

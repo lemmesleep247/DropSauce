@@ -47,7 +47,7 @@
                 app:tabPaddingStart="6dp"
                 app:tabPaddingEnd="6dp"
                 app:tabMode="scrollable"
-                app:tabUnboundedRipple="true" />
+                app:tabRippleColor="@android:color/transparent" />
 
             <com.google.android.material.button.MaterialSplitButton
                 android:id="@+id/split_button_read"

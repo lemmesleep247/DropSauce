@@ -243,7 +243,12 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 	private fun onPageChanged(position: Int) {
 		viewBinding?.toolbar?.invalidateMenu()
-		settings.lastDetailsTab = position
+		val adapter = viewBinding?.pager?.adapter as? ChaptersPagesAdapter
+		settings.lastDetailsTab = if (position == 1 && adapter?.isPagesTabEnabled == false) {
+			TAB_BOOKMARKS
+		} else {
+			position
+		}
 	}
 
 	private fun onNewChaptersChanged(counter: Int) {

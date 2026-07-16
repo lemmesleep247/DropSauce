@@ -1013,6 +1013,12 @@
     <string name="dont_ask_again">Don\'t ask again</string>
     <string name="incognito_mode_hint_nsfw">This manga may contain adult content. Do you want to use incognito mode?</string>
     <string name="incognito_for_nsfw">Incognito mode for NSFW manga</string>
+    <string name="chapter_jump_title">Jump to this chapter?</string>
+    <string name="chapter_jump_message">You left off somewhere else. Take a peek without losing your place, or move your reading progress here.</string>
+    <string name="chapter_jump_peek">Just peek</string>
+    <string name="chapter_jump_move">Move progress here</string>
+    <string name="peek_mode">Peeking</string>
+    <string name="peek_mode_hint">Peeking — your progress won\'t change</string>
     <string name="additional_action_required">Additional action is required</string>
     <string name="hide_from_main_screen">Hide from main screen</string>
     <string name="changelog">Changelog</string>

@@ -67,6 +67,7 @@ import org.koitharu.kotatsu.core.util.ext.postDelayed
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.core.util.ext.zipWithPrevious
 import org.koitharu.kotatsu.databinding.ActivityReaderBinding
+import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesViewModel
 import org.koitharu.kotatsu.details.ui.pager.pages.PagesSavedObserver
 import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.parsers.model.MangaChapter
@@ -362,20 +363,22 @@ class ReaderActivity :
     }
 
     override fun onChapterSelected(chapter: MangaChapter): Boolean {
-        viewModel.switchChapter(chapter.id, 0)
+        jumpToChapter(chapter.id, page = 0, scroll = 0, isPeekPreferred = false)
         return true
     }
 
     override fun onBookmarkSelected(bookmark: Bookmark): Boolean {
         return if (bookmark.epubHighlight != null) {
-            viewModel.switchChapter(bookmark.chapterId, 0, bookmark.scroll)
+            jumpToChapter(bookmark.chapterId, page = 0, scroll = bookmark.scroll, isPeekPreferred = true)
             true
         } else {
-            onPageSelected(ReaderPage(bookmark.toMangaPage(), bookmark.page, bookmark.chapterId))
+            onPageSelectedImpl(ReaderPage(bookmark.toMangaPage(), bookmark.page, bookmark.chapterId), isPeekPreferred = true)
         }
     }
 
-    override fun onPageSelected(page: ReaderPage): Boolean {
+    override fun onPageSelected(page: ReaderPage): Boolean = onPageSelectedImpl(page, isPeekPreferred = false)
+
+    private fun onPageSelectedImpl(page: ReaderPage, isPeekPreferred: Boolean): Boolean {
         lifecycleScope.launch(Dispatchers.Default) {
             val pages = viewModel.content.value.pages
             val index = pages.indexOfFirst { it.chapterId == page.chapterId && it.id == page.id }
@@ -383,11 +386,44 @@ class ReaderActivity :
                 withContext(Dispatchers.Main) {
                     readerManager.currentReader?.switchPageTo(index, true)
                 }
-            } else {
-                viewModel.switchChapter(page.chapterId, page.index)
+            } else withContext(Dispatchers.Main) {
+                jumpToChapter(page.chapterId, page.index, scroll = 0, isPeekPreferred = isPeekPreferred)
             }
         }
         return true
+    }
+
+    /**
+     * Routes an explicit chapter jump through the progress guard: normal continuation switches
+     * as usual, jumps away from the saved progress either peek (keeping history untouched) or
+     * ask the user. [isPeekPreferred] (bookmarks) resolves ambiguous jumps to a silent peek.
+     */
+    private fun jumpToChapter(chapterId: Long, page: Int, scroll: Int, isPeekPreferred: Boolean) {
+        lifecycleScope.launch {
+            when (viewModel.getChapterOpenMode(chapterId)) {
+                ChaptersPagesViewModel.ChapterOpenMode.NORMAL -> {
+                    viewModel.setPeekMode(false)
+                    viewModel.switchChapter(chapterId, page, scroll)
+                }
+
+                ChaptersPagesViewModel.ChapterOpenMode.ASK -> if (isPeekPreferred) {
+                    viewModel.setPeekMode(true)
+                    viewModel.switchChapter(chapterId, page, scroll)
+                } else {
+                    showChapterJumpDialog(
+                        activity = this@ReaderActivity,
+                        onPeek = {
+                            viewModel.setPeekMode(true)
+                            viewModel.switchChapter(chapterId, page, scroll)
+                        },
+                        onMoveProgress = {
+                            viewModel.setPeekMode(false)
+                            viewModel.switchChapter(chapterId, page, scroll)
+                        },
+                    )
+                }
+            }
+        }
     }
 
     override fun onReaderModeChanged(mode: ReaderMode) {
@@ -582,6 +618,7 @@ class ReaderActivity :
         val chapterTitle = uiState.getChapterTitle(resources)
         supportActionBar?.subtitle = when {
             uiState.incognito -> getString(R.string.incognito_mode)
+            uiState.isPeek -> getString(R.string.peek_mode)
             else -> chapterTitle
         }
         if (

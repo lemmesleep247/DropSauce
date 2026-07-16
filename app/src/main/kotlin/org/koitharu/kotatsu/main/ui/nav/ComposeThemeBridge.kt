@@ -36,6 +36,8 @@ fun composeColorSchemeFromTheme(context: Context, isDark: Boolean): ColorScheme 
 		onPrimaryContainer = c(materialR.attr.colorOnPrimaryContainer, base.onPrimaryContainer),
 		secondary = c(materialR.attr.colorSecondary, base.secondary),
 		onSecondary = c(materialR.attr.colorOnSecondary, base.onSecondary),
+		secondaryContainer = c(materialR.attr.colorSecondaryContainer, base.secondaryContainer),
+		onSecondaryContainer = c(materialR.attr.colorOnSecondaryContainer, base.onSecondaryContainer),
 		tertiary = c(materialR.attr.colorTertiary, base.tertiary),
 		onTertiary = c(materialR.attr.colorOnTertiary, base.onTertiary),
 		surface = c(materialR.attr.colorSurface, base.surface),

@@ -61,6 +61,8 @@ fun SettingsItem(
 	tintIcon: Boolean = true,
 	shape: Shape = MaterialTheme.shapes.medium,
 	enabled: Boolean = true,
+	// Overrides the title and plain-icon color, e.g. colorScheme.error for destructive actions.
+	accentColor: Color? = null,
 	onClick: (() -> Unit)? = null,
 	hapticEffect: HapticEffect? = null,
 	trailing: @Composable (() -> Unit)? = null,
@@ -128,7 +130,7 @@ fun SettingsItem(
 						tintIcon = tintIcon,
 					)
 				} else {
-					SettingsIconPlain(iconRes = icon, enabled = enabled)
+					SettingsIconPlain(iconRes = icon, enabled = enabled, tintOverride = accentColor)
 				}
 				Spacer(Modifier.width(14.dp))
 			}
@@ -136,7 +138,7 @@ fun SettingsItem(
 				Text(
 					text = title,
 					style = MaterialTheme.typography.titleMedium,
-					color = textColor(enabled),
+					color = accentColor?.copy(alpha = if (enabled) 1f else 0.38f) ?: textColor(enabled),
 					maxLines = 2,
 					overflow = TextOverflow.Ellipsis,
 				)
@@ -224,8 +226,8 @@ private fun SettingsIconBubble(
 }
 
 @Composable
-private fun SettingsIconPlain(@DrawableRes iconRes: Int, enabled: Boolean) {
-	val tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.4f)
+private fun SettingsIconPlain(@DrawableRes iconRes: Int, enabled: Boolean, tintOverride: Color? = null) {
+	val tint = (tintOverride ?: MaterialTheme.colorScheme.onSurfaceVariant).copy(alpha = if (enabled) 1f else 0.4f)
 	Box(
 		modifier = Modifier.size(44.dp),
 		contentAlignment = Alignment.Center,

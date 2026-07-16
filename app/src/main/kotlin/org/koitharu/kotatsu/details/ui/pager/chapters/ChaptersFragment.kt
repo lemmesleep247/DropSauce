@@ -8,6 +8,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,6 +17,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.nav.dismissParentDialog
@@ -44,6 +46,7 @@ import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.reader.ui.ReaderNavigationCallback
 import org.koitharu.kotatsu.reader.ui.ReaderState
+import org.koitharu.kotatsu.reader.ui.showChapterJumpDialog
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
@@ -155,12 +158,27 @@ class ChaptersFragment :
 			} else {
 				ReaderState(item.chapter.id, 0, 0)
 			}
-			router.openReader(
-				ReaderIntent.Builder(view.context)
-					.manga(viewModel.getMangaOrNull() ?: return)
-					.state(state)
-					.build(),
-			)
+			val manga = viewModel.getMangaOrNull() ?: return
+			val context = view.context
+			viewLifecycleOwner.lifecycleScope.launch {
+				val openReader = { peek: Boolean ->
+					router.openReader(
+						ReaderIntent.Builder(context)
+							.manga(manga)
+							.state(state)
+							.apply { if (peek) peek() }
+							.build(),
+					)
+				}
+				when (viewModel.getChapterOpenMode(item.chapter.id)) {
+					ChaptersPagesViewModel.ChapterOpenMode.NORMAL -> openReader(false)
+					ChaptersPagesViewModel.ChapterOpenMode.ASK -> showChapterJumpDialog(
+						activity = requireActivity(),
+						onPeek = { openReader(true) },
+						onMoveProgress = { openReader(false) },
+					)
+				}
+			}
 		}
 	}
 

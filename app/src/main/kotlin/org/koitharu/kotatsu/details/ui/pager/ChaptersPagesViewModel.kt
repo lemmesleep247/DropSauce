@@ -42,8 +42,10 @@ import org.koitharu.kotatsu.details.ui.mapChapters
 import org.koitharu.kotatsu.details.ui.model.ChapterListItem
 import org.koitharu.kotatsu.download.ui.worker.DownloadTask
 import org.koitharu.kotatsu.download.ui.worker.DownloadWorker
+import org.koitharu.kotatsu.core.prefs.TriStateOption
 import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.list.domain.ListFilterOption
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.local.domain.DeleteLocalMangaUseCase
 import org.koitharu.kotatsu.local.domain.model.LocalManga
 import org.koitharu.kotatsu.parsers.model.Manga
@@ -210,6 +212,34 @@ abstract class ChaptersPagesViewModel(
 
 	fun requireManga() = mangaDetails.requireValue().toManga()
 
+	/**
+	 * How a chapter tap should be handled relative to the saved reading progress:
+	 * [ChapterOpenMode.NORMAL] — open as usual (progress moves along),
+	 * [ChapterOpenMode.ASK] — the user is jumping away from their progress, ask peek vs move.
+	 */
+	open suspend fun getChapterOpenMode(chapterId: Long): ChapterOpenMode {
+		val details = mangaDetails.value ?: return ChapterOpenMode.NORMAL
+		val manga = details.toManga()
+		val history = runCatchingCancellable {
+			historyRepository.getOne(manga)
+		}.getOrNull() ?: return ChapterOpenMode.NORMAL // first open — no progress to protect
+		if (chapterId == history.chapterId) {
+			return ChapterOpenMode.NORMAL // resuming the current chapter
+		}
+		if (interactor.observeIncognitoMode(flowOf(manga)).first() == TriStateOption.ENABLED) {
+			return ChapterOpenMode.NORMAL // nothing will be saved anyway
+		}
+		val chapters = details.chapters.values.firstOrNull { list -> list.any { it.id == chapterId } }
+			?: return ChapterOpenMode.NORMAL
+		val currentIndex = chapters.indexOfFirst { it.id == history.chapterId }
+		val targetIndex = chapters.indexOfFirst { it.id == chapterId }
+		return if (currentIndex >= 0 && targetIndex == currentIndex + 1) {
+			ChapterOpenMode.NORMAL // the next chapter — normal reading flow
+		} else {
+			ChapterOpenMode.ASK
+		}
+	}
+
 	fun markChapterAsCurrent(chapterId: Long) {
 		launchJob(Dispatchers.Default) {
 			val manga = mangaDetails.requireValue()
@@ -299,5 +329,9 @@ abstract class ChaptersPagesViewModel(
 			is DetailsExpressiveActivity -> DetailsViewModel::class.java
 			else -> error("Wrong activity ${activity.javaClass.simpleName} for ${ChaptersPagesViewModel::class.java.simpleName}")
 		}
+	}
+
+	enum class ChapterOpenMode {
+		NORMAL, ASK
 	}
 }

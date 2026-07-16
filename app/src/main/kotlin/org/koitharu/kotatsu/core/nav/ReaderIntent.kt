@@ -33,6 +33,10 @@ value class ReaderIntent private constructor(
 			intent.putExtra(EXTRA_INCOGNITO, true)
 		}
 
+		fun peek() = apply {
+			intent.putExtra(EXTRA_PEEK, true)
+		}
+
 		fun branch(branch: String?) = apply {
 			intent.putExtra(EXTRA_BRANCH, branch)
 		}
@@ -59,5 +63,6 @@ value class ReaderIntent private constructor(
 		const val EXTRA_STATE = "state"
 		const val EXTRA_BRANCH = "branch"
 		const val EXTRA_INCOGNITO = "incognito"
+		const val EXTRA_PEEK = "peek"
 	}
 }

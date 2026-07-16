@@ -12,12 +12,14 @@ import androidx.collection.ArraySet
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isInvisible
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.ReaderIntent
@@ -51,6 +53,7 @@ import org.koitharu.kotatsu.reader.ui.PageSaveHelper
 import org.koitharu.kotatsu.reader.ui.ReaderNavigationCallback
 import org.koitharu.kotatsu.reader.ui.ReaderState
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
+import org.koitharu.kotatsu.reader.ui.showChapterJumpDialog
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -182,12 +185,27 @@ class PagesFragment :
 		if (listener != null && listener.onPageSelected(item.page)) {
 			dismissParentDialog()
 		} else {
-			router.openReader(
-				ReaderIntent.Builder(view.context)
-					.manga(parentViewModel.getMangaOrNull() ?: return)
-					.state(ReaderState(item.page.chapterId, item.page.index, 0))
-					.build(),
-			)
+			val manga = parentViewModel.getMangaOrNull() ?: return
+			val context = view.context
+			viewLifecycleOwner.lifecycleScope.launch {
+				val openReader = { peek: Boolean ->
+					router.openReader(
+						ReaderIntent.Builder(context)
+							.manga(manga)
+							.state(ReaderState(item.page.chapterId, item.page.index, 0))
+							.apply { if (peek) peek() }
+							.build(),
+					)
+				}
+				when (parentViewModel.getChapterOpenMode(item.page.chapterId)) {
+					ChaptersPagesViewModel.ChapterOpenMode.NORMAL -> openReader(false)
+					ChaptersPagesViewModel.ChapterOpenMode.ASK -> showChapterJumpDialog(
+						activity = requireActivity(),
+						onPeek = { openReader(true) },
+						onMoveProgress = { openReader(false) },
+					)
+				}
+			}
 		}
 	}
 

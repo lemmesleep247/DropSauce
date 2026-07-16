@@ -128,6 +128,10 @@ class ReaderViewModel @Inject constructor(
 
     val isIncognitoMode = MutableStateFlow(savedStateHandle.get<Boolean>(ReaderIntent.EXTRA_INCOGNITO))
 
+    // Peek mode: the reader works as usual but never writes reading progress (history) —
+    // used when the user just looks into a chapter away from their current position.
+    val isPeekMode = MutableStateFlow(savedStateHandle.get<Boolean>(ReaderIntent.EXTRA_PEEK) == true)
+
     val content = MutableStateFlow(ReaderContent(emptyList(), null))
 
     val pageAnimation = settings.observeAsStateFlow(
@@ -252,7 +256,7 @@ class ReaderViewModel @Inject constructor(
             readingState.value = state
             savedStateHandle[ReaderIntent.EXTRA_STATE] = state
         }
-        if (isIncognitoMode.value != false) {
+        if (isIncognitoMode.value != false || isPeekMode.value) {
             return
         }
         val readerState = state ?: readingState.value ?: return
@@ -405,6 +409,25 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    override suspend fun getChapterOpenMode(chapterId: Long): ChapterOpenMode {
+        return if (isIncognitoMode.value == true) {
+            ChapterOpenMode.NORMAL // nothing will be saved anyway
+        } else {
+            super.getChapterOpenMode(chapterId)
+        }
+    }
+
+    fun setPeekMode(value: Boolean) {
+        if (isPeekMode.value == value) {
+            return
+        }
+        isPeekMode.value = value
+        savedStateHandle[ReaderIntent.EXTRA_PEEK] = value
+        if (value) {
+            onShowToast.call(R.string.peek_mode_hint)
+        }
+    }
+
     fun setIncognitoMode(value: Boolean, dontAskAgain: Boolean) {
         isIncognitoMode.value = value
         if (dontAskAgain) {
@@ -452,7 +475,7 @@ class ReaderViewModel @Inject constructor(
                         mangaDetails.value = details.filterChapters(selectedBranch.value)
 
                         // save state
-                        if (!isIncognitoMode.firstNotNull()) {
+                        if (!isIncognitoMode.firstNotNull() && !isPeekMode.value) {
                             readingState.value?.let {
                                 val percent = computePercent(it.chapterId)
                                 historyUpdateUseCase(manga, it, percent)
@@ -576,6 +599,7 @@ class ReaderViewModel @Inject constructor(
             },
             percent = computePercent(state.chapterId),
             incognito = isIncognitoMode.value == true,
+            isPeek = isPeekMode.value,
             isEpub = isEpub,
             isEpubPaged = isEpubPaged,
         )

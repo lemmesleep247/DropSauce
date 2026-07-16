@@ -222,6 +222,7 @@ fun ActionSettingsItem(
 	iconColors: CategoryIconColors? = null,
 	shape: Shape = MaterialTheme.shapes.medium,
 	enabled: Boolean = true,
+	accentColor: androidx.compose.ui.graphics.Color? = null,
 ) {
 	SettingsItem(
 		title = title,
@@ -231,6 +232,7 @@ fun ActionSettingsItem(
 		iconColors = iconColors,
 		shape = shape,
 		enabled = enabled,
+		accentColor = accentColor,
 		onClick = onClick,
 	)
 }

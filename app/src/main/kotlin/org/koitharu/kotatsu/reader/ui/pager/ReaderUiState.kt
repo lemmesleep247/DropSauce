@@ -13,6 +13,7 @@ data class ReaderUiState(
 	val totalPages: Int,
 	val percent: Float,
 	val incognito: Boolean,
+	val isPeek: Boolean = false,
 	val isEpub: Boolean = false,
 	val isEpubPaged: Boolean = false,
 ) {

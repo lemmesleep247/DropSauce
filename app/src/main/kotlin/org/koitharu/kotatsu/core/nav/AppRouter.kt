@@ -720,6 +720,7 @@ class AppRouter private constructor(
                 data = challengeUrl.toUri()
                 putExtra(KEY_SOURCE, exception.source.name)
                 putExtra(CloudFlareActivity.EXTRA_HIDDEN, hidden)
+                putExtra(CloudFlareActivity.EXTRA_ORIGINAL_URL, exception.url)
                 exception.headers[CommonHeaders.USER_AGENT]?.let {
                     putExtra(KEY_USER_AGENT, it)
                 }
@@ -727,17 +728,12 @@ class AppRouter private constructor(
         }
 
         private fun getChallengeUrl(url: String): String {
-            val httpUrl = try {
-                url.toHttpUrlOrNull()
-            } catch (_: Exception) {
-                null
-            } ?: return url
+            val httpUrl = url.toHttpUrlOrNull() ?: return url
             val host = httpUrl.host.lowercase()
             val path = httpUrl.encodedPath
             val ext = path.substringAfterLast('.', "").lowercase()
             val isAsset = ext in setOf("jpg", "jpeg", "png", "webp", "gif", "svg") ||
                     host.startsWith("imagenes.") || host.startsWith("images.") || host.startsWith("cdn.") || host.startsWith("img.") || host.startsWith("static.")
-            
             if (isAsset) {
                 val rootDomain = getRootDomain(host)
                 if (rootDomain.isNotBlank()) {

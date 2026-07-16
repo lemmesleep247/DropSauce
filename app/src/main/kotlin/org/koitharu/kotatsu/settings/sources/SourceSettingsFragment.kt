@@ -289,40 +289,13 @@ private fun SourceSettingsScreen(
 				}
 			}
 		}
-		if (isValidSource) {
-			item {
-				SettingsGroup {
-					item { pos ->
-						var slowdown by rememberSourceBoolean(sourcePrefs, SourceSettings.KEY_SLOWDOWN, false)
-						SwitchSettingsItem(
-							title = stringResource(R.string.download_slowdown),
-							subtitle = stringResource(R.string.download_slowdown_summary),
-							checked = slowdown,
-							onCheckedChange = { slowdown = it },
-							icon = R.drawable.ic_timelapse,
-							shape = pos.shape,
-						)
-					}
-					item { pos ->
-						var intercept by rememberSourceBoolean(sourcePrefs, SourceSettings.KEY_INTERCEPT_CLOUDFLARE, false)
-						SwitchSettingsItem(
-							title = stringResource(R.string.intercept_cloudflare),
-							subtitle = stringResource(R.string.intercept_cloudflare_summary),
-							checked = intercept,
-							onCheckedChange = { intercept = it },
-							icon = R.drawable.ic_lock,
-							shape = pos.shape,
-						)
-					}
-				}
-			}
-		}
-
 		// Dynamic extension-provided preferences (reload with the selected language).
-		variant.sections.forEach { section ->
-			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		variant.sections.forEachIndexed { index, section ->
+			if (index > 0) {
+				item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+			}
 			item {
-				SettingsGroup(title = section.title) {
+				SettingsGroup(title = section.title ?: stringResource(R.string.source_settings_extension)) {
 					section.preferences.forEach { pref ->
 						item { pos ->
 							MihonPreferenceRow(pref = pref, shape = pos.shape, rev = rev)
@@ -348,10 +321,34 @@ private fun SourceSettingsScreen(
 			}
 		}
 
-		if (variant.openBrowserUrl != null || uninstallPkg != null) {
+		if (isValidSource || variant.openBrowserUrl != null || uninstallPkg != null) {
 			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 			item {
-				SettingsGroup {
+				SettingsGroup(title = stringResource(R.string.source_settings_app)) {
+					if (isValidSource) {
+						item { pos ->
+							var slowdown by rememberSourceBoolean(sourcePrefs, SourceSettings.KEY_SLOWDOWN, false)
+							SwitchSettingsItem(
+								title = stringResource(R.string.download_slowdown),
+								subtitle = stringResource(R.string.download_slowdown_summary),
+								checked = slowdown,
+								onCheckedChange = { slowdown = it },
+								icon = R.drawable.ic_timelapse,
+								shape = pos.shape,
+							)
+						}
+						item { pos ->
+							var intercept by rememberSourceBoolean(sourcePrefs, SourceSettings.KEY_INTERCEPT_CLOUDFLARE, false)
+							SwitchSettingsItem(
+								title = stringResource(R.string.intercept_cloudflare),
+								subtitle = stringResource(R.string.intercept_cloudflare_summary),
+								checked = intercept,
+								onCheckedChange = { intercept = it },
+								icon = R.drawable.ic_lock,
+								shape = pos.shape,
+							)
+						}
+					}
 					val browserUrl = variant.openBrowserUrl
 					if (browserUrl != null) {
 						item { pos ->

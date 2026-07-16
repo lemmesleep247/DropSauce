@@ -29,6 +29,7 @@ import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinato
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.MangaSource as ResolveMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.network.CommonHeaders
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
@@ -58,6 +59,10 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	@Inject
 	@MangaHttpClient
 	lateinit var okHttpClient: OkHttpClient
+
+	@Inject
+	@BaseHttpClient
+	lateinit var baseHttpClient: OkHttpClient
 
 	@Inject
 	lateinit var captchaHandler: CaptchaHandler
@@ -97,7 +102,7 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 				showSnackbar(e.getDisplayMessage(resources))
 			}
 			cfClient = if (shouldUseInterception(source)) {
-				CloudFlareInterceptClient(cookieJar, this@CloudFlareActivity, adBlock, url)
+				CloudFlareInterceptClient(cookieJar, this@CloudFlareActivity, adBlock, url, baseHttpClient)
 			} else {
 				CloudFlareClient(cookieJar, this@CloudFlareActivity, adBlock, url)
 			}
@@ -169,7 +174,9 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			return
 		}
 		clearanceVerificationJob = lifecycleScope.launch {
-			val url = intent?.dataString
+			// Verify against the originally blocked url, not the rewritten challenge (root) url:
+			// the root may be unprotected while the actual resource is still blocked
+			val url = intent?.getStringExtra(EXTRA_ORIGINAL_URL)?.takeIf { it.isNotBlank() } ?: intent?.dataString
 			if (url.isNullOrBlank() || !verifyClearance(url)) {
 				if (!isHidden) {
 					showSnackbar(getString(R.string.captcha_required_message))
@@ -210,17 +217,10 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 					}
 				}
 				.build()
+			// MangaHttpClient's CloudFlareInterceptor throws if the challenge is still active
 			okHttpClient.newCall(request).execute().use { response ->
-				val success = response.isSuccessful
-				android.util.Log.i(
-					TAG,
-					"verify clearance: url=$url status=${response.code} success=$success " +
-						"source=${intent?.getStringExtra(AppRouter.KEY_SOURCE)} " +
-						"hasCfClearance=${url.toHttpUrlOrNull()?.let { httpUrl ->
-							cookieJar.loadForRequest(httpUrl).any { it.name == "cf_clearance" }
-						}}",
-				)
-				success
+				android.util.Log.i(TAG, "verify clearance: url=$url status=${response.code}")
+				response.isSuccessful
 			}
 		}
 	}.onFailure { error ->
@@ -270,6 +270,7 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		const val TAG = "CloudFlareActivity"
 		const val EXTRA_HIDDEN = "hidden"
 		const val EXTRA_AUTO_RESOLVE = "auto_resolve"
+		const val EXTRA_ORIGINAL_URL = "original_url"
 		private const val HIDDEN_TIMEOUT_MS = 45_000L
 	}
 }

@@ -1,10 +1,6 @@
 package org.koitharu.kotatsu.core.exceptions.resolve
 
 import android.content.Context
-import android.content.Intent
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -13,10 +9,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.koitharu.kotatsu.R
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareActivity
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
-import org.koitharu.kotatsu.core.model.MangaSource as ResolveMangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.ui.util.ForegroundActivityHolder
@@ -26,119 +21,98 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Coordinates automatic Cloudflare challenge solving by launching a hidden [CloudFlareActivity]
+ * over the current foreground activity. Concurrent requests for the same source share one attempt.
+ */
 @Singleton
 class CaptchaAutoResolveCoordinator @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val foregroundActivityHolder: ForegroundActivityHolder,
+	@ApplicationContext private val context: Context,
+	private val foregroundActivityHolder: ForegroundActivityHolder,
 ) {
 
-    private val mutex = Mutex()
-    private val inFlight = ConcurrentHashMap<MangaSource, CompletableDeferred<Boolean>>()
-    private val pendingActivityResult = ConcurrentHashMap<MangaSource, CompletableDeferred<Boolean>>()
-    private val recentSuccessAt = ConcurrentHashMap<MangaSource, Long>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+	private val mutex = Mutex()
+	private val inFlight = ConcurrentHashMap<MangaSource, CompletableDeferred<Boolean>>()
+	private val pendingActivityResult = ConcurrentHashMap<MangaSource, CompletableDeferred<Boolean>>()
+	private val recentSuccessAt = ConcurrentHashMap<MangaSource, Long>()
+	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    fun notifyResolveResult(source: MangaSource, success: Boolean) {
-        pendingActivityResult.remove(source)?.complete(success)
-    }
+	fun notifyResolveResult(source: MangaSource, success: Boolean) {
+		pendingActivityResult.remove(source)?.complete(success)
+	}
 
-    suspend fun resolve(source: MangaSource, exception: CloudFlareProtectedException): Boolean {
-        return resolveInternal(source, exception, allowInteractiveFallback = true, showToast = true)
-    }
+	suspend fun resolveInBackground(source: MangaSource, exception: CloudFlareProtectedException): Boolean {
+		inFlight[source]?.let { return it.await() }
+		if (isInCooldown(source)) {
+			return false
+		}
+		val deferred = mutex.withLock {
+			inFlight[source]?.let { return@withLock it }
+			if (isInCooldown(source)) {
+				return@withLock CompletableDeferred(false)
+			}
+			CompletableDeferred<Boolean>().also { fresh ->
+				inFlight[source] = fresh
+				scope.launch {
+					runResolve(source, exception, fresh)
+				}
+			}
+		}
+		return deferred.await()
+	}
 
-    suspend fun resolveInBackground(source: MangaSource, exception: CloudFlareProtectedException): Boolean {
-        return resolveInternal(source, exception, allowInteractiveFallback = false, showToast = false)
-    }
+	private suspend fun runResolve(
+		source: MangaSource,
+		exception: CloudFlareProtectedException,
+		deferred: CompletableDeferred<Boolean>,
+	) {
+		try {
+			val result = launchAndAwait(source, exception)
+			if (result) {
+				recentSuccessAt[source] = System.currentTimeMillis()
+			}
+			deferred.complete(result)
+		} catch (e: Throwable) {
+			e.printStackTraceDebug()
+			deferred.complete(false)
+		} finally {
+			inFlight.remove(source)
+			pendingActivityResult.remove(source)
+		}
+	}
 
-    private suspend fun resolveInternal(
-        source: MangaSource,
-        exception: CloudFlareProtectedException,
-        allowInteractiveFallback: Boolean,
-        showToast: Boolean,
-    ): Boolean {
-        inFlight[source]?.let { return it.await() }
-        val lastSuccessAt = recentSuccessAt[source]
-        if (lastSuccessAt != null && System.currentTimeMillis() - lastSuccessAt < RECENT_SUCCESS_COOLDOWN_MS) {
-            return false
-        }
-        val deferred = mutex.withLock {
-            inFlight[source]?.let { return@withLock it }
-            val recheckSuccessAt = recentSuccessAt[source]
-            if (recheckSuccessAt != null && System.currentTimeMillis() - recheckSuccessAt < RECENT_SUCCESS_COOLDOWN_MS) {
-                return@withLock CompletableDeferred(false)
-            }
-            CompletableDeferred<Boolean>().also { fresh ->
-                inFlight[source] = fresh
-                if (showToast) {
-                    showSolvingToast()
-                }
-                scope.launch {
-                    runOrchestration(source, exception, allowInteractiveFallback, fresh)
-                }
-            }
-        }
-        return deferred.await()
-    }
+	private suspend fun launchAndAwait(
+		source: MangaSource,
+		exception: CloudFlareProtectedException,
+	): Boolean {
+		if (source == UnknownMangaSource) {
+			return false
+		}
+		val launcher = foregroundActivityHolder.current ?: return false
+		val resultDeferred = CompletableDeferred<Boolean>()
+		pendingActivityResult[source] = resultDeferred
+		val intent = AppRouter.cloudFlareResolveIntent(context, exception, hidden = true).apply {
+			putExtra(CloudFlareActivity.EXTRA_AUTO_RESOLVE, true)
+		}
+		launcher.startActivity(intent)
+		// The activity has its own 45s timeout, but it may be killed without calling finish().
+		// Without this outer timeout the deferred would never complete and the source
+		// would be stuck un-resolvable until app restart.
+		return withTimeoutOrNull(RESOLVE_TIMEOUT_MS) {
+			resultDeferred.await()
+		} ?: run {
+			pendingActivityResult.remove(source, resultDeferred)
+			false
+		}
+	}
 
-    private suspend fun runOrchestration(
-        source: MangaSource,
-        exception: CloudFlareProtectedException,
-        allowInteractiveFallback: Boolean,
-        deferred: CompletableDeferred<Boolean>,
-    ) {
-        try {
-            val hiddenPassed = launchAndAwait(source, exception, hidden = true)
-            val finalResult = if (hiddenPassed) {
-                true
-            } else if (allowInteractiveFallback) {
-                launchAndAwait(source, exception, hidden = false)
-            } else {
-                false
-            }
-            if (finalResult) {
-                recentSuccessAt[source] = System.currentTimeMillis()
-            }
-            deferred.complete(finalResult)
-        } catch (e: Throwable) {
-            e.printStackTraceDebug()
-            deferred.complete(false)
-        } finally {
-            inFlight.remove(source)
-            pendingActivityResult.remove(source)
-        }
-    }
+	private fun isInCooldown(source: MangaSource): Boolean {
+		val lastSuccessAt = recentSuccessAt[source] ?: return false
+		return System.currentTimeMillis() - lastSuccessAt < RECENT_SUCCESS_COOLDOWN_MS
+	}
 
-    private suspend fun launchAndAwait(
-        source: MangaSource,
-        exception: CloudFlareProtectedException,
-        hidden: Boolean,
-    ): Boolean {
-        if (source == UnknownMangaSource) {
-            return false
-        }
-        val launcher = foregroundActivityHolder.current
-        if (hidden && launcher == null) {
-            return false
-        }
-        val resultDeferred = CompletableDeferred<Boolean>()
-        pendingActivityResult[source] = resultDeferred
-        val intent = AppRouter.cloudFlareResolveIntent(context, exception, hidden = hidden).apply {
-            putExtra(CloudFlareActivity.EXTRA_AUTO_RESOLVE, true)
-        }
-        launcher?.startActivity(intent) ?: run {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-        }
-        return resultDeferred.await()
-    }
-
-    private fun showSolvingToast() {
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(context, R.string.captcha_solving, Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private companion object {
-        const val RECENT_SUCCESS_COOLDOWN_MS = 30_000L
-    }
+	private companion object {
+		const val RECENT_SUCCESS_COOLDOWN_MS = 30_000L
+		const val RESOLVE_TIMEOUT_MS = 60_000L
+	}
 }

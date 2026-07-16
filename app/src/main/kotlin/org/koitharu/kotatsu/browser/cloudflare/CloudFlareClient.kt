@@ -51,22 +51,15 @@ open class CloudFlareClient(
 		}
 	}
 
-	override fun onReceivedSslError(
-		view: WebView?,
-		handler: android.webkit.SslErrorHandler?,
-		error: android.net.http.SslError?
-	) {
-		// Ignore SSL errors during CloudFlare check to avoid handshake failures on legacy sites
-		handler?.proceed()
-	}
-
 	override fun onReceivedError(
 		view: WebView?,
 		request: android.webkit.WebResourceRequest?,
 		error: android.webkit.WebResourceError?
 	) {
 		// Log errors to help debugging loops
-		android.util.Log.w("CloudFlareClient", "WebView error: ${error?.errorCode} - ${error?.description}")
+		if (request?.isForMainFrame == true) {
+			android.util.Log.w("CloudFlareClient", "WebView error: ${error?.errorCode} - ${error?.description}")
+		}
 		super.onReceivedError(view, request, error)
 	}
 

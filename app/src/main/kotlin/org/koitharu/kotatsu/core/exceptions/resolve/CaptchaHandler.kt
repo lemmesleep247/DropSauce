@@ -44,7 +44,6 @@ import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.AppRouter
-import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.checkNotificationPermission
@@ -74,12 +73,11 @@ class CaptchaHandler @Inject constructor(
 	private val mutex = Mutex()
 
 	@CheckResult
-	suspend fun handle(exception: CloudFlareException, tryAutoResolve: Boolean = true): Boolean =
+	suspend fun handle(exception: CloudFlareException): Boolean =
 		handleException(
 			source = exception.source,
 			exception = exception,
 			notify = true,
-			tryAutoResolve = tryAutoResolve,
 		)
 
 	suspend fun discard(source: MangaSource) {
@@ -299,6 +297,5 @@ class CaptchaHandler @Inject constructor(
 		private const val GROUP_NOTIFICATION_ID = 34
 		private const val SETTINGS_ACTION_CODE = 3
 		private const val ACTION_DISCARD = "org.koitharu.kotatsu.CAPTCHA_DISCARD"
-		private const val RESOLVE_TIMEOUT = 20_000L
 	}
 }

@@ -114,6 +114,18 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	lateinit var httpClient: OkHttpClient
 
 	private var chapters: List<NativeChapter> = emptyList()
+	private val chapterDividerPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+	private val chapterDividerDecoration = object : RecyclerView.ItemDecoration() {
+		override fun onDrawOver(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+			chapterDividerPaint.strokeWidth = resources.displayMetrics.density
+			for (index in 0 until parent.childCount) {
+				val child = parent.getChildAt(index)
+				if (parent.getChildAdapterPosition(child) !in 0 until chapters.lastIndex) continue
+				val y = child.bottom + child.translationY
+				canvas.drawLine(0f, y, parent.width.toFloat(), y, chapterDividerPaint)
+			}
+		}
+	}
 	private var archiveFiles: Map<File, ZipFile> = emptyMap()
 	private val archiveLock = Any()
 	private val loadingChapters = HashSet<Int>()
@@ -399,6 +411,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun applyVisibleColors(background: Int, foreground: Int) {
+		chapterDividerPaint.color = foreground
 		viewBinding?.root?.setBackgroundColor(background)
 		viewBinding?.readerContainer?.setBackgroundColor(background)
 		fun recolor(recycler: RecyclerView?) {
@@ -411,6 +424,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			}
 		}
 		recolor(verticalView)
+		verticalView?.invalidateItemDecorations()
 		recolor(pagerView?.getChildAt(0) as? RecyclerView)
 	}
 
@@ -494,6 +508,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun renderVertical(container: FrameLayout, locator: Locator) {
+		chapterDividerPaint.color = foregroundColor
 		val recycler = RecyclerView(requireContext()).apply {
 			layoutParams = FrameLayout.LayoutParams(-1, -1)
 			layoutManager = LinearLayoutManager(context)
@@ -506,6 +521,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			setBackgroundColor(backgroundColor)
 			clipToPadding = true
 			setPadding(0, scrollTopClipPx, 0, 0)
+			addItemDecoration(chapterDividerDecoration)
 			addOnScrollListener(object : RecyclerView.OnScrollListener() {
 				override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) = scheduleProgress()
 			})

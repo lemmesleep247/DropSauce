@@ -38,12 +38,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,8 +77,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.activityViewModels
@@ -1241,11 +1242,12 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             modifier = modifier,
             iconSize = 22.dp,
         )
-        if (showDialog) EpubThemeDialog { showDialog = false }
+        if (showDialog) EpubThemeSheet { showDialog = false }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun EpubThemeDialog(onDismiss: () -> Unit) {
+    private fun EpubThemeSheet(onDismiss: () -> Unit) {
         var theme by remember { mutableStateOf(canonicalEpubTheme(settings.epubTheme)) }
         var background by remember { mutableIntStateOf(settings.epubCustomBackgroundColor) }
         var foreground by remember { mutableIntStateOf(settings.epubCustomTextColor) }
@@ -1267,25 +1269,38 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             }
         }
         val customSelected = theme == EPUB_THEME_CUSTOM
-        Dialog(
+        ModalBottomSheet(
             onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false),
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
+            Column(
                 modifier = Modifier
-                    .widthIn(max = 600.dp)
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .heightIn(max = 720.dp),
+                    .heightIn(max = 720.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(stringResource(R.string.theme), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.theme),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        FilledTonalIconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_close),
+                                contentDescription = stringResource(R.string.close),
+                            )
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
                             "white" to R.string.epub_theme_light,
@@ -1428,7 +1443,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             },
                         ) { Text(stringResource(R.string.apply)) }
                     }
-                }
             }
         }
     }

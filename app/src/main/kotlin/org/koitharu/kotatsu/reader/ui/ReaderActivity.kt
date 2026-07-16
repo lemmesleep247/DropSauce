@@ -177,9 +177,9 @@ class ReaderActivity :
             ),
         )
         viewModel.readerMode.observe(this, Lifecycle.State.STARTED, this::onInitReader)
-		settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }.observe(this) {
-			if (readerManager.isEpub) viewBinding.actionsView.setSliderReversed(it == EPUB_MODE_PAGED_RTL)
-		}
+        settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }.observe(this) {
+            if (readerManager.isEpub) viewBinding.actionsView.setSliderReversed(it == EPUB_MODE_PAGED_RTL)
+        }
         viewModel.onPageSaved.observeEvent(this, PagesSavedObserver(viewBinding.container))
         viewModel.uiState.zipWithPrevious().observe(this, this::onUiStateChanged)
         combine(
@@ -281,9 +281,9 @@ class ReaderActivity :
         if (viewBinding.appbarTop.isVisible) {
             lifecycle.postDelayed(TimeUnit.SECONDS.toMillis(1), hideUiRunnable)
         }
-		viewBinding.actionsView.setSliderReversed(
-			if (readerManager.isEpub) settings.epubReadingMode == EPUB_MODE_PAGED_RTL else mode == ReaderMode.REVERSED,
-		)
+        viewBinding.actionsView.setSliderReversed(
+            if (readerManager.isEpub) settings.epubReadingMode == EPUB_MODE_PAGED_RTL else mode == ReaderMode.REVERSED,
+        )
         viewBinding.timerControl.onReaderModeChanged(mode)
     }
 

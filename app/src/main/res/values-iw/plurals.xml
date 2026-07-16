@@ -3,36 +3,43 @@
     <plurals name="items">
         <item quantity="one">פריט אחד</item>
         <item quantity="two">שתי פריטים</item>
+        <item quantity="many">%1$d פריטים</item>
         <item quantity="other">%1$d פריטים</item>
     </plurals>
     <plurals name="new_chapters">
         <item quantity="one">פרק אחד חדש</item>
         <item quantity="two">שתי פרקים חדשים</item>
+        <item quantity="many">%1$d פרקים חדשים</item>
         <item quantity="other">%1$d פרקים חדשים</item>
     </plurals>
     <plurals name="months_ago">
         <item quantity="one">לפני חודש</item>
         <item quantity="two">לפני חודשיים</item>
+        <item quantity="many">לפני %1$d חודשים</item>
         <item quantity="other">לפני %1$d חודשים</item>
     </plurals>
     <plurals name="chapters">
         <item quantity="one">פרק אחד</item>
         <item quantity="two">שתי פרקים</item>
+        <item quantity="many">%1$d פרקים</item>
         <item quantity="other">%1$d פרקים</item>
     </plurals>
     <plurals name="days_ago">
         <item quantity="one">לפני יום</item>
         <item quantity="two">לפני יומיים</item>
+        <item quantity="many">לפני %1$d ימים</item>
         <item quantity="other">לפני %1$d ימים</item>
     </plurals>
     <plurals name="hours">
         <item quantity="one">שעה</item>
         <item quantity="two">שעתיים</item>
+        <item quantity="many">%1$d שעות</item>
         <item quantity="other">%1$d שעות</item>
     </plurals>
     <plurals name="minutes">
         <item quantity="one">דקה</item>
         <item quantity="two">שתי דקות</item>
+        <item quantity="many">%1$d דקות</item>
         <item quantity="other">%1$d דקות</item>
     </plurals>
 </resources>

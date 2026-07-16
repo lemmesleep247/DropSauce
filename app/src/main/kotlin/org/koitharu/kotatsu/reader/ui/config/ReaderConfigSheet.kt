@@ -953,12 +953,12 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     private fun EpubReadModeSection(enabled: Boolean = true) {
         val modes = listOf(
             "scroll" to (R.string.epub_mode_scroll to R.drawable.ic_reader_vertical),
-			"paged_ltr" to (R.string.epub_mode_paged_ltr to R.drawable.ic_reader_ltr),
-			"paged_rtl" to (R.string.epub_mode_paged_rtl to R.drawable.ic_reader_rtl),
+            "paged_ltr" to (R.string.epub_mode_paged_ltr to R.drawable.ic_reader_ltr),
+            "paged_rtl" to (R.string.epub_mode_paged_rtl to R.drawable.ic_reader_rtl),
         )
-		var current by remember {
-			mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
-		}
+        var current by remember {
+            mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
+        }
         val selectedIndex = modes.indexOfFirst { it.first == current }.coerceAtLeast(0)
 
         Column(

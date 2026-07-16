@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.reader.ui.epub
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
@@ -379,6 +380,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		}
 	}
 
+	@SuppressLint("WrongConstant")
 	private fun paginate(viewWidth: Int, viewHeight: Int, range: IntRange): List<NativePage> {
 		val density = resources.displayMetrics.density
 		val horizontal = (settings.epubHorizontalPadding * density).toInt().coerceAtLeast(1)
@@ -427,6 +429,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		isLongClickable = false
 	}
 
+	@SuppressLint("WrongConstant")
 	private fun applyTextStyle(textView: TextView, paged: Boolean) = with(textView) {
 		setTextColor(foregroundColor)
 		setBackgroundColor(backgroundColor)
@@ -437,8 +440,9 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		textDirection = if (isRtlPagedMode) View.TEXT_DIRECTION_RTL else View.TEXT_DIRECTION_FIRST_STRONG
 		gravity = Gravity.TOP or when (effectiveTextAlign) {
 			"center" -> Gravity.CENTER_HORIZONTAL
-			"right", "end" -> Gravity.RIGHT
-			"justify" -> if (isRtlPagedMode) Gravity.RIGHT else Gravity.LEFT
+			"end" -> Gravity.END
+			"right" -> if (isRtlPagedMode) Gravity.START else Gravity.END
+			"justify" -> Gravity.START
 			else -> Gravity.START
 		}
 		textAlignment = when (effectiveTextAlign) {

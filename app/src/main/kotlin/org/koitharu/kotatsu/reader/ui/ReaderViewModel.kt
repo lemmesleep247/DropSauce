@@ -541,6 +541,7 @@ class ReaderViewModel @Inject constructor(
 
     fun onEpubProgressChanged(
         chapterId: Long,
+        charOffset: Int,
         chapterPm: Int,
         page: Int = 0,
         pageCount: Int = 0,
@@ -552,7 +553,7 @@ class ReaderViewModel @Inject constructor(
             it?.copy(
                 chapterId = chapterId,
                 page = if (pageCount > 0) page.coerceIn(0, pageCount - 1) else 0,
-                scroll = chapterPm,
+                scroll = ReaderState.encodeEpubOffset(charOffset),
             )
         }
         updateEpubProgressUi(chapterPm, page, pageCount)
@@ -601,6 +602,10 @@ class ReaderViewModel @Inject constructor(
             currentPage = when {
                 !isEpub -> state.page
                 isEpubPaged -> prevUi.currentPage.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+                // exact-offset states (negative) carry no permille; keep the last slider value
+                // until the imminent progress report supplies the real one
+                ReaderState.decodeEpubOffset(state.scroll) != null ->
+                    (prevUi?.currentPage ?: 0).coerceIn(0, EPUB_SLIDER_MAX)
                 else -> state.scroll.coerceIn(0, EPUB_SLIDER_MAX)
             },
             percent = computePercent(state.chapterId),

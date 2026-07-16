@@ -25,4 +25,13 @@ data class ReaderState(
 		page = 0,
 		scroll = 0,
 	)
+
+	companion object {
+
+		// EPUB progress: scroll >= 0 is a legacy 0..1000 permille value, negative values
+		// encode an exact character offset within the chapter (lossless restore)
+		fun encodeEpubOffset(offset: Int): Int = -offset - 1
+
+		fun decodeEpubOffset(scroll: Int): Int? = if (scroll < 0) -scroll - 1 else null
+	}
 }

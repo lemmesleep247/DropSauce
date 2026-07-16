@@ -369,7 +369,13 @@ class ReaderActivity :
 
     override fun onBookmarkSelected(bookmark: Bookmark): Boolean {
         return if (bookmark.epubHighlight != null) {
-            jumpToChapter(bookmark.chapterId, page = 0, scroll = bookmark.scroll, isPeekPreferred = true)
+            // epub highlights keep the exact character offset in `page`; scroll is only a coarse permille
+            jumpToChapter(
+                bookmark.chapterId,
+                page = 0,
+                scroll = ReaderState.encodeEpubOffset(bookmark.page),
+                isPeekPreferred = true,
+            )
             true
         } else {
             onPageSelectedImpl(ReaderPage(bookmark.toMangaPage(), bookmark.page, bookmark.chapterId), isPeekPreferred = true)

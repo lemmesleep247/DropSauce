@@ -282,7 +282,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val chapter = chapters.indexOfFirst { it.id == state.chapterId }
 			.takeIf { it >= 0 } ?: return
 		withContext(Dispatchers.IO) { ensureChaptersLoaded(chapter.preloadRange()) }
-		val offset = (chapters[chapter].text.length.toLong() * state.scroll.coerceIn(0, 1000) / 1000).toInt()
+		val offset = ReaderState.decodeEpubOffset(state.scroll)
+			?: (chapters[chapter].text.length.toLong() * state.scroll.coerceIn(0, 1000) / 1000).toInt()
 		renderMode(Locator(chapter, offset), state.page.takeIf { isPagedMode })
 	}
 
@@ -373,8 +374,11 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun scheduleReflow() {
+		// settings observers fire once on subscribe, before the book is loaded; a reflow queued
+		// then would later render from an empty view and jump to the first page
+		if (chapters.isEmpty()) return
 		val root = viewBinding?.root ?: return
-		if (reflowLocator == null && chapters.isNotEmpty()) reflowLocator = currentLocator()
+		if (reflowLocator == null) reflowLocator = currentLocator()
 		root.removeCallbacks(rebuildRunnable)
 		refreshVisibleStyles()
 		root.postDelayed(rebuildRunnable, REPAGINATE_DELAY_MS)
@@ -482,9 +486,11 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			container.post { renderMode(locator, pageInChapter) }
 			return
 		}
+		val alreadyThere = currentLocator() == locator.clamped()
 		lastLocator = locator.clamped()
 		if (!isPagedMode && verticalView != null) {
-			goTo(lastLocator)
+			// re-emissions of the same state must not re-snap the scroll position
+			if (!alreadyThere) goTo(lastLocator)
 			return
 		}
 		if (isPagedMode && pagerView != null && pages.any {
@@ -847,7 +853,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			pageId = UUID.randomUUID().leastSignificantBits and Long.MAX_VALUE,
 			chapterId = chapter.id,
 			page = selection.start,
-			scroll = selection.start * 1000 / chapter.text.length.coerceAtLeast(1),
+			scroll = (selection.start.toLong() * 1000 / chapter.text.length.coerceAtLeast(1)).toInt(),
 			imageUrl = epubHighlightUrl(selection.end, selection.text),
 			createdAt = Instant.now(),
 			percent = selection.start / chapter.text.length.coerceAtLeast(1).toFloat(),
@@ -1001,6 +1007,9 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 
 	private fun currentLocator(): Locator {
+		// mid-restore the views are not at the target position yet; trust the target instead
+		// so idle/pause saves and scheduled reflows never capture a transient page 0
+		if (restoring) return lastLocator.clamped()
 		pagerView?.let { pager ->
 			return pages.getOrNull(pager.currentItem)?.let { Locator(it.chapter, it.start) } ?: lastLocator
 		}
@@ -1035,7 +1044,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val firstChapterPage = if (pagerView != null) pages.indexOfFirst { it.chapter == locator.chapter }.coerceAtLeast(0) else 0
 		val page = globalPage - firstChapterPage
 		val pageCount = if (pagerView != null) pages.count { it.chapter == locator.chapter } else 0
-		viewModel.onEpubProgressChanged(chapter.id, chapterPm, page, pageCount)
+		viewModel.onEpubProgressChanged(chapter.id, locator.offset, chapterPm, page, pageCount)
 	}
 
 	override fun getCurrentState(): ReaderState? {
@@ -1047,7 +1056,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		return ReaderState(
 			chapter.id,
 			page,
-			(locator.offset.toLong() * 1000 / chapter.text.length.coerceAtLeast(1)).toInt(),
+			ReaderState.encodeEpubOffset(locator.offset),
 		)
 	}
 
@@ -1068,7 +1077,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			return
 		}
 		val chapter = currentLocator().chapter
-		val offset = chapters[chapter].text.length * position.coerceIn(0, 1000) / 1000
+		val offset = (chapters[chapter].text.length.toLong() * position.coerceIn(0, 1000) / 1000).toInt()
 		goTo(Locator(chapter, offset), smooth)
 	}
 
@@ -1240,9 +1249,11 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		override fun getItemCount() = pages.size
 		override fun onBindViewHolder(holder: TextHolder, position: Int) {
 			val page = pages[position]
+			val chapterText = styledChapterText(page.chapter)
+			val visibleStart = (page.start until page.end).firstOrNull { !chapterText[it].isWhitespace() } ?: page.end
 			applyTextStyle(holder.text, true)
-			holder.text.tag = TextLocation(page.chapter, page.start)
-			holder.text.text = styledChapterText(page.chapter).subSequence(page.start, page.end)
+			holder.text.tag = TextLocation(page.chapter, visibleStart)
+			holder.text.text = chapterText.subSequence(visibleStart, page.end)
 		}
 	}
 

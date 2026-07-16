@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.reader.ui.epub
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -24,6 +25,7 @@ internal class HighlightColorSpan(var color: Int) : CharacterStyle(), UpdateAppe
 	}
 }
 
+@SuppressLint("ViewConstructor")
 internal class EpubSelectableTextView(
 	context: Context,
 	private val highlightColor: Int,

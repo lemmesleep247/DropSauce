@@ -285,8 +285,8 @@
     <string name="download_slowdown_summary">Helps avoid blocking your IP address</string>
     <string name="intercept_cloudflare">Bypass Cloudflare via Interception</string>
     <string name="intercept_cloudflare_summary">Try this if the source gets stuck on the Cloudflare check forever</string>
-    <string name="source_settings_app">App settings</string>
-    <string name="source_settings_extension">Extension settings</string>
+    <string name="source_settings_app">App-side settings</string>
+    <string name="source_settings_extension">Server-side settings</string>
     <string name="local_manga_processing">Saved manga processing</string>
     <string name="chapters_will_removed_background">Chapters will be removed in the background</string>
     <string name="canceled">Canceled</string>

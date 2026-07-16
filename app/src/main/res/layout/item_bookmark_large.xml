@@ -20,6 +20,18 @@
 		tools:ignore="ContentDescription"
 		tools:src="@tools:sample/backgrounds/scenic[5]" />
 
+	<TextView
+		android:id="@+id/textView_highlight"
+		android:layout_width="match_parent"
+		android:layout_height="160dp"
+		android:gravity="top|start"
+		android:maxLines="7"
+		android:padding="16dp"
+		android:textAppearance="?attr/textAppearanceBodyMedium"
+		android:visibility="gone"
+		tools:text="Selected EPUB text appears here as a remembered highlight."
+		tools:visibility="gone" />
+
 	<org.koitharu.kotatsu.history.ui.util.ReadingProgressView
 		android:id="@+id/progressView"
 		android:layout_width="wrap_content"

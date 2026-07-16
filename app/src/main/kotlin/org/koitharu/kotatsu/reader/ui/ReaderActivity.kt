@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.bookmarks.domain.Bookmark
+import org.koitharu.kotatsu.bookmarks.domain.epubHighlight
 import org.koitharu.kotatsu.core.exceptions.resolve.DialogErrorObserver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -303,12 +305,26 @@ class ReaderActivity :
         invalidateOptionsMenu()
     }
 
-    override fun onGridTouch(area: TapGridArea): Boolean {
-        return isReaderResumed() && controlDelegate.onGridTouch(area)
+    override fun onGridTouch(area: TapGridArea, horizontalFraction: Float): Boolean {
+        if (!isReaderResumed()) return false
+        return if (readerManager.isEpub) {
+            if (settings.isEpubPagedTapGesturesEnabled && settings.epubReadingMode != EPUB_MODE_SCROLL) {
+                when {
+                    horizontalFraction < 1f / 3f -> switchPageBy(-1)
+                    horizontalFraction > 2f / 3f -> switchPageBy(1)
+                    else -> toggleUiVisibility()
+                }
+            } else {
+                toggleUiVisibility()
+            }
+            true
+        } else {
+            controlDelegate.onGridTouch(area)
+        }
     }
 
     override fun onGridLongTouch(area: TapGridArea): Boolean {
-        return isReaderResumed() && controlDelegate.onGridLongTouch(area)
+        return !readerManager.isEpub && isReaderResumed() && controlDelegate.onGridLongTouch(area)
     }
 
     override fun onProcessTouch(rawX: Int, rawY: Int): Boolean {
@@ -323,7 +339,9 @@ class ReaderActivity :
             false
         } else {
             val touchables = window.peekDecorView()?.touchables
-            touchables?.none { it.hasGlobalPoint(rawX, rawY) } != false
+            touchables?.none {
+                it.hasGlobalPoint(rawX, rawY) && it.getTag(R.id.tag_epub_selectable_text) != true
+            } != false
         }
     }
 
@@ -346,6 +364,15 @@ class ReaderActivity :
     override fun onChapterSelected(chapter: MangaChapter): Boolean {
         viewModel.switchChapter(chapter.id, 0)
         return true
+    }
+
+    override fun onBookmarkSelected(bookmark: Bookmark): Boolean {
+        return if (bookmark.epubHighlight != null) {
+            viewModel.switchChapter(bookmark.chapterId, 0, bookmark.scroll)
+            true
+        } else {
+            onPageSelected(ReaderPage(bookmark.toMangaPage(), bookmark.page, bookmark.chapterId))
+        }
     }
 
     override fun onPageSelected(page: ReaderPage): Boolean {
@@ -470,9 +497,11 @@ class ReaderActivity :
     }
 
     override fun openMenu() {
-        viewModel.saveCurrentState(readerManager.currentReader?.getCurrentState())
         val currentMode = readerManager.currentMode ?: return
-        router.showReaderConfigSheet(currentMode)
+        viewBinding.root.post {
+            viewModel.saveCurrentState(readerManager.currentReader?.getCurrentState())
+            router.showReaderConfigSheet(currentMode)
+        }
     }
 
     override fun scrollBy(delta: Int, smooth: Boolean): Boolean {
@@ -633,6 +662,7 @@ class ReaderActivity :
     companion object {
 
         private const val TOAST_DURATION = 2000L
+		private const val EPUB_MODE_SCROLL = "scroll"
 		private const val EPUB_MODE_PAGED_RTL = "paged_rtl"
 
         private const val TOP_READER_BAR_ALPHA = 0.7f

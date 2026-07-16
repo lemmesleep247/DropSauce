@@ -12,15 +12,10 @@ import org.koitharu.kotatsu.details.ui.pager.pages.PagesFragment
 class ChaptersPagesAdapter(
 	fragment: Fragment,
 	val isPagesTabEnabled: Boolean,
-	private val isChaptersOnly: Boolean = false,
 ) : FragmentStateAdapter(fragment),
 	TabLayoutMediator.TabConfigurationStrategy {
 
-	override fun getItemCount(): Int = when {
-		isChaptersOnly -> 1
-		isPagesTabEnabled -> 3
-		else -> 2
-	}
+	override fun getItemCount(): Int = if (isPagesTabEnabled) 3 else 2
 
 	override fun createFragment(position: Int): Fragment = when (position) {
 		0 -> ChaptersFragment()

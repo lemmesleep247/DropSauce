@@ -160,7 +160,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		set(value) = prefs.edit { putBoolean(KEY_TITLE_OVER_COVER, value) }
 
 	var isTitleTapToReadEnabled: Boolean
-		get() = prefs.getBoolean(KEY_TITLE_TAP_TO_READ, true)
+		get() = prefs.getBoolean(KEY_TITLE_TAP_TO_READ, false)
 		set(value) = prefs.edit { putBoolean(KEY_TITLE_TAP_TO_READ, value) }
 
 	var isGridSpacingIncreased: Boolean
@@ -254,6 +254,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getInt(KEY_EPUB_HORIZONTAL_PADDING, 20)
 		set(value) = prefs.edit { putInt(KEY_EPUB_HORIZONTAL_PADDING, value.coerceIn(0, 64)) }
 
+	var epubVerticalPadding: Int
+		get() = prefs.getInt(KEY_EPUB_VERTICAL_PADDING, 112).coerceIn(0, 112)
+		set(value) = prefs.edit { putInt(KEY_EPUB_VERTICAL_PADDING, value.coerceIn(0, 112)) }
+
 	var epubTextAlign: String
 		get() = prefs.getString(KEY_EPUB_TEXT_ALIGN, "justify") ?: "justify"
 		set(value) = prefs.edit { putString(KEY_EPUB_TEXT_ALIGN, value) }
@@ -262,14 +266,38 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getString(KEY_EPUB_READING_MODE, "scroll") ?: "scroll"
 		set(value) = prefs.edit { putString(KEY_EPUB_READING_MODE, value) }
 
+	var isEpubPagedTapGesturesEnabled: Boolean
+		get() = prefs.getBoolean(KEY_EPUB_PAGED_TAP_GESTURES, false)
+		set(value) = prefs.edit { putBoolean(KEY_EPUB_PAGED_TAP_GESTURES, value) }
+
 	var isEpubPublisherStyleEnabled: Boolean
 		get() = prefs.getBoolean(KEY_EPUB_PUBLISHER_STYLE, false)
 		set(value) = prefs.edit { putBoolean(KEY_EPUB_PUBLISHER_STYLE, value) }
 
-	// "system" | "light" | "dark" - page colors of the epub reader only
+	// "white" | "gray" | "black" | "custom" - page colors of the EPUB reader only
 	var epubTheme: String
-		get() = prefs.getString(KEY_EPUB_THEME, "system") ?: "system"
+		get() = prefs.getString(KEY_EPUB_THEME, "white") ?: "white"
 		set(value) = prefs.edit { putString(KEY_EPUB_THEME, value) }
+
+	var epubCustomBackgroundColor: Int
+		get() = prefs.getInt(KEY_EPUB_CUSTOM_BACKGROUND_COLOR, 0xFFFFFFFF.toInt())
+		set(value) = prefs.edit { putInt(KEY_EPUB_CUSTOM_BACKGROUND_COLOR, value) }
+
+	var epubCustomTextColor: Int
+		get() = prefs.getInt(KEY_EPUB_CUSTOM_TEXT_COLOR, 0xFF1B1B1F.toInt())
+		set(value) = prefs.edit { putInt(KEY_EPUB_CUSTOM_TEXT_COLOR, value) }
+
+	var epubCustomHighlightColor: Int
+		get() = prefs.getInt(KEY_EPUB_CUSTOM_HIGHLIGHT_COLOR, 0xFFFFD54F.toInt())
+		set(value) = prefs.edit { putInt(KEY_EPUB_CUSTOM_HIGHLIGHT_COLOR, value) }
+
+	var epubCustomFontName: String
+		get() = prefs.getString(KEY_EPUB_CUSTOM_FONT_NAME, "").orEmpty()
+		set(value) = prefs.edit { putString(KEY_EPUB_CUSTOM_FONT_NAME, value) }
+
+	var epubCustomFontRevision: Int
+		get() = prefs.getInt(KEY_EPUB_CUSTOM_FONT_REVISION, 0)
+		set(value) = prefs.edit { putInt(KEY_EPUB_CUSTOM_FONT_REVISION, value) }
 
 	val isReaderZoomButtonsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_ZOOM_BUTTONS, false)
@@ -1027,10 +1055,18 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_EPUB_FONT_FAMILY = "epub_font_family"
 		const val KEY_EPUB_LINE_HEIGHT = "epub_line_height"
 		const val KEY_EPUB_HORIZONTAL_PADDING = "epub_horizontal_padding"
+		const val KEY_EPUB_VERTICAL_PADDING = "epub_vertical_padding"
 		const val KEY_EPUB_TEXT_ALIGN = "epub_text_align"
 		const val KEY_EPUB_READING_MODE = "epub_reading_mode"
+		const val KEY_EPUB_PAGED_TAP_GESTURES = "epub_paged_tap_gestures"
 		const val KEY_EPUB_PUBLISHER_STYLE = "epub_publisher_style"
 		const val KEY_EPUB_THEME = "epub_theme"
+		const val KEY_EPUB_CUSTOM_BACKGROUND_COLOR = "epub_custom_background_color"
+		const val KEY_EPUB_CUSTOM_TEXT_COLOR = "epub_custom_text_color"
+		const val KEY_EPUB_CUSTOM_HIGHLIGHT_COLOR = "epub_custom_highlight_color"
+		const val KEY_EPUB_CUSTOM_FONT_NAME = "epub_custom_font_name"
+		const val KEY_EPUB_CUSTOM_FONT_REVISION = "epub_custom_font_revision"
+		const val EPUB_CUSTOM_FONT_FILE = "epub_custom_font"
 		const val KEY_READER_MODE_DETECT = "reader_mode_detect"
 		const val KEY_READER_CROP = "reader_crop"
 		const val KEY_APP_PASSWORD = "app_password"

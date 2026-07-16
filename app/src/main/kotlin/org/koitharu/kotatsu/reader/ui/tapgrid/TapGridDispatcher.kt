@@ -33,7 +33,10 @@ class TapGridDispatcher(
 			return true
 		}
 		val area = getArea(event.rawX, event.rawY) ?: return false
-		return listener.onGridTouch(area)
+		val location = IntArray(2)
+		rootView.getLocationOnScreen(location)
+		val horizontalFraction = ((event.rawX - location[0]) / rootView.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+		return listener.onGridTouch(area, horizontalFraction)
 	}
 
 	override fun onDoubleTapEvent(e: MotionEvent): Boolean {
@@ -88,7 +91,7 @@ class TapGridDispatcher(
 
 	interface OnGridTouchListener {
 
-		fun onGridTouch(area: TapGridArea): Boolean
+		fun onGridTouch(area: TapGridArea, horizontalFraction: Float): Boolean
 
 		fun onGridLongTouch(area: TapGridArea): Boolean
 

@@ -41,6 +41,10 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 	val isCaptchaNotificationsDisabled: Boolean
 		get() = prefs.getBoolean(KEY_NO_CAPTCHA, false)
 
+	var isInterceptCloudflareEnabled: Boolean
+		get() = prefs.getBoolean(KEY_INTERCEPT_CLOUDFLARE, false)
+		set(value) = prefs.edit { putBoolean(KEY_INTERCEPT_CLOUDFLARE, value) }
+
 	@Suppress("UNCHECKED_CAST")
 	override fun <T> get(key: ConfigKey<T>): T {
 		return when (key) {
@@ -116,6 +120,7 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 
 		const val KEY_NO_CAPTCHA = "no_captcha"
 		const val KEY_SLOWDOWN = "slowdown"
+		const val KEY_INTERCEPT_CLOUDFLARE = "intercept_cloudflare"
 		const val KEY_SORT_ORDER = "sort_order"
 		const val KEY_LAST_SORT_KEY = "last_sort_key"
 		const val KEY_LAST_SORT_TITLE = "last_sort_title"

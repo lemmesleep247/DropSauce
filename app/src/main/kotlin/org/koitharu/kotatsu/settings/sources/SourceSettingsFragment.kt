@@ -303,6 +303,17 @@ private fun SourceSettingsScreen(
 							shape = pos.shape,
 						)
 					}
+					item { pos ->
+						var intercept by rememberSourceBoolean(sourcePrefs, SourceSettings.KEY_INTERCEPT_CLOUDFLARE, false)
+						SwitchSettingsItem(
+							title = stringResource(R.string.intercept_cloudflare),
+							subtitle = stringResource(R.string.intercept_cloudflare_summary),
+							checked = intercept,
+							onCheckedChange = { intercept = it },
+							icon = R.drawable.ic_lock,
+							shape = pos.shape,
+						)
+					}
 				}
 			}
 		}

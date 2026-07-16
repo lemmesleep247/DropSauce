@@ -5,25 +5,35 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.core.view.isInvisible
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.yield
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.browser.BaseBrowserActivity
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
-import org.koitharu.kotatsu.core.model.MangaSource
+import org.koitharu.kotatsu.core.model.MangaSource as ResolveMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.network.CommonHeaders
+import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.model.MangaSource
@@ -36,30 +46,62 @@ import javax.inject.Inject
 class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 
 	private var pendingResult = RESULT_CANCELED
+	private val isHidden: Boolean by lazy { intent?.getBooleanExtra(EXTRA_HIDDEN, false) == true }
+	private val isAutoResolve: Boolean by lazy { intent?.getBooleanExtra(EXTRA_AUTO_RESOLVE, false) == true }
+	private var resultNotified = false
+	private var hiddenTimeoutJob: Job? = null
+	private var clearanceVerificationJob: Job? = null
 
 	@Inject
 	lateinit var cookieJar: MutableCookieJar
 
 	@Inject
+	@MangaHttpClient
+	lateinit var okHttpClient: OkHttpClient
+
+	@Inject
 	lateinit var captchaHandler: CaptchaHandler
+
+	@Inject
+	lateinit var captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator
 
 	private lateinit var cfClient: CloudFlareClient
 
 	override fun onCreate2(savedInstanceState: Bundle?, source: MangaSource, repository: MangaRepository?) {
-		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = true)
+		if (isHidden) {
+			supportActionBar?.hide()
+			viewBinding.appbar.isVisible = false
+			viewBinding.progressBar.isVisible = false
+			viewBinding.root.alpha = 0.01f
+			window.addFlags(
+				WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+					WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+			)
+			hiddenTimeoutJob = lifecycleScope.launch {
+				delay(HIDDEN_TIMEOUT_MS)
+				viewBinding.webView.stopLoading()
+				finishAfterTransition()
+			}
+		} else {
+			setDisplayHomeAsUp(isEnabled = true, showUpAsClose = true)
+		}
 		val url = intent?.dataString
 		if (url.isNullOrEmpty()) {
 			finishAfterTransition()
 			return
 		}
-		cfClient = CloudFlareClient(cookieJar, this, adBlock, url)
-		viewBinding.webView.webViewClient = cfClient
 		lifecycleScope.launch {
 			try {
 				proxyProvider.applyWebViewConfig()
 			} catch (e: Exception) {
-				Snackbar.make(viewBinding.webView, e.getDisplayMessage(resources), Snackbar.LENGTH_LONG).show()
+				showSnackbar(e.getDisplayMessage(resources))
 			}
+			cfClient = if (shouldUseInterception(source)) {
+				CloudFlareInterceptClient(cookieJar, this@CloudFlareActivity, adBlock, url)
+			} else {
+				CloudFlareClient(cookieJar, this@CloudFlareActivity, adBlock, url)
+			}
+			viewBinding.webView.webViewClient = cfClient
 			if (savedInstanceState == null) {
 				onTitleChanged(getString(R.string.loading_), url)
 				viewBinding.webView.loadUrl(url)
@@ -68,6 +110,9 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	}
 
 	override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+		if (isHidden) {
+			return false
+		}
 		menuInflater.inflate(R.menu.opt_captcha, menu)
 		return super.onCreateOptionsMenu(menu)
 	}
@@ -88,27 +133,54 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	}
 
 	override fun finish() {
+		hiddenTimeoutJob?.cancel()
 		setResult(pendingResult)
+		if (isAutoResolve && !resultNotified) {
+			resultNotified = true
+			intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let { sourceName ->
+				captchaAutoResolveCoordinator.notifyResolveResult(
+					ResolveMangaSource(sourceName),
+					pendingResult == RESULT_OK,
+				)
+			}
+		}
 		super.finish()
 	}
 
 	override fun onLoadingStateChanged(isLoading: Boolean) = Unit
 
 	override fun onPageLoaded() {
-		viewBinding.progressBar.isInvisible = true
+		if (!isHidden) {
+			viewBinding.progressBar.isInvisible = true
+		}
 	}
 
 	override fun onLoopDetected() {
-		restartCheck()
+		if (isHidden || isAutoResolve) {
+			restartCheck()
+		} else {
+			cfClient.reset()
+			android.util.Log.w(TAG, "Cloudflare loop detected; keeping manual browser open for user action")
+		}
 	}
 
 	override fun onCheckPassed() {
-		pendingResult = RESULT_OK
-		lifecycleScope.launch {
+		if (clearanceVerificationJob?.isActive == true) {
+			return
+		}
+		clearanceVerificationJob = lifecycleScope.launch {
+			val url = intent?.dataString
+			if (url.isNullOrBlank() || !verifyClearance(url)) {
+				if (!isHidden) {
+					showSnackbar(getString(R.string.captcha_required_message))
+				}
+				return@launch
+			}
+			pendingResult = RESULT_OK
 			val source = intent?.getStringExtra(AppRouter.KEY_SOURCE)
 			if (source != null) {
 				runCatchingCancellable {
-					captchaHandler.discard(MangaSource(source))
+					captchaHandler.discard(ResolveMangaSource(source))
 				}.onFailure {
 					it.printStackTraceDebug()
 				}
@@ -116,6 +188,44 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			finishAfterTransition()
 		}
 	}
+
+	private fun showSnackbar(message: CharSequence) {
+		if (isFinishing || isDestroyed || !viewBinding.root.isAttachedToWindow) {
+			return
+		}
+		Snackbar.make(viewBinding.root, message, Snackbar.LENGTH_LONG).show()
+	}
+
+	private suspend fun verifyClearance(url: String): Boolean = runCatchingCancellable {
+		runInterruptible(Dispatchers.IO) {
+			val request = Request.Builder()
+				.url(url)
+				.get()
+				.apply {
+					intent?.getStringExtra(AppRouter.KEY_USER_AGENT)?.takeIf { it.isNotBlank() }?.let {
+						header(CommonHeaders.USER_AGENT, it)
+					}
+					intent?.getStringExtra(AppRouter.KEY_SOURCE)?.takeIf { it.isNotBlank() }?.let {
+						header(CommonHeaders.MANGA_SOURCE, it)
+					}
+				}
+				.build()
+			okHttpClient.newCall(request).execute().use { response ->
+				val success = response.isSuccessful
+				android.util.Log.i(
+					TAG,
+					"verify clearance: url=$url status=${response.code} success=$success " +
+						"source=${intent?.getStringExtra(AppRouter.KEY_SOURCE)} " +
+						"hasCfClearance=${url.toHttpUrlOrNull()?.let { httpUrl ->
+							cookieJar.loadForRequest(httpUrl).any { it.name == "cf_clearance" }
+						}}",
+				)
+				success
+			}
+		}
+	}.onFailure { error ->
+		android.util.Log.w(TAG, "verify clearance failed: url=$url", error)
+	}.getOrDefault(false)
 
 	override fun onTitleChanged(title: CharSequence, subtitle: CharSequence?) {
 		setTitle(title)
@@ -141,6 +251,10 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		}
 	}
 
+	private fun shouldUseInterception(source: MangaSource): Boolean {
+		return SourceSettings(this, ResolveMangaSource(source.name)).isInterceptCloudflareEnabled
+	}
+
 	class Contract : ActivityResultContract<CloudFlareProtectedException, Boolean>() {
 		override fun createIntent(context: Context, input: CloudFlareProtectedException): Intent {
 			return AppRouter.cloudFlareResolveIntent(context, input)
@@ -154,5 +268,8 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	companion object {
 
 		const val TAG = "CloudFlareActivity"
+		const val EXTRA_HIDDEN = "hidden"
+		const val EXTRA_AUTO_RESOLVE = "auto_resolve"
+		private const val HIDDEN_TIMEOUT_MS = 45_000L
 	}
 }

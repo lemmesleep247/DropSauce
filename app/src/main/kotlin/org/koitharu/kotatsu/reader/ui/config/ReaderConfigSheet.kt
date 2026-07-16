@@ -1085,30 +1085,38 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                 ),
                                 modifier = Modifier.weight(1f),
                             ) {
-                                Text(
-                                    text = label,
-                                    textAlign = TextAlign.Center,
-                                    fontFamily = when (value) {
-                                        "sans-serif" -> androidx.compose.ui.text.font.FontFamily.SansSerif
-                                        "monospace" -> androidx.compose.ui.text.font.FontFamily.Monospace
-                                        EPUB_FONT_CUSTOM -> null
-                                        else -> androidx.compose.ui.text.font.FontFamily.Serif
-                                    },
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                                )
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = label,
+                                        textAlign = TextAlign.Center,
+                                        fontFamily = when (value) {
+                                            "sans-serif" -> androidx.compose.ui.text.font.FontFamily.SansSerif
+                                            "monospace" -> androidx.compose.ui.text.font.FontFamily.Monospace
+                                            EPUB_FONT_CUSTOM -> null
+                                            else -> androidx.compose.ui.text.font.FontFamily.Serif
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(
+                                            horizontal = if (value == EPUB_FONT_CUSTOM && customFontName.isNotBlank()) 40.dp else 8.dp,
+                                            vertical = 12.dp,
+                                        ),
+                                    )
+                                    if (value == EPUB_FONT_CUSTOM && customFontName.isNotBlank()) {
+                                        IconButton(
+                                            onClick = onRemoveCustom,
+                                            enabled = enabled,
+                                            modifier = Modifier.align(Alignment.CenterEnd).size(40.dp),
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_close),
+                                                contentDescription = stringResource(R.string.remove),
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                    }
+                                }
                             }
-                        }
-                    }
-                }
-                if (customFontName.isNotBlank()) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onChooseCustom, enabled = enabled) {
-                            Text(stringResource(R.string.epub_font_replace))
-                        }
-                        TextButton(onClick = onRemoveCustom, enabled = enabled) {
-                            Text(stringResource(R.string.remove))
                         }
                     }
                 }
@@ -1272,6 +1280,9 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = null,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(
                 modifier = Modifier

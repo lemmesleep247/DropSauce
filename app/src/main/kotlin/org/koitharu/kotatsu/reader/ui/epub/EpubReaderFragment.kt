@@ -511,7 +511,14 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		chapterDividerPaint.color = foregroundColor
 		val recycler = RecyclerView(requireContext()).apply {
 			layoutParams = FrameLayout.LayoutParams(-1, -1)
-			layoutManager = LinearLayoutManager(context)
+			layoutManager = object : LinearLayoutManager(context) {
+				override fun onRequestChildFocus(
+					parent: RecyclerView,
+					state: RecyclerView.State,
+					child: View,
+					focused: View?,
+				): Boolean = true
+			}
 			adapter = ChapterAdapter()
 			itemAnimator = null
 			overScrollMode = View.OVER_SCROLL_NEVER

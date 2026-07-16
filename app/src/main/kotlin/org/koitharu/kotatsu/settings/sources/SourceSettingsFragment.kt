@@ -47,6 +47,7 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.parser.EmptyMangaRepository
 import org.koitharu.kotatsu.core.prefs.SourceSettings
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.withArgs
@@ -139,6 +140,7 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 					uninstallPkg = uninstallPkg,
 					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenBrowser = { url -> openBrowser(url) },
+					onClearCookies = { url -> confirmClearCookies(url) },
 					onUninstall = { pkg -> uninstallExtension(pkg) },
 					onLanguageSelected = { lang -> viewModel.setActiveLanguage(lang) },
 				)
@@ -181,6 +183,15 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 		mihonPms += pm
 		mihonScreens += screen
 		return buildSections(screen)
+	}
+
+	private fun confirmClearCookies(url: String) {
+		buildAlertDialog(context ?: return) {
+			setTitle(R.string.clear_cookies)
+			setMessage(url)
+			setNegativeButton(android.R.string.cancel, null)
+			setPositiveButton(R.string.clear) { _, _ -> viewModel.clearCookies(url) }
+		}.show()
 	}
 
 	private fun openBrowser(url: String) {
@@ -259,6 +270,7 @@ private fun SourceSettingsScreen(
 	uninstallPkg: String?,
 	onBack: () -> Unit,
 	onOpenBrowser: (String) -> Unit,
+	onClearCookies: (String) -> Unit,
 	onUninstall: (String) -> Unit,
 	onLanguageSelected: (String) -> Unit,
 ) {
@@ -360,6 +372,14 @@ private fun SourceSettingsScreen(
 								onClick = { onOpenBrowser(browserUrl) },
 							)
 						}
+						item { pos ->
+							ActionSettingsItem(
+								title = stringResource(R.string.clear_cookies),
+								icon = R.drawable.ic_cookie,
+								shape = pos.shape,
+								onClick = { onClearCookies(browserUrl) },
+							)
+						}
 					}
 					if (uninstallPkg != null) {
 						item { pos ->
@@ -367,6 +387,7 @@ private fun SourceSettingsScreen(
 								title = stringResource(R.string.uninstall),
 								subtitle = uninstallPkg,
 								icon = R.drawable.ic_delete,
+								accentColor = androidx.compose.material3.MaterialTheme.colorScheme.error,
 								shape = pos.shape,
 								onClick = { onUninstall(uninstallPkg) },
 							)

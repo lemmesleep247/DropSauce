@@ -3,7 +3,11 @@ package org.koitharu.kotatsu.settings.sources
 import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.MangaSource
+import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -12,6 +16,7 @@ import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
+import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.mihon.MihonMangaRepository
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
@@ -25,6 +30,7 @@ class SourceSettingsViewModel @Inject constructor(
 	mangaRepositoryFactory: MangaRepository.Factory,
 	private val settings: AppSettings,
 	private val mihonExtensionManager: MihonExtensionManager,
+	private val cookieJar: MutableCookieJar,
 ) : BaseViewModel(), SharedPreferences.OnSharedPreferenceChangeListener {
 
 	val source = MangaSource(savedStateHandle.get<String>(AppRouter.KEY_SOURCE))
@@ -59,6 +65,15 @@ class SourceSettingsViewModel @Inject constructor(
 		val src = mihonSource ?: return null
 		val stored = settings.getMihonActiveLang(src.pkgName, src.catalogueSource.name)
 		return resolveActiveMihonLanguage(siblings.map { it.language }, stored, Locale.getDefault().language)
+	}
+
+	/** Clears cookies stored for this source's site. */
+	fun clearCookies(baseUrl: String) {
+		val url = baseUrl.toHttpUrlOrNull() ?: return
+		launchJob(Dispatchers.Default) {
+			cookieJar.removeCookies(url, null)
+			onActionDone.call(ReversibleAction(R.string.cookies_cleared, null))
+		}
 	}
 
 	/** Persists [language] as the active language for the logical source. */

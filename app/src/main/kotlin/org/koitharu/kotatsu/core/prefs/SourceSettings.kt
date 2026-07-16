@@ -38,6 +38,9 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 		set(value) = prefs.edit { putString(KEY_LAST_SORT_TITLE, value) }
 
 
+	val isSlowdownEnabled: Boolean
+		get() = prefs.getBoolean(KEY_SLOWDOWN, false)
+
 	val isCaptchaNotificationsDisabled: Boolean
 		get() = prefs.getBoolean(KEY_NO_CAPTCHA, false)
 

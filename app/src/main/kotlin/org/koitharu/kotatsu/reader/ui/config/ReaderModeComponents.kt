@@ -116,7 +116,7 @@ internal fun ReadModeSection(
 								Icon(
 									painter = painterResource(iconRes),
 									contentDescription = null,
-									tint = MaterialTheme.colorScheme.onSurface.copy(alpha = contentColor),
+									tint = (if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface).copy(alpha = contentColor),
 									modifier = Modifier.size(18.dp),
 								)
 								Spacer(modifier = Modifier.width(6.dp))
@@ -124,7 +124,7 @@ internal fun ReadModeSection(
 									text = stringResource(labelRes),
 									style = MaterialTheme.typography.titleSmall,
 									fontWeight = FontWeight.Bold,
-									color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentColor),
+									color = (if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface).copy(alpha = contentColor),
 								)
 							}
 						}
@@ -243,7 +243,7 @@ internal fun DoublePageConfigSection(
 					Slider(
 						value = sensitivity,
 						onValueChange = onSensitivityChange,
-						valueRange = 50f..200f,
+						valueRange = 0f..100f,
 						enabled = isModeStandardOrReversed && isDoubleOnLandscape,
 					)
 				}

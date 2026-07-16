@@ -44,7 +44,6 @@ import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.AppRouter
-import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.checkNotificationPermission
@@ -67,17 +66,22 @@ class CaptchaHandler @Inject constructor(
 	@LocalizedAppContext private val context: Context,
 	private val databaseProvider: Provider<MangaDatabase>,
 	private val coilProvider: Provider<ImageLoader>,
-	private val webViewExecutor: WebViewExecutor,
+	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
 ) : EventListener() {
 
 	private val exceptionMap = MutableScatterMap<MangaSource, CloudFlareProtectedException>()
 	private val mutex = Mutex()
 
 	@CheckResult
-	suspend fun handle(exception: CloudFlareException): Boolean = handleException(exception.source, exception, true)
+	suspend fun handle(exception: CloudFlareException): Boolean =
+		handleException(
+			source = exception.source,
+			exception = exception,
+			notify = true,
+		)
 
 	suspend fun discard(source: MangaSource) {
-		handleException(source, null, true)
+		handleException(source, null, notify = true, tryAutoResolve = false)
 	}
 
 	override fun onError(request: ImageRequest, result: ErrorResult) {
@@ -91,6 +95,7 @@ class CaptchaHandler @Inject constructor(
 						source = e.source,
 						exception = e,
 						notify = request.extras[suppressCaptchaKey] != true,
+						tryAutoResolve = false,
 					)
 				) {
 					coilProvider.get().enqueue(request) // TODO check if ok
@@ -103,11 +108,16 @@ class CaptchaHandler @Inject constructor(
 		source: MangaSource,
 		exception: CloudFlareException?,
 		notify: Boolean,
+		tryAutoResolve: Boolean = true,
 	): Boolean = withContext(Dispatchers.Default) {
 		if (source == UnknownMangaSource) {
 			return@withContext false
 		}
-		if (exception != null && webViewExecutor.tryResolveCaptcha(exception, RESOLVE_TIMEOUT)) {
+		if (
+			tryAutoResolve &&
+			exception is CloudFlareProtectedException &&
+			captchaAutoResolveCoordinator.resolveInBackground(source, exception)
+		) {
 			return@withContext true
 		}
 		mutex.withLock {
@@ -287,6 +297,5 @@ class CaptchaHandler @Inject constructor(
 		private const val GROUP_NOTIFICATION_ID = 34
 		private const val SETTINGS_ACTION_CODE = 3
 		private const val ACTION_DISCARD = "org.koitharu.kotatsu.CAPTCHA_DISCARD"
-		private const val RESOLVE_TIMEOUT = 20_000L
 	}
 }

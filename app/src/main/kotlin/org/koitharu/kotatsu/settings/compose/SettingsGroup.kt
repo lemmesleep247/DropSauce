@@ -56,7 +56,8 @@ fun SettingsGroup(
 				style = MaterialTheme.typography.labelMedium,
 				fontWeight = FontWeight.SemiBold,
 				color = MaterialTheme.colorScheme.primary,
-				modifier = Modifier.padding(start = 24.dp, top = 12.dp, bottom = 8.dp),
+				// Aligned with the title text of icon-less setting rows (12dp card padding)
+				modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 8.dp),
 			)
 		}
 		val total = scope.items.size

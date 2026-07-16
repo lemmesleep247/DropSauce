@@ -38,6 +38,7 @@ import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableMangaListFilter
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableMangaPage
 import org.koitharu.kotatsu.core.network.CommonHeaders
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
@@ -713,14 +714,52 @@ class AppRouter private constructor(
                     }
                 }
 
-        fun cloudFlareResolveIntent(context: Context, exception: CloudFlareProtectedException): Intent =
-            Intent(context, CloudFlareActivity::class.java).apply {
-                data = exception.url.toUri()
+        fun cloudFlareResolveIntent(context: Context, exception: CloudFlareProtectedException, hidden: Boolean = false): Intent {
+            val challengeUrl = getChallengeUrl(exception.url)
+            return Intent(context, CloudFlareActivity::class.java).apply {
+                data = challengeUrl.toUri()
                 putExtra(KEY_SOURCE, exception.source.name)
+                putExtra(CloudFlareActivity.EXTRA_HIDDEN, hidden)
+                putExtra(CloudFlareActivity.EXTRA_ORIGINAL_URL, exception.url)
                 exception.headers[CommonHeaders.USER_AGENT]?.let {
                     putExtra(KEY_USER_AGENT, it)
                 }
             }
+        }
+
+        private fun getChallengeUrl(url: String): String {
+            val httpUrl = url.toHttpUrlOrNull() ?: return url
+            val host = httpUrl.host.lowercase()
+            val path = httpUrl.encodedPath
+            val ext = path.substringAfterLast('.', "").lowercase()
+            val isAsset = ext in setOf("jpg", "jpeg", "png", "webp", "gif", "svg") ||
+                    host.startsWith("imagenes.") || host.startsWith("images.") || host.startsWith("cdn.") || host.startsWith("img.") || host.startsWith("static.")
+            if (isAsset) {
+                val rootDomain = getRootDomain(host)
+                if (rootDomain.isNotBlank()) {
+                    return "https://$rootDomain/"
+                }
+            }
+            return httpUrl.newBuilder()
+                .encodedPath("/")
+                .query(null)
+                .fragment(null)
+                .build()
+                .toString()
+        }
+
+        private fun getRootDomain(host: String): String {
+            val parts = host.split('.')
+            if (parts.size <= 2) return host
+            val last = parts.last()
+            val secondLast = parts[parts.size - 2]
+            val isDoubleTld = secondLast in setOf("com", "co", "org", "net", "edu", "gov") && last.length == 2
+            return if (isDoubleTld && parts.size >= 3) {
+                parts.takeLast(3).joinToString(".")
+            } else {
+                parts.takeLast(2).joinToString(".")
+            }
+        }
 
         fun browserIntent(
             context: Context,

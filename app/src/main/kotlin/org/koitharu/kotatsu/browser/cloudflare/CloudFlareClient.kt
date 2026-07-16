@@ -9,7 +9,7 @@ import org.koitharu.kotatsu.parsers.network.CloudFlareHelper
 
 private const val LOOP_COUNTER = 3
 
-class CloudFlareClient(
+open class CloudFlareClient(
 	private val cookieJar: MutableCookieJar,
 	private val callback: CloudFlareCallback,
 	adBlock: AdBlock,
@@ -49,6 +49,18 @@ class CloudFlareClient(
 				callback.onLoopDetected()
 			}
 		}
+	}
+
+	override fun onReceivedError(
+		view: WebView?,
+		request: android.webkit.WebResourceRequest?,
+		error: android.webkit.WebResourceError?
+	) {
+		// Log errors to help debugging loops
+		if (request?.isForMainFrame == true) {
+			android.util.Log.w("CloudFlareClient", "WebView error: ${error?.errorCode} - ${error?.description}")
+		}
+		super.onReceivedError(view, request, error)
 	}
 
 	private fun getClearance() = CloudFlareHelper.getClearanceCookie(cookieJar, targetUrl)

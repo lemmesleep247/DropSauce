@@ -20,8 +20,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.core.graphics.Insets
-import androidx.core.graphics.ColorUtils
-import androidx.core.content.ContextCompat
+import android.graphics.Color
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
@@ -51,6 +50,7 @@ import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView.ChipModel
 import org.koitharu.kotatsu.core.util.LocaleComparator
 import org.koitharu.kotatsu.core.util.ext.getDisplayName
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.smoothScrollToTop
@@ -67,6 +67,7 @@ import org.koitharu.kotatsu.parsers.model.ContentType
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
+import androidx.appcompat.R as appcompatR
 
 @AndroidEntryPoint
 class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
@@ -353,7 +354,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			singleLine = true,
 		)
 		editor.setText(viewModel.getExternalRepoUrl().orEmpty())
-		editor.hint = "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+		editor.hint = getString(R.string.add_repo_hint)
 		if (hasRepo) {
 			dialogBuilder.setNeutralButton(R.string.remove_repo) { _, _ ->
 				onRemoveRepoRequested()
@@ -365,7 +366,6 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 		dialogBuilder.setPositiveButton(android.R.string.ok, null)
 		val dialog = dialogBuilder.create()
 		dialog.setOnShowListener {
-			val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
 			dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
 				val value = editor.text?.toString()?.trim().orEmpty()
 				if (!value.startsWith("https://")) {
@@ -375,11 +375,8 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 				viewModel.setExternalRepoUrl(value)
 				dialog.dismiss()
 			}
-			val neutralButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-			val defaultColor = neutralButton?.currentTextColor ?: positiveButton.currentTextColor
-			val redColor = ContextCompat.getColor(dialog.context, android.R.color.holo_red_dark)
 			dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(
-				ColorUtils.blendARGB(defaultColor, redColor, 0.5f),
+				dialog.context.getThemeColor(appcompatR.attr.colorError, Color.RED),
 			)
 		}
 		dialog.show()

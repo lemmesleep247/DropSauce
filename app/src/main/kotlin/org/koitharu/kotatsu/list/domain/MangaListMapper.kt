@@ -210,7 +210,7 @@ class MangaListMapper @Inject constructor(
 		context.resources.openRawResource(R.raw.tags_warnlist).use {
 			val set = MutableScatterSet<String>()
 			it.bufferedReader().forEachLine { x ->
-				val line = x.trim()
+				val line = x.trim().lowercase()
 				if (line.isNotEmpty()) {
 					set.add(line)
 				}

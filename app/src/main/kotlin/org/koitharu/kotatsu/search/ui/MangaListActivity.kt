@@ -1,6 +1,8 @@
 package org.koitharu.kotatsu.search.ui
 
+import android.graphics.Color
 import android.os.Bundle
+import android.text.TextPaint
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +14,7 @@ import androidx.core.view.updatePaddingRelative
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.CollapsingToolbarLayout
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -116,27 +119,70 @@ class MangaListActivity :
 	}
 
 	/**
-	 * Shows the source name as the title with the active language as the collapsing toolbar's
-	 * subtitle. Spans inside a CollapsingToolbarLayout title render as overlapping ghost text
-	 * during the collapse cross-fade, so the language must not be inlined into the title.
+	 * Shows the source name as the title with the active language as a smaller label: inline after
+	 * the expanded title when it fits without reaching the sort button, otherwise as the collapsing
+	 * toolbar's subtitle below the name. Spans inside a CollapsingToolbarLayout title render as
+	 * overlapping ghost text during the collapse cross-fade, so the language must not be inlined
+	 * into the title itself. In both cases only the name collapses into the top bar.
 	 */
 	private fun applyTitle() {
 		val name = source.getTitle(this)
 		val lang = activeLanguageName
 		title = name
-		viewBinding.collapsingToolbarLayout?.let { ctl ->
-			ctl.title = name
-			ctl.subtitle = lang
+		val ctl = viewBinding.collapsingToolbarLayout ?: return
+		ctl.title = name
+		if (expandedBaseHeight < 0) {
+			expandedBaseHeight = ctl.layoutParams.height
+		}
+		viewBinding.textLanguage?.let { ctl.setExpandedSubtitleTextSize(it.textSize) }
+		ctl.setCollapsedSubtitleTextColor(Color.TRANSPARENT)
+		ctl.setCollapsedSubtitleTextSize(1f)
+		if (lang.isNullOrEmpty()) {
+			ctl.subtitle = null
+			viewBinding.textLanguage?.isVisible = false
+			applyExpandedHeight(ctl, extra = 0)
+		} else {
+			viewBinding.root.doOnLayout { applyLanguage(ctl, name, lang) }
+		}
+	}
+
+	private fun applyLanguage(ctl: CollapsingToolbarLayout, name: String, lang: String) {
+		val langView = viewBinding.textLanguage
+		val titlePaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
+			typeface = ctl.expandedTitleTypeface
+			textSize = ctl.expandedTitleTextSize
+		}
+		val titleEnd = ctl.expandedTitleMarginStart + titlePaint.measureText(name) +
+			resources.displayMetrics.density * 12f
+		if (langView != null && titleEnd + langView.paint.measureText(lang) <= ctl.width - ctl.expandedTitleMarginEnd) {
+			ctl.subtitle = null
+			langView.text = lang
+			langView.isVisible = true
+			val row = langView.parent as View
+			langView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+				marginStart = (titleEnd - row.paddingStart).roundToInt()
+			}
+			// With no subtitle set, CollapsingTextHelper aligns the expanded title's BASELINE at
+			// expandedTitleMarginBottom above the layout bottom (alignBaselineAtBottom). Put the
+			// language's baseline on the same line: view bottom padding + font descent = margin.
+			langView.updatePaddingRelative(
+				bottom = (ctl.expandedTitleMarginBottom - langView.paint.fontMetrics.descent)
+					.roundToInt().coerceAtLeast(0),
+			)
+			applyExpandedHeight(ctl, extra = 0)
+		} else {
+			langView?.isVisible = false
 			// The medium collapsing height fits the toolbar + one title line; with a subtitle the
 			// title gets pushed up into the nav icon. Grow the expanded area by one subtitle line
 			// (and the parallax button row with it, so the sort button stays bottom-aligned).
-			if (expandedBaseHeight < 0) {
-				expandedBaseHeight = ctl.layoutParams.height
-			}
-			val extra = if (lang.isNullOrEmpty()) 0 else (resources.displayMetrics.density * 28f).roundToInt()
-			ctl.updateLayoutParams { height = expandedBaseHeight + extra }
-			(viewBinding.buttonOrder?.parent as? View)?.updateLayoutParams { height = expandedBaseHeight + extra }
+			ctl.subtitle = lang
+			applyExpandedHeight(ctl, extra = (resources.displayMetrics.density * 24f).roundToInt())
 		}
+	}
+
+	private fun applyExpandedHeight(ctl: CollapsingToolbarLayout, extra: Int) {
+		ctl.updateLayoutParams { height = expandedBaseHeight + extra }
+		(viewBinding.buttonOrder?.parent as? View)?.updateLayoutParams { height = expandedBaseHeight + extra }
 	}
 
 	private fun configureSortButton() {

@@ -335,7 +335,7 @@ abstract class BaseAdaptiveSheet<B : ViewBinding> : AppCompatDialogFragment(),
 		}
 	}
 
-	private companion object {
+	protected companion object {
 		const val HALF_EXPANDED_RATIO = 0.62f
 	}
 }

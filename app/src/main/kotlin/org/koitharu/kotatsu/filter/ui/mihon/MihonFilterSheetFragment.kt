@@ -14,7 +14,10 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.R as materialR
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.shape.MaterialShapeDrawable
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.withCreationCallback
@@ -41,8 +44,6 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 		},
 	)
 
-	private var systemBarsBottom = 0
-
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): SheetFilterMihonBinding {
 		return SheetFilterMihonBinding.inflate(inflater, container, false)
 	}
@@ -58,6 +59,19 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 		binding.buttonReset.setOnClickListener { viewModel.reset() }
 		binding.buttonDone.setOnClickListener { dismiss() }
 		viewModel.items.observe(viewLifecycleOwner, adapter)
+		// The adapter diffs asynchronously, so listen for the actual data dispatch and re-measure
+		// after the RecyclerView lays the new items out.
+		adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+			override fun onChanged() = onUpdated()
+			override fun onItemRangeChanged(positionStart: Int, itemCount: Int) = onUpdated()
+			override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = onUpdated()
+			override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) = onUpdated()
+			override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) = onUpdated()
+
+			private fun onUpdated() {
+				viewBinding?.recyclerView?.doOnLayout { adjustHeightToContent() }
+			}
+		})
 		viewModel.isLoading.observe(viewLifecycleOwner) {
 			binding.progressBar.isVisible = it
 		}
@@ -75,6 +89,57 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 	override fun onStart() {
 		super.onStart()
 		setHalfExpanded()
+		viewBinding?.root?.doOnLayout { adjustHeightToContent() }
+	}
+
+	/**
+	 * Shrinks the half-expanded resting height when the filter list is shorter than the default
+	 * half-page height, so short filter sets don't leave a large empty area. The sheet stays
+	 * draggable to full screen either way.
+	 */
+	private fun adjustHeightToContent() {
+		val sheetDialog = dialog as? BottomSheetDialog ?: return
+		val sheet = sheetDialog.findViewById<View>(materialR.id.design_bottom_sheet) ?: return
+		val parentHeight = (sheet.parent as? View)?.height ?: return
+		if (parentHeight <= 0) {
+			return
+		}
+		val behavior = sheetDialog.behavior
+		val desired = wrappedContentHeight()
+		behavior.halfExpandedRatio = if (desired == null) {
+			HALF_EXPANDED_RATIO
+		} else {
+			(desired.toFloat() / parentHeight).coerceIn(MIN_HEIGHT_RATIO, HALF_EXPANDED_RATIO)
+		}
+		if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) {
+			sheet.requestLayout()
+		}
+	}
+
+	/**
+	 * Height the sheet needs to show all filter items without scrolling,
+	 * or null if the content doesn't fit (or isn't measurable yet).
+	 */
+	private fun wrappedContentHeight(): Int? {
+		val binding = viewBinding ?: return null
+		if (binding.progressBar.isVisible || binding.textViewHolder.isVisible) {
+			return null
+		}
+		val rv = binding.recyclerView
+		val lm = rv.layoutManager as? LinearLayoutManager ?: return null
+		val itemCount = rv.adapter?.itemCount ?: return null
+		if (itemCount == 0 || lm.findLastVisibleItemPosition() < itemCount - 1) {
+			return null
+		}
+		var content = 0
+		for (i in 0 until rv.childCount) {
+			val child = rv.getChildAt(i)
+			val lp = child.layoutParams as ViewGroup.MarginLayoutParams
+			content += lm.getDecoratedMeasuredHeight(child) + lp.topMargin + lp.bottomMargin
+		}
+		val basePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
+		// layoutBottom already carries the navigation-bar inset in its own padding
+		return binding.headerBar.height + content + basePadding + binding.layoutBottom.height
 	}
 
 	override fun onStateChanged(sheet: View, newState: Int) {
@@ -82,6 +147,9 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 		if (newState == STATE_DRAGGING || newState == STATE_SETTLING) {
 			return
 		}
+		// A ratio change applied mid-settle doesn't retarget the running animation, so re-check
+		// once the sheet comes to rest.
+		adjustHeightToContent()
 		// Snap the drag handle to its resting state for programmatic moves; manual drags drive it via onSlide.
 		viewBinding?.headerBar?.setDragHandleCollapseProgress(if (newState == STATE_EXPANDED) 1f else 0f)
 	}
@@ -103,10 +171,13 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 		val surfaceColor = getSheetSurfaceColor(sheet)
 		binding.layoutBottom.setBackgroundColor(surfaceColor)
 
+		// The sheet is match_parent tall, so at rest its bottom (with the button row) hangs below
+		// the screen by `top` minus the overlaid button row — padding of basePadding + top is
+		// exactly what lets the last item scroll clear of the pinned buttons, with no dead
+		// scroll range left over.
 		val basePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
-		val buttonsHeight = binding.layoutBottom.height
 		binding.recyclerView.updatePadding(
-			bottom = basePadding + systemBarsBottom + buttonsHeight + top
+			bottom = basePadding + top
 		)
 	}
 
@@ -132,7 +203,6 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
-		systemBarsBottom = barsInsets.bottom
 		viewBinding?.recyclerView?.updatePadding(
 			left = barsInsets.left,
 			right = barsInsets.right,
@@ -158,5 +228,8 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 		// Slide offset (0 = half, 1 = full screen) at which the drag handle starts collapsing. Kept above
 		// the half-expanded resting offset so the handle stays full at the centre position.
 		const val DRAG_HANDLE_COLLAPSE_START = 0.65f
+
+		// Lower bound for the content-fitted sheet height so a couple of filters don't produce a sliver
+		const val MIN_HEIGHT_RATIO = 0.2f
 	}
 }

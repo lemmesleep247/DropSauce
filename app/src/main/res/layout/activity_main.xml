@@ -49,8 +49,6 @@
 			android:id="@+id/layout_search"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_gravity="center_horizontal"
-			android:maxWidth="600dp"
 			android:orientation="horizontal"
 			android:gravity="center_vertical"
 			android:clipToPadding="false"
@@ -104,6 +102,7 @@
 				android:layout_weight="1"
 				android:layout_marginEnd="8dp"
 				android:hint="@string/search_manga"
+				app:adaptiveMaxWidthEnabled="false"
 				app:hideNavigationIcon="true" />
 
 			<FrameLayout

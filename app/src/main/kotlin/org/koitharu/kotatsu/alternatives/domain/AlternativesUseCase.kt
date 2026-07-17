@@ -1,11 +1,14 @@
 package org.koitharu.kotatsu.alternatives.domain
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import org.koitharu.kotatsu.core.model.chaptersCount
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.parsers.model.Manga
@@ -24,7 +27,7 @@ class AlternativesUseCase @Inject constructor(
 ) {
 
 	suspend operator fun invoke(manga: Manga): Flow<Manga> {
-		val sources = getSources()
+		val sources = getSources().filter { it != manga.source }
 		if (sources.isEmpty()) {
 			return emptyFlow()
 		}
@@ -38,15 +41,21 @@ class AlternativesUseCase @Inject constructor(
 							searchHelper(manga.title, SearchKind.TITLE)?.manga
 						}
 					}.getOrNull()
-					list?.forEach { m ->
-						if (m.id != manga.id) {
-							launch {
-								val details = runCatchingCancellable {
-									mangaRepositoryFactory.create(m.source).getDetails(m)
-								}.getOrDefault(m)
-								send(details)
-							}
+					// A source may return several same-name results; load details for all of them
+					// and offer only the one whose best branch (scanlator) has the most chapters.
+					val candidates = list?.filter { it.id != manga.id }
+					if (candidates.isNullOrEmpty()) {
+						return@launch
+					}
+					val best = candidates.map { m ->
+						async {
+							runCatchingCancellable {
+								mangaRepositoryFactory.create(m.source).getDetails(m)
+							}.getOrDefault(m)
 						}
+					}.awaitAll().maxByOrNull { it.chaptersCount() }
+					if (best != null) {
+						send(best)
 					}
 				}
 			}

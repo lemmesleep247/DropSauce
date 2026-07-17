@@ -365,19 +365,20 @@ private fun SourceSettingsScreen(
 					if (browserUrl != null) {
 						item { pos ->
 							ActionSettingsItem(
+								title = stringResource(R.string.clear_cookies),
+								subtitle = stringResource(R.string.clear_cookies_summary),
+								icon = R.drawable.ic_cookie,
+								shape = pos.shape,
+								onClick = { onClearCookies(browserUrl) },
+							)
+						}
+						item { pos ->
+							ActionSettingsItem(
 								title = stringResource(R.string.open_in_browser),
 								subtitle = browserUrl,
 								icon = R.drawable.ic_open_external,
 								shape = pos.shape,
 								onClick = { onOpenBrowser(browserUrl) },
-							)
-						}
-						item { pos ->
-							ActionSettingsItem(
-								title = stringResource(R.string.clear_cookies),
-								icon = R.drawable.ic_cookie,
-								shape = pos.shape,
-								onClick = { onClearCookies(browserUrl) },
 							)
 						}
 					}

@@ -146,9 +146,7 @@ fun SettingsItem(
 					Text(
 						text = subtitle,
 						style = MaterialTheme.typography.bodySmall,
-						color = secondaryTextColor(enabled),
-						maxLines = 2,
-						overflow = TextOverflow.Ellipsis,
+						color = accentColor?.copy(alpha = if (enabled) 0.8f else 0.38f) ?: secondaryTextColor(enabled),
 					)
 				}
 			}

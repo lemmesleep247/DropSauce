@@ -8,6 +8,8 @@ import org.koitharu.kotatsu.R
 
 class ReaderMenuProvider(
 	private val onOpenMenu: () -> Unit,
+	private val onSearchBook: () -> Unit,
+	private val isEpub: () -> Boolean,
 	private val isLandscape: Boolean,
 ) : MenuProvider {
 
@@ -16,8 +18,17 @@ class ReaderMenuProvider(
 		menu.findItem(R.id.action_reader_menu)?.isVisible = !isLandscape
 	}
 
+	override fun onPrepareMenu(menu: Menu) {
+		menu.findItem(R.id.action_epub_search)?.isVisible = isEpub()
+	}
+
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
 		return when (menuItem.itemId) {
+			R.id.action_epub_search -> {
+				onSearchBook()
+				true
+			}
+
 			R.id.action_reader_menu -> {
 				onOpenMenu()
 				true

@@ -20,10 +20,15 @@ import android.text.SpannedString
 import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
+import android.text.style.AbsoluteSizeSpan
 import android.text.style.AlignmentSpan
+import android.text.style.BackgroundColorSpan
 import android.text.style.CharacterStyle
+import android.text.style.ForegroundColorSpan
 import android.text.style.LineBackgroundSpan
+import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
 import android.text.style.UpdateAppearance
 import android.util.TypedValue
 import android.view.ActionMode
@@ -191,6 +196,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_TEXT_ALIGN) { epubTextAlign }
 			.observe(viewLifecycleOwner) { refreshAlignment() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_PUBLISHER_STYLE) { isEpubPublisherStyleEnabled }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_READING_MODE) { epubReadingMode }
 			.observe(viewLifecycleOwner) {
 				binding.root.requestApplyInsets()
@@ -342,7 +349,6 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val document = Jsoup.parse(raw)
 		document.select("script,style,noscript").remove()
 		val parsed = SpannableString(HtmlCompat.fromHtml(document.body().html(), HtmlCompat.FROM_HTML_MODE_LEGACY).trimmed())
-		parsed.getSpans(0, parsed.length, AlignmentSpan::class.java).forEach(parsed::removeSpan)
 		return SpannedString(parsed).takeIf { it.isNotEmpty() } ?: EMPTY_CHAPTER_TEXT
 	}
 
@@ -545,10 +551,10 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	private fun renderPaged(container: FrameLayout, locator: Locator, pageInChapter: Int? = null) {
 		val generation = ++renderGeneration
-		val key = "${container.width}:${container.height}:${settings.epubFontSize}:${settings.epubFontFamily}:" +
+		val key = "${container.width}:${container.height}:$effectiveFontSize:${readerTypeface.hashCode()}:" +
 			"${settings.epubCustomFontRevision}:" +
-			"${settings.epubLineHeight}:${settings.epubHorizontalPadding}:${settings.epubVerticalPadding}:" +
-			"$effectiveTextAlign:${settings.epubReadingMode}"
+			"$effectiveLineHeight:$effectiveHorizontalPadding:$effectiveVerticalPadding:" +
+			"$effectiveTextAlign:${settings.epubReadingMode}:${settings.isEpubPublisherStyleEnabled}"
 		container.setBackgroundColor(backgroundColor)
 		if (pages.isNotEmpty() && paginationKey == key && pageRange?.contains(locator.chapter) == true) {
 			renderPagedReady(container, locator, pageInChapter)
@@ -654,39 +660,39 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private fun paginate(viewWidth: Int, viewHeight: Int, range: IntRange): List<NativePage> {
 		ensureChaptersLoaded(range)
 		val density = resources.displayMetrics.density
-		val horizontal = (settings.epubHorizontalPadding * density).toInt().coerceAtLeast(1)
+		val horizontal = (effectiveHorizontalPadding * density).toInt().coerceAtLeast(1)
 		val verticalTop = verticalTopPaddingPx
 		val verticalBottom = verticalBottomPaddingPx
 		val width = (viewWidth - horizontal * 2).coerceAtLeast(1)
 		val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply {
 			color = foregroundColor
 			textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics) *
-				settings.epubFontSize / 100f
+				effectiveFontSize / 100f
 			typeface = readerTypeface
 		}
 		// A page fragment gets its own font padding when rendered. Reserving one line prevents the
 		// final baseline from being clipped when the vertical margins leave a tight viewport.
-		val bottomSafety = ceil(paint.fontSpacing * settings.epubLineHeight / 100f).toInt()
+		val bottomSafety = ceil(paint.fontSpacing * effectiveLineHeight / 100f).toInt()
 		val height = (viewHeight - verticalTop - verticalBottom - bottomSafety).coerceAtLeast(1)
 		val result = ArrayList<NativePage>()
 		range.forEach { chapterIndex ->
-			val chapter = chapters[chapterIndex]
-			val layout = StaticLayout.Builder.obtain(chapter.text, 0, chapter.text.length, paint, width)
+			val chapterText = styledChapterText(chapterIndex)
+			val layout = StaticLayout.Builder.obtain(chapterText, 0, chapterText.length, paint, width)
 				.setAlignment(textAlignment)
 				.setTextDirection(if (isRtlPagedMode) TextDirectionHeuristics.RTL else TextDirectionHeuristics.FIRSTSTRONG_LTR)
 				.setIncludePad(true)
-				.setLineSpacing(0f, settings.epubLineHeight / 100f)
+				.setLineSpacing(0f, effectiveLineHeight / 100f)
 				.apply {
 					if (effectiveTextAlign == "justify") {
 						enableInterWordJustificationCompat()
 					}
 				}.build()
 			var start = 0
-			while (start < chapter.text.length) {
+			while (start < chapterText.length) {
 				val firstLine = layout.getLineForOffset(start)
 				val bottom = (layout.getLineTop(firstLine) + height).coerceAtMost(layout.height)
 				val lastLine = layout.getLineForVertical((bottom - 1).coerceAtLeast(0))
-				val end = layout.getLineEnd(lastLine).coerceAtLeast(start + 1).coerceAtMost(chapter.text.length)
+				val end = layout.getLineEnd(lastLine).coerceAtLeast(start + 1).coerceAtMost(chapterText.length)
 				result += NativePage(chapterIndex, start, end)
 				start = end
 			}
@@ -715,6 +721,14 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private fun styledChapterText(chapterIndex: Int): Spanned {
 		val chapter = chapters[chapterIndex]
 		val text = SpannableString(chapter.text)
+		text.getSpans(0, text.length, ForegroundColorSpan::class.java).forEach(text::removeSpan)
+		text.getSpans(0, text.length, BackgroundColorSpan::class.java).forEach(text::removeSpan)
+		if (!settings.isEpubPublisherStyleEnabled) {
+			text.getSpans(0, text.length, AlignmentSpan::class.java).forEach(text::removeSpan)
+			text.getSpans(0, text.length, AbsoluteSizeSpan::class.java).forEach(text::removeSpan)
+			text.getSpans(0, text.length, RelativeSizeSpan::class.java).forEach(text::removeSpan)
+			text.getSpans(0, text.length, TypefaceSpan::class.java).forEach(text::removeSpan)
+		}
 		highlights.forEach { bookmark ->
 			if (bookmark.chapterId != chapter.id) return@forEach
 			val highlight = bookmark.epubHighlight ?: return@forEach
@@ -730,13 +744,13 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private fun applyTextStyle(textView: TextView, paged: Boolean) = with(textView) {
 		setTextColor(foregroundColor)
 		setBackgroundColor(backgroundColor)
-		textSize = 16f * settings.epubFontSize / 100f
+		textSize = 16f * effectiveFontSize / 100f
 		typeface = readerTypeface
-		setLineSpacing(0f, settings.epubLineHeight / 100f)
+		setLineSpacing(0f, effectiveLineHeight / 100f)
 		includeFontPadding = true
 		applyTextAlignment(this)
 		val density = resources.displayMetrics.density
-		val h = (settings.epubHorizontalPadding * density).toInt()
+		val h = (effectiveHorizontalPadding * density).toInt()
 		val top = if (paged) verticalTopPaddingPx else (20 * density).toInt()
 		val bottom = if (paged) verticalBottomPaddingPx else (36 * density).toInt()
 		setPadding(h, top, h, bottom)
@@ -1177,8 +1191,18 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 
 	private val isPagedMode get() = settings.epubReadingMode != EPUB_MODE_SCROLL
 	private val isRtlPagedMode get() = settings.epubReadingMode == EPUB_MODE_PAGED_RTL
-	private val effectiveTextAlign get() = if (isRtlPagedMode && settings.epubTextAlign == "left") "right" else settings.epubTextAlign
-	private val verticalMarginFraction get() = (settings.epubVerticalPadding / VERTICAL_MARGIN_MAX.toFloat()).coerceIn(0f, 1f)
+	private val effectiveTextAlign get() = when {
+		settings.isEpubPublisherStyleEnabled -> if (isRtlPagedMode) "right" else "left"
+		isRtlPagedMode && settings.epubTextAlign == "left" -> "right"
+		else -> settings.epubTextAlign
+	}
+	private val effectiveFontSize get() = if (settings.isEpubPublisherStyleEnabled) 100 else settings.epubFontSize
+	private val effectiveLineHeight get() = if (settings.isEpubPublisherStyleEnabled) 120 else settings.epubLineHeight
+	private val effectiveHorizontalPadding get() =
+		if (settings.isEpubPublisherStyleEnabled) PUBLISHER_HORIZONTAL_PADDING_DP else settings.epubHorizontalPadding
+	private val effectiveVerticalPadding get() =
+		if (settings.isEpubPublisherStyleEnabled) VERTICAL_MARGIN_MAX else settings.epubVerticalPadding
+	private val verticalMarginFraction get() = (effectiveVerticalPadding / VERTICAL_MARGIN_MAX.toFloat()).coerceIn(0f, 1f)
 	private val verticalTopPaddingPx get(): Int {
 		val maximum = pagedTopBarClearancePx +
 			(PAGED_TOP_EXTRA_MARGIN_DP * resources.displayMetrics.density).toInt()
@@ -1211,10 +1235,10 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	} else {
 		DEFAULT_HIGHLIGHT_COLOR
 	}
-	private val readerTypeface get() = if (settings.epubFontFamily == EPUB_FONT_CUSTOM) {
-		customReaderTypeface()
-	} else {
-		Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
+	private val readerTypeface get() = when {
+		settings.isEpubPublisherStyleEnabled -> Typeface.SERIF
+		settings.epubFontFamily == EPUB_FONT_CUSTOM -> customReaderTypeface()
+		else -> Typeface.create(settings.epubFontFamily.substringBefore(',').trim().trim('\'', '"'), Typeface.NORMAL)
 	}
 
 	private fun customReaderTypeface(): Typeface {
@@ -1433,6 +1457,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		private const val REPAGINATE_DELAY_MS = 180L
 		private const val COLOR_ANIMATION_MS = 180L
 		private const val VERTICAL_MARGIN_MAX = 112
+		private const val PUBLISHER_HORIZONTAL_PADDING_DP = 20
 		private const val MAX_BOTTOM_MARGIN_DP = 96
 		private const val ACTION_DICTIONARY = 0x455001
 		private const val ACTION_HIGHLIGHT = 0x455002

@@ -617,16 +617,15 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     // EPUB books get a single simple menu: text size slider + automatic scroll & settings
     @Composable
     private fun EpubConfigContent() {
-        val callback = remember { findParentCallback(Callback::class.java) }
         val customFontName = remember(customFontUiRevision) { settings.epubCustomFontName }
+        var publisherStyleEnabled by remember { mutableStateOf(settings.isEpubPublisherStyleEnabled) }
         var readingMode by remember {
             mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
         }
         val pagerState = rememberPagerState(pageCount = { 3 })
         val scope = rememberCoroutineScope()
-        // book formatting on -> publisher styles win, so our formatting options are inert: grey
-        // out everything except search and the page theme toggle
-        val editable = !settings.isEpubPublisherStyleEnabled
+        // Book formatting temporarily owns typography; reading behavior and page colors remain editable.
+        val editable = !publisherStyleEnabled
         val navBarPadding = remember {
             dialog?.window?.decorView?.let { decor ->
                 ViewCompat.getRootWindowInsets(decor)
@@ -696,7 +695,17 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                         onRemoveCustom = ::removeEpubCustomFont,
                     )
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ToolGridCard(R.drawable.ic_search, stringResource(R.string.epub_search_book), onClick = { callback?.onEpubSearchClick(); dismissAllowingStateLoss() }, modifier = Modifier.weight(1f).height(96.dp), iconSize = 22.dp)
+                        ToolGridCard(
+                            icon = R.drawable.ic_auto_fix,
+                            label = stringResource(R.string.epub_publisher_style),
+                            checked = publisherStyleEnabled,
+                            onClick = {
+                                publisherStyleEnabled = !publisherStyleEnabled
+                                settings.isEpubPublisherStyleEnabled = publisherStyleEnabled
+                            },
+                            modifier = Modifier.weight(1f).height(96.dp),
+                            iconSize = 22.dp,
+                        )
                         EpubThemeCard(modifier = Modifier.weight(1f).height(96.dp))
                     }
                 }
@@ -1708,6 +1717,5 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 
         fun onBookmarkClick()
 
-        fun onEpubSearchClick()
     }
 }

@@ -213,6 +213,8 @@ class ReaderActivity :
         addMenuProvider(
             ReaderMenuProvider(
                 onOpenMenu = ::openMenu,
+                onSearchBook = ::openEpubSearch,
+                isEpub = { readerManager.isEpub },
                 isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
             ),
         )
@@ -284,6 +286,7 @@ class ReaderActivity :
         if (readerManager.currentMode != mode) {
             readerManager.replace(mode)
         }
+        invalidateOptionsMenu()
         if (viewBinding.appbarTop.isVisible) {
             lifecycle.postDelayed(TimeUnit.SECONDS.toMillis(1), hideUiRunnable)
         }
@@ -595,7 +598,7 @@ class ReaderActivity :
         }
     }
 
-	override fun onEpubSearchClick() {
+	private fun openEpubSearch() {
 		(readerManager.currentReader as? EpubReaderFragment)?.showBookSearch()
 	}
 

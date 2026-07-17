@@ -504,6 +504,7 @@
 	<string name="epub_untitled_chapter">Untitled chapter</string>
 	<string name="epub_text_tab">Text</string>
 	<string name="epub_reading_tab">Reading</string>
+	<string name="epub_style_tab">Style</string>
     <string name="speed">Speed</string>
     <string name="show_on_shelf">Show on the Shelf</string>
     <string name="find_similar">Find similar</string>

@@ -13,6 +13,7 @@ import okio.sink
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -21,12 +22,14 @@ import org.koitharu.kotatsu.backup.MihonBackupManager
 import org.koitharu.kotatsu.backup.model.MihonBackup
 import org.koitharu.kotatsu.backup.model.MihonBackupCategory
 import org.koitharu.kotatsu.backup.model.MihonBackupChapter
+import org.koitharu.kotatsu.backup.model.MihonBackupHistory
 import org.koitharu.kotatsu.backup.model.MihonBackupManga
 import org.koitharu.kotatsu.backup.model.MihonBackupSource
 import org.koitharu.kotatsu.backup.model.MihonBackupTracking
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
 import org.koitharu.kotatsu.history.data.HistoryRepository
+import org.koitharu.kotatsu.mihon.model.mihonChapterId
 import org.koitharu.kotatsu.parsers.util.longHashCode
 import java.io.File
 import javax.inject.Inject
@@ -143,6 +146,72 @@ class AppBackupAgentTest {
 	}
 
 	@Test
+	fun restoreMihonFixture_ignoresResetHistoryForUnreadManga() = runTest {
+		val mangaUrl = "https://fixture.example/manga/1"
+		val chapters = listOf(
+			MihonBackupChapter(
+				url = "$mangaUrl/chapter-1",
+				name = "Chapter 1",
+				sourceOrder = 1,
+			),
+			MihonBackupChapter(
+				url = "$mangaUrl/chapter-2",
+				name = "Chapter 2",
+				sourceOrder = 0,
+			),
+		)
+		val fixture = createFixture(
+			trackerItems = emptyList(),
+			chapters = chapters,
+			history = listOf(MihonBackupHistory(chapters.last().url, lastRead = 0)),
+		)
+
+		backupManager.restoreBackup(writeFixture(fixture))
+
+		val mangaId = "MIHON_123:$mangaUrl".longHashCode()
+		assertNull(database.getHistoryDao().find(mangaId))
+	}
+
+	@Test
+	fun restoreMihonFixture_usesFurthestChapterWithRealProgress() = runTest {
+		val mangaUrl = "https://fixture.example/manga/1"
+		val chapters = listOf(
+			MihonBackupChapter(
+				url = "$mangaUrl/chapter-1",
+				name = "Chapter 1",
+				read = true,
+				chapterNumber = 1f,
+				sourceOrder = 2,
+			),
+			MihonBackupChapter(
+				url = "$mangaUrl/chapter-2",
+				name = "Chapter 2",
+				read = true,
+				chapterNumber = 2f,
+				sourceOrder = 1,
+			),
+			MihonBackupChapter(
+				url = "$mangaUrl/chapter-3",
+				name = "Chapter 3",
+				chapterNumber = 3f,
+				sourceOrder = 0,
+			),
+		)
+		val fixture = createFixture(
+			trackerItems = emptyList(),
+			chapters = chapters,
+			history = listOf(MihonBackupHistory(chapters.last().url, lastRead = 1_000)),
+		)
+
+		backupManager.restoreBackup(writeFixture(fixture))
+
+		val mangaId = "MIHON_123:$mangaUrl".longHashCode()
+		val history = database.getHistoryDao().find(mangaId)
+		assertEquals(mihonChapterId("MIHON_123", chapters[1].url), history?.chapterId)
+		assertEquals(2f / 3f, history?.percent)
+	}
+
+	@Test
 	fun restoreMihonFixture_createsNewMihonCategoryEachTime() = runTest {
 		val fixture = createFixture(trackerItems = emptyList())
 		val uri = writeFixture(fixture)
@@ -170,6 +239,8 @@ class AppBackupAgentTest {
 		trackerItems: List<Pair<Int, Int>>,
 		categories: List<MihonBackupCategory> = listOf(MihonBackupCategory(name = "Default", id = 1, order = 0)),
 		mangaCategoryIds: List<Long> = listOf(1),
+		chapters: List<MihonBackupChapter>? = null,
+		history: List<MihonBackupHistory> = emptyList(),
 	): MihonBackup {
 		val mangaUrl = "https://fixture.example/manga/1"
 		return MihonBackup(
@@ -181,7 +252,7 @@ class AppBackupAgentTest {
 					thumbnailUrl = "https://fixture.example/cover.jpg",
 					favorite = true,
 					categories = mangaCategoryIds,
-					chapters = listOf(
+					chapters = chapters ?: listOf(
 						MihonBackupChapter(
 							url = "$mangaUrl/chapter-1",
 							name = "Chapter 1",
@@ -191,6 +262,7 @@ class AppBackupAgentTest {
 							chapterNumber = 1f,
 						),
 					),
+					history = history,
 					tracking = trackerItems.mapIndexed { index, (syncId, status) ->
 						MihonBackupTracking(
 							syncId = syncId,

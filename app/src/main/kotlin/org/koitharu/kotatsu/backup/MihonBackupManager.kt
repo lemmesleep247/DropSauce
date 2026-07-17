@@ -349,18 +349,23 @@ class MihonBackupManager @Inject constructor(
                 }
                 .toList()
 
-            // The reading position is the most recently opened chapter (history), or — when the
-            // backup carries no history — the newest chapter that has any progress (read or a saved
-            // page). `chapters` is sorted oldest-first, so `lastOrNull` picks the furthest-progressed.
-            val latestHistory = item.history.maxByOrNull { it.lastRead }
-            val currentChapter = latestHistory?.url?.let(chapterByUrl::get)
-                ?: chapters.lastOrNull { chapterEntity ->
-                    backupChapterByUrl[chapterEntity.url]?.let { it.read || it.lastPageRead > 0 } == true
-                }
+            // `chapters` is sorted oldest-first, so explicit chapter progress wins. Positive history
+            // remains a fallback for history-only backups; reset rows use lastRead = 0 and are ignored.
+            val progressedChapter = chapters.lastOrNull { chapterEntity ->
+                val backupChapter = backupChapterByUrl[chapterEntity.url]
+                backupChapter?.let { it.read || it.lastPageRead > 0 } == true
+            }
+            val latestHistory = item.history
+                .filter { it.lastRead > 0 }
+                .maxByOrNull { it.lastRead }
+            val currentChapter = progressedChapter ?: latestHistory?.url?.let(chapterByUrl::get)
+            val currentHistory = currentChapter?.url?.let { url ->
+                item.history.filter { it.url == url && it.lastRead > 0 }.maxByOrNull { it.lastRead }
+            }
             val history = if (currentChapter != null) {
                 val backupChapter = backupChapterByUrl[currentChapter.url]
                 val restoredPage = backupChapter?.lastPageRead?.toInt()?.coerceAtLeast(0) ?: 0
-                val updatedAt = latestHistory?.lastRead?.takeIf { it > 0 }
+                val updatedAt = currentHistory?.lastRead
                     ?: item.lastModifiedAt.takeIf { it > 0 }
                     ?: item.dateAdded.takeIf { it > 0 }
                     ?: now
@@ -398,11 +403,11 @@ class MihonBackupManager @Inject constructor(
                     lastError = null,
                 )
             }
-            val stats = if ((latestHistory?.readDuration ?: 0L) > 0L && history != null) {
+            val stats = if ((currentHistory?.readDuration ?: 0L) > 0L && history != null) {
                 StatsEntity(
                     mangaId = mangaId,
-                    startedAt = (history.updatedAt - latestHistory!!.readDuration).coerceAtLeast(0L),
-                    duration = latestHistory.readDuration,
+                    startedAt = (history.updatedAt - currentHistory!!.readDuration).coerceAtLeast(0L),
+                    duration = currentHistory.readDuration,
                     pages = (history.page + 1).coerceAtLeast(1),
                 )
             } else {

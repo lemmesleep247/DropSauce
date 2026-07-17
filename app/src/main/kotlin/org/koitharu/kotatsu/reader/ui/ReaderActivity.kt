@@ -121,6 +121,9 @@ class ReaderActivity :
     private lateinit var touchHelper: TapGridDispatcher
     private lateinit var controlDelegate: ReaderControlDelegate
     private var gestureInsets: Insets = Insets.NONE
+    // Set when a long-press action consumed the gesture; the remainder of the touch stream is
+    // delivered to the content as ACTION_CANCEL so the pager doesn't scroll under the opened sheet.
+    private var isTouchCancelled = false
     private lateinit var readerManager: ReaderManager
     private val hideUiRunnable = Runnable { setUiIsVisible(false) }
 
@@ -325,7 +328,14 @@ class ReaderActivity :
     }
 
     override fun onGridLongTouch(area: TapGridArea): Boolean {
-        return !readerManager.isEpub && isReaderResumed() && controlDelegate.onGridLongTouch(area)
+        val handled = !readerManager.isEpub && isReaderResumed() && controlDelegate.onGridLongTouch(area)
+        // The finger is still down when the long-press action fires (e.g. the config sheet opens),
+        // and the ongoing gesture keeps feeding the pager underneath — any drift after the
+        // long-press scrolls the page abruptly. Cancel the rest of this gesture for the content.
+        if (handled) {
+            isTouchCancelled = true
+        }
+        return handled
     }
 
     override fun onProcessTouch(rawX: Int, rawY: Int): Boolean {
@@ -350,6 +360,16 @@ class ReaderActivity :
         touchHelper.dispatchTouchEvent(ev)
         if (!viewBinding.timerControl.hasGlobalPoint(ev.rawX.toInt(), ev.rawY.toInt())) {
             scrollTimer.onTouchEvent(ev)
+        }
+        if (isTouchCancelled) {
+            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) {
+                isTouchCancelled = false
+            }
+            val cancel = MotionEvent.obtain(ev)
+            cancel.action = MotionEvent.ACTION_CANCEL
+            val result = super.dispatchTouchEvent(cancel)
+            cancel.recycle()
+            return result
         }
         return super.dispatchTouchEvent(ev)
     }

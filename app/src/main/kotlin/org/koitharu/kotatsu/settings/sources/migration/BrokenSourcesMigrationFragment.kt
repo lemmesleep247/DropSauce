@@ -49,8 +49,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.core.view.MenuProvider
+import androidx.core.view.doOnDetach
+import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
+import com.google.android.material.appbar.AppBarLayout
+import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import dagger.hilt.android.AndroidEntryPoint
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -123,6 +129,15 @@ class BrokenSourcesMigrationFragment :
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
+		// The fragment container is laid out for the collapsed appbar (ScrollingViewBehavior), so
+		// while the appbar is expanded the bottom of this view is pushed off-screen. Compensate
+		// with bottom padding equal to the appbar's current expansion so the Fix bar stays visible.
+		val appBar = (requireActivity() as AppBarOwner).appBar
+		val offsetListener = AppBarLayout.OnOffsetChangedListener { bar, verticalOffset ->
+			view.updatePadding(bottom = bar.totalScrollRange + verticalOffset)
+		}
+		appBar.addOnOffsetChangedListener(offsetListener)
+		view.doOnDetach { appBar.removeOnOffsetChangedListener(offsetListener) }
 		addMenuProvider(object : MenuProvider {
 			override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 				menu.add(Menu.NONE, MENU_INFO, Menu.NONE, R.string.migration_information).apply {
@@ -200,7 +215,12 @@ private fun BrokenSourcesMigrationScreen(
 				}
 			}
 
-			else -> LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+			else -> LazyColumn(
+				modifier = Modifier
+					.fillMaxWidth()
+					.weight(1f)
+					.nestedScroll(rememberNestedScrollInteropConnection()),
+			) {
 				if (unavailableSources.isNotEmpty()) {
 					item {
 						SourceSectionHeader(

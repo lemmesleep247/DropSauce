@@ -10,6 +10,10 @@ import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.text.inSpans
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.extensions.runtime.getExternalExtensionLanguageDisplayName
+import org.koitharu.kotatsu.extensions.runtime.getExternalExtensionRepoDisplayName
+import org.koitharu.kotatsu.mihon.MihonExtensionLoader
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.parsers.model.ContentType
@@ -116,7 +120,21 @@ tailrec fun MangaSource.unwrap(): MangaSource = if (this is MangaSourceInfo) {
 fun MangaSource.getLocale(): Locale? = null
 
 fun MangaSource.getSummary(context: Context): String? = when (val source = unwrap()) {
-	is MihonMangaSource -> context.getString(R.string.external_source)
+	// Same info the extension manager shows under each extension: language • version • repo.
+	is MihonMangaSource -> buildString {
+		append(getExternalExtensionLanguageDisplayName(source.language))
+		runCatching { context.packageManager.getPackageInfo(source.pkgName, 0).versionName }
+			.getOrNull()
+			?.let { append(" • ").append(it) }
+		val settings = AppSettings(context.applicationContext)
+		// Repo attribution mirrors the extension manager: signing fingerprint first (works for
+		// extensions installed before provenance was tracked), install-time repo URL as fallback.
+		val repoLabel = settings.findRepoInfoBySignatures(
+			MihonExtensionLoader.getPackageSignatures(context, source.pkgName),
+		)?.displayName
+			?: settings.getExtensionRepoUrl(source.pkgName)?.let { getExternalExtensionRepoDisplayName(it) }
+		repoLabel?.let { append(" • ").append(it) }
+	}
 	is MissingMangaSource -> {
 		if (source.name.startsWith("MIHON_")) {
 			context.getString(R.string.external_source)

@@ -1,11 +1,7 @@
 package org.koitharu.kotatsu.search.ui
 
 import android.os.Bundle
-import android.text.Spannable
-import android.text.SpannableStringBuilder
 import android.text.TextUtils
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.WindowInsetsCompat
@@ -40,7 +36,6 @@ import org.koitharu.kotatsu.core.util.ext.consumeSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.end
 import org.koitharu.kotatsu.core.util.ext.getParcelableExtraCompat
 import org.koitharu.kotatsu.core.util.ext.getSerializableExtraCompat
-import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
 import org.koitharu.kotatsu.core.util.ext.start
@@ -60,7 +55,6 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.remotelist.ui.RemoteListFragment
 import kotlin.math.roundToInt
-import com.google.android.material.R as materialR
 
 private const val SORT_BUTTON_MAX_WIDTH_FRACTION = 0.45f
 
@@ -83,8 +77,12 @@ class MangaListActivity :
 
 	private lateinit var source: MangaSource
 
-	// The active language's native name, appended after the source name in the top bar.
+	// The active language's native name, shown as the top bar's subheading.
 	private var activeLanguageName: String? = null
+
+	// Original (attr-defined) expanded height of the collapsing toolbar, captured before growing
+	// it to make room for the language subtitle line.
+	private var expandedBaseHeight = -1
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -118,32 +116,26 @@ class MangaListActivity :
 	}
 
 	/**
-	 * Shows the source name with the active language appended after it on the same line, but kept
-	 * smaller and muted (the same size it had as a subheader).
+	 * Shows the source name as the title with the active language as the collapsing toolbar's
+	 * subtitle. Spans inside a CollapsingToolbarLayout title render as overlapping ghost text
+	 * during the collapse cross-fade, so the language must not be inlined into the title.
 	 */
 	private fun applyTitle() {
 		val name = source.getTitle(this)
 		val lang = activeLanguageName
-		val titleText: CharSequence = if (lang.isNullOrEmpty()) {
-			name
-		} else {
-			SpannableStringBuilder(name).apply {
-				append("  ")
-				val start = length
-				append(lang)
-				setSpan(RelativeSizeSpan(0.7f), start, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-				setSpan(
-					ForegroundColorSpan(getThemeColor(materialR.attr.colorOnSurfaceVariant)),
-					start,
-					length,
-					Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-				)
+		title = name
+		viewBinding.collapsingToolbarLayout?.let { ctl ->
+			ctl.title = name
+			ctl.subtitle = lang
+			// The medium collapsing height fits the toolbar + one title line; with a subtitle the
+			// title gets pushed up into the nav icon. Grow the expanded area by one subtitle line
+			// (and the parallax button row with it, so the sort button stays bottom-aligned).
+			if (expandedBaseHeight < 0) {
+				expandedBaseHeight = ctl.layoutParams.height
 			}
-		}
-		title = titleText
-		viewBinding.collapsingToolbarLayout?.let {
-			it.title = titleText
-			it.subtitle = null
+			val extra = if (lang.isNullOrEmpty()) 0 else (resources.displayMetrics.density * 28f).roundToInt()
+			ctl.updateLayoutParams { height = expandedBaseHeight + extra }
+			(viewBinding.buttonOrder?.parent as? View)?.updateLayoutParams { height = expandedBaseHeight + extra }
 		}
 	}
 

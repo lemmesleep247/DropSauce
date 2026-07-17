@@ -37,6 +37,34 @@ class MihonExtensionLoader @Inject constructor(
 		private const val METADATA_NSFW = "tachiyomi.extension.nsfw"
 		private const val METADATA_EXTENSION_LIB = "tachiyomix.extensionLib"
 		private const val METADATA_CONTENT_WARNING = "tachiyomix.contentWarning"
+		/** Languages hidden from the whole app: their source variants are never loaded. */
+		val HIDDEN_LANGUAGES = setOf("he", "iw")
+
+		@Suppress("DEPRECATION")
+		fun getSignatures(pkgInfo: PackageInfo): List<String> {
+			val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+				val signingInfo = pkgInfo.signingInfo ?: return emptyList()
+				if (signingInfo.hasMultipleSigners()) {
+					signingInfo.apkContentsSigners
+				} else {
+					signingInfo.signingCertificateHistory
+				}
+			} else {
+				pkgInfo.signatures
+			}
+			return signatures.orEmpty().map { Hash.sha256(it.toByteArray()) }
+		}
+
+		/** SHA-256 signatures of one installed package — for repo attribution by fingerprint. */
+		@Suppress("DEPRECATION")
+		fun getPackageSignatures(context: Context, pkgName: String): List<String> = runCatching {
+			val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+				PackageManager.GET_SIGNING_CERTIFICATES
+			} else {
+				PackageManager.GET_SIGNATURES
+			}
+			getSignatures(context.packageManager.getPackageInfo(pkgName, flags))
+		}.getOrDefault(emptyList())
 		// Keep the accepted ABI window bounded by Mihon's source-api. Loading a hypothetical newer
 		// APK and hoping its missing host symbols are unused turns a clear incompatibility into a
 		// delayed NoSuchMethodError.
@@ -251,6 +279,7 @@ class MihonExtensionLoader @Inject constructor(
 					else -> error("Unknown source class type: ${instance.javaClass.name}")
 				}
 			}
+			.filterNot { (it as? CatalogueSource)?.lang in HIDDEN_LANGUAGES }
 	}
 
 	private fun buildLoggedError(
@@ -305,20 +334,6 @@ class MihonExtensionLoader @Inject constructor(
 			?: "all"
 	}
 
-	@Suppress("DEPRECATION")
-	private fun getSignatures(pkgInfo: PackageInfo): List<String> {
-		val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-			val signingInfo = pkgInfo.signingInfo ?: return emptyList()
-			if (signingInfo.hasMultipleSigners()) {
-				signingInfo.apkContentsSigners
-			} else {
-				signingInfo.signingCertificateHistory
-			}
-		} else {
-			pkgInfo.signatures
-		}
-		return signatures.orEmpty().map { Hash.sha256(it.toByteArray()) }
-	}
 
 	@Suppress("DEPRECATION")
 	private fun getInstalledPackages(packageManager: PackageManager): List<PackageInfo> {

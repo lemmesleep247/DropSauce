@@ -126,6 +126,9 @@ internal fun WavyProgressBar(progress: Float, color: Color, trackColor: Color, m
 		}
 		val amplitude = (size.height / 2f - stroke / 2f) * 0.9f * edgeFlatten
 		val waveLength = 40.dp.toPx()
+		// The wave must land exactly on the track's centerline at the junction, so its
+		// amplitude fades out over the last quarter wavelength only.
+		val endTaper = waveLength / 4f
 		if (animatedProgress < 1f) {
 			drawLine(
 				color = trackColor,
@@ -140,9 +143,11 @@ internal fun WavyProgressBar(progress: Float, color: Color, trackColor: Color, m
 				moveTo(0f, midY + amplitude * sin(phase))
 				var x = 0f
 				while (x <= activeW) {
-					lineTo(x, midY + amplitude * sin((x / waveLength) * 2f * PI.toFloat() + phase))
+					val envelope = ((activeW - x) / endTaper).coerceIn(0f, 1f)
+					lineTo(x, midY + amplitude * envelope * sin((x / waveLength) * 2f * PI.toFloat() + phase))
 					x += 3f
 				}
+				lineTo(activeW, midY)
 			}
 			drawPath(
 				path = path,

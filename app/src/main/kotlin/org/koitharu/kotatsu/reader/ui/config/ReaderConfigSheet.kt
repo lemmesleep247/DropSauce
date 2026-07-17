@@ -79,8 +79,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import android.view.WindowManager
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import android.content.res.Configuration
@@ -147,6 +149,27 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 			?.let { ReaderMode.valueOf(it) }
 			?: ReaderMode.STANDARD
 		imageServerDelegate = ImageServerDelegate()
+	}
+
+	override fun onStart() {
+		// When the reader is immersive, this sheet's own window must hide the system bars too —
+		// otherwise showing it makes the bars reappear over the activity, which resizes the reader
+		// (visible as an abrupt jump). FLAG_NOT_FOCUSABLE while showing defers the focus grab until
+		// after the bars are hidden so they never flash in.
+		val window = dialog?.window
+		val activityInsets = activity?.window?.decorView?.let(ViewCompat::getRootWindowInsets)
+		val barsHidden = activityInsets?.isVisible(WindowInsetsCompat.Type.statusBars()) == false
+		if (window != null && barsHidden) {
+			window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+			WindowInsetsControllerCompat(window, window.decorView).apply {
+				systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+				hide(WindowInsetsCompat.Type.systemBars())
+			}
+			super.onStart()
+			window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+		} else {
+			super.onStart()
+		}
 	}
 
 	private fun importEpubFont(uri: Uri) {

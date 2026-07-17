@@ -15,7 +15,6 @@ import org.koitharu.kotatsu.core.util.ext.toInstantOrNull
 import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.local.data.LocalMangaRepository
 import org.koitharu.kotatsu.parsers.model.Manga
-import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.tracker.domain.model.MangaTracking
@@ -37,6 +36,9 @@ class CheckNewChaptersUseCase @Inject constructor(
 	private val mutex = MultiMutex<Long>()
 
 	suspend operator fun invoke(manga: Manga): MangaUpdates = mutex.withLock(manga.id) {
+		if (!settings.isTrackerEnabled) {
+			return@withLock MangaUpdates.Failure(manga = manga, error = null)
+		}
 		repository.updateTracks()
 		val tracking = repository.getTrackOrNull(manga) ?: return@withLock MangaUpdates.Failure(
 			manga = manga,
@@ -55,9 +57,18 @@ class CheckNewChaptersUseCase @Inject constructor(
 			val details = getFullManga(manga).let {
 				if (mangaDataRepository.isScanlatorsMerged(manga.id)) it.withMergedBranches() else it
 			}
-			val track = repository.getTrackOrNull(manga) ?: return@withLock
+			var track = repository.getTrackOrNull(manga) ?: return@withLock
 			val branch = checkNotNull(details.chapters?.findById(currentChapterId)).branch
 			val chapters = details.getChapters(branch)
+			if (!track.isEmpty()) {
+				// Chapters that appeared since the last background check would otherwise be
+				// re-baselined below without ever reaching the updates feed
+				val unseen = chapters.takeLastWhile { x -> x.id != track.lastChapterId }
+				if (unseen.isNotEmpty() && unseen.size < chapters.size) {
+					repository.saveUpdates(MangaUpdates.Success(details, branch, unseen, isValid = true))
+					track = repository.getTrackOrNull(manga) ?: return@withLock
+				}
+			}
 			val chapterIndex = chapters.indexOfFirst { x -> x.id == currentChapterId }
 			val lastNewChapterIndex = chapters.size - track.newChapters
 			val lastChapter = chapters.lastOrNull()
@@ -81,19 +92,9 @@ class CheckNewChaptersUseCase @Inject constructor(
 
 	private suspend fun invokeImpl(track: MangaTracking): MangaUpdates = runCatchingCancellable {
 		val isMerged = mangaDataRepository.isScanlatorsMerged(track.manga.id)
-		val cachedChapters = mangaDataRepository.findMangaById(track.manga.id, withChapters = true)
-			?.chapters
-			.orEmpty()
 		val details = getFullManga(track.manga).let { if (isMerged) it.withMergedBranches() else it }
 		val branch = if (isMerged) null else getBranch(details, track.lastChapterId)
-		compare(
-			track = track,
-			manga = details,
-			branch = branch,
-			cachedChapterIds = cachedChapters.asSequence()
-				.filter { isMerged || it.branch == branch }
-				.mapTo(HashSet()) { it.id },
-		)
+		compare(track, details, branch)
 	}.getOrElse { error ->
 		MangaUpdates.Failure(
 			manga = track.manga,
@@ -143,20 +144,16 @@ class CheckNewChaptersUseCase @Inject constructor(
 		track: MangaTracking,
 		manga: Manga,
 		branch: String?,
-		cachedChapterIds: Set<Long>,
-	): MangaUpdates.Success {
+	): MangaUpdates {
 		val chapters = requireNotNull(manga.getChapters(branch))
-		val installTime = settings.onboardingInstallTime
-		val lastCheckTime = track.lastCheck?.toEpochMilli() ?: installTime
-
 		if (track.isEmpty()) {
-			val newChapters = chapters.findFallbackChapters(cachedChapterIds, lastCheckTime)
-			return MangaUpdates.Success(
-				manga = manga,
-				branch = branch,
-				newChapters = newChapters,
-				isValid = newChapters.isNotEmpty(),
-			)
+			// First check of a newly tracked manga: baseline silently. Flagging pre-existing
+			// chapters here spammed notifications/downloads for manga the user just added
+			return MangaUpdates.Success(manga, branch, newChapters = emptyList(), isValid = true)
+		}
+		if (chapters.isEmpty()) {
+			// A "successful" but empty response (site glitch, layout change) must not wipe the track
+			return MangaUpdates.Failure(manga, IllegalStateException("Source returned an empty chapter list"))
 		}
 		if (BuildConfig.DEBUG && chapters.findById(track.lastChapterId) == null) {
 			Log.e("Tracker", "Chapter ${track.lastChapterId} not found")
@@ -164,17 +161,15 @@ class CheckNewChaptersUseCase @Inject constructor(
 		val newChapters = chapters.takeLastWhile { x -> x.id != track.lastChapterId }
 		return when {
 			newChapters.isEmpty() -> {
-				MangaUpdates.Success(
-					manga = manga,
-					branch = branch,
-					newChapters = emptyList(),
-					isValid = chapters.lastOrNull()?.id == track.lastChapterId,
-				)
+				MangaUpdates.Success(manga, branch, newChapters = emptyList(), isValid = true)
 			}
 
 			newChapters.size == chapters.size -> {
-				val fallbackChapters = chapters.findFallbackChapters(cachedChapterIds, lastCheckTime)
-				MangaUpdates.Success(manga, branch, fallbackChapters, isValid = fallbackChapters.isNotEmpty())
+				// The last known chapter is not in this branch: scanlator switch or the
+				// site/extension re-keyed chapter ids. Never flag anything here — upload dates
+				// and id diffs are both unreliable (fake dates flagged a whole second scanlator
+				// as new). isValid=false re-baselines to the current list, keeping the counter
+				MangaUpdates.Success(manga, branch, newChapters = emptyList(), isValid = false)
 			}
 
 			else -> {
@@ -182,45 +177,4 @@ class CheckNewChaptersUseCase @Inject constructor(
 			}
 		}
 	}
-}
-
-private fun List<MangaChapter>.findFallbackChapters(
-	cachedChapterIds: Set<Long>,
-	lastCheckTime: Long,
-): List<MangaChapter> {
-	val fallbackIds = findFallbackChapterIds(
-		currentChapters = map { ChapterFingerprint(it.id, it.uploadDate) },
-		cachedChapterIds = cachedChapterIds,
-		lastCheckTime = lastCheckTime,
-	)
-	return filter { it.id in fallbackIds }
-}
-
-internal data class ChapterFingerprint(
-	val id: Long,
-	val uploadDate: Long,
-)
-
-internal fun findFallbackChapterIds(
-	currentChapters: List<ChapterFingerprint>,
-	cachedChapterIds: Set<Long>,
-	lastCheckTime: Long,
-): Set<Long> {
-	val datesAreAmbiguous = currentChapters.any { it.uploadDate <= 0L } ||
-		(currentChapters.size > 1 && currentChapters.all { it.uploadDate == currentChapters.first().uploadDate })
-	val cacheHasOverlap = cachedChapterIds.isNotEmpty() &&
-		currentChapters.any { it.id in cachedChapterIds }
-	if (datesAreAmbiguous && cacheHasOverlap) {
-		return currentChapters
-			.asSequence()
-			.filterNot { it.id in cachedChapterIds }
-			.mapTo(HashSet()) { it.id }
-	}
-	if (lastCheckTime <= 0L) {
-		return emptySet()
-	}
-	return currentChapters
-		.asSequence()
-		.filter { it.uploadDate > lastCheckTime }
-		.mapTo(HashSet()) { it.id }
 }

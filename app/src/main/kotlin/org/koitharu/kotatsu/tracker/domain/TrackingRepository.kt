@@ -277,7 +277,8 @@ class TrackingRepository @Inject constructor(
 			is MangaUpdates.Success -> TrackEntity(
 				mangaId = mangaId,
 				lastChapterId = updates.manga.getChapters(updates.branch).lastOrNull()?.id ?: NO_ID,
-				newChapters = if (updates.isValid) newChapters + updates.newChapters.size else 0,
+				// isValid=false means "re-baseline": keep the user's unread counter instead of wiping it
+				newChapters = if (updates.isValid) newChapters + updates.newChapters.size else newChapters,
 				lastCheckTime = System.currentTimeMillis(),
 				lastChapterDate = updates.lastChapterDate().ifZero { lastChapterDate },
 				lastResult = if (updates.isNotEmpty()) TrackEntity.RESULT_HAS_UPDATE else TrackEntity.RESULT_NO_UPDATE,

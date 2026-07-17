@@ -39,7 +39,10 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.recoverNotNull
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.tracker.domain.CheckNewChaptersUseCase
 import javax.inject.Inject
+import javax.inject.Provider
 
 class DetailsLoadUseCase @Inject constructor(
 	private val mangaDataRepository: MangaDataRepository,
@@ -49,6 +52,7 @@ class DetailsLoadUseCase @Inject constructor(
 	private val imageGetter: Html.ImageGetter,
 	private val networkState: NetworkState,
 	private val mihonExtensionManager: MihonExtensionManager,
+	private val checkNewChaptersUseCase: Provider<CheckNewChaptersUseCase>,
 ) {
 
 	operator fun invoke(intent: MangaIntent, force: Boolean): Flow<MangaDetails> = flow {
@@ -212,6 +216,14 @@ class DetailsLoadUseCase @Inject constructor(
 			detailsFetched = true,
 		)
 		emit(mangaDetails)
+		// Feed chapters found by this refresh into the tracker so they appear in the updates feed
+		// instead of being silently swallowed by the next background check. Emits nothing to the UI
+		// and never notifies — the user is already looking at the manga.
+		runCatchingCancellable {
+			checkNewChaptersUseCase.get().invoke(remoteDetails)
+		}.onFailure { e ->
+			e.printStackTraceDebug()
+		}
 	}
 
 	private suspend fun getDetails(seed: Manga, force: Boolean) = runCatchingCancellable {

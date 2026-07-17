@@ -59,23 +59,6 @@
             </org.koitharu.kotatsu.filter.ui.FilterFieldLayout>
 
             <org.koitharu.kotatsu.filter.ui.FilterFieldLayout
-                android:id="@+id/layout_saved_filters"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/margin_small"
-                app:title="@string/saved_filters">
-
-                <org.koitharu.kotatsu.core.ui.widgets.ChipsView
-                    android:id="@+id/chips_saved_filters"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="@dimen/margin_small"
-                    android:layout_marginTop="@dimen/margin_small"
-                    app:chipStyle="@style/Widget.Kotatsu.Chip.Filter" />
-
-            </org.koitharu.kotatsu.filter.ui.FilterFieldLayout>
-
-            <org.koitharu.kotatsu.filter.ui.FilterFieldLayout
                 android:id="@+id/layout_locale"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -307,24 +290,26 @@
         android:paddingVertical="@dimen/margin_small">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_reset"
-            style="?materialButtonOutlinedStyle"
+            android:id="@+id/button_save"
+            style="?materialButtonTonalStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/margin_small"
             android:layout_weight="1"
             android:enabled="false"
-            android:text="@string/reset"
+            android:text="@string/save"
             tools:enabled="true" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_done"
-            style="?materialButtonTonalStyle"
+            android:id="@+id/button_reset"
+            style="?materialButtonOutlinedStyle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/margin_small"
             android:layout_weight="1"
-            android:text="@string/done" />
+            android:enabled="false"
+            android:text="@string/reset"
+            tools:enabled="true" />
 
     </LinearLayout>
 

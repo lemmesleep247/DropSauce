@@ -1,39 +1,24 @@
 package org.koitharu.kotatsu.filter.ui.sheet
 
 import android.os.Bundle
-import android.text.InputFilter
-import android.view.Gravity
+import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.LinearLayout
-import android.widget.Toast
-import androidx.appcompat.widget.PopupMenu
-import android.graphics.drawable.ColorDrawable
 import androidx.core.view.doOnLayout
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import com.google.android.material.R as materialR
 import com.google.android.material.chip.Chip
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.slider.Slider
 import com.google.android.material.shape.MaterialShapeDrawable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.titleResId
 import org.koitharu.kotatsu.core.nav.router
-import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
-import org.koitharu.kotatsu.core.ui.dialog.setEditText
 import org.koitharu.kotatsu.core.ui.model.titleRes
 import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_DRAGGING
 import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.Companion.STATE_EXPANDED
@@ -50,9 +35,8 @@ import org.koitharu.kotatsu.core.util.ext.parentView
 import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.core.util.ext.setValuesRounded
 import org.koitharu.kotatsu.databinding.SheetFilterBinding
-import org.koitharu.kotatsu.filter.data.PersistableFilter
-import org.koitharu.kotatsu.filter.data.PersistableFilter.Companion.MAX_TITLE_LENGTH
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
+import org.koitharu.kotatsu.filter.ui.showSaveFilterDialog
 import org.koitharu.kotatsu.filter.ui.model.FilterProperty
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.ContentType
@@ -69,9 +53,7 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
     AdapterView.OnItemSelectedListener,
     View.OnClickListener,
     AdaptiveSheetCallback,
-    ChipsView.OnChipClickListener,
-    ChipsView.OnChipLongClickListener,
-    ChipsView.OnChipCloseClickListener {
+    ChipsView.OnChipClickListener {
 
     private var systemBarsBottom = 0
 
@@ -97,8 +79,6 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
         filter.demographics.observe(viewLifecycleOwner, this::onDemographicsChanged)
         filter.year.observe(viewLifecycleOwner, this::onYearChanged)
         filter.yearRange.observe(viewLifecycleOwner, this::onYearRangeChanged)
-        filter.savedFilters.observe(viewLifecycleOwner, ::onSavedPresetsChanged)
-
         binding.layoutGenres.setTitle(
             if (filter.capabilities.isMultipleTagsSupported) {
                 R.string.genres
@@ -109,7 +89,6 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
         binding.spinnerLocale.onItemSelectedListener = this
         binding.spinnerOriginalLocale.onItemSelectedListener = this
         binding.spinnerOrder.onItemSelectedListener = this
-        binding.chipsSavedFilters.onChipClickListener = this
         binding.chipsState.onChipClickListener = this
         binding.chipsTypes.onChipClickListener = this
         binding.chipsContentRating.onChipClickListener = this
@@ -117,8 +96,6 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
         binding.chipsGenres.onChipClickListener = this
         binding.chipsGenresExclude.onChipClickListener = this
         binding.chipsAuthor.onChipClickListener = this
-        binding.chipsSavedFilters.onChipLongClickListener = this
-        binding.chipsSavedFilters.onChipCloseClickListener = this
         binding.sliderYear.addOnChangeListener(this::onSliderValueChange)
         binding.sliderYearsRange.addOnChangeListener(this::onRangeSliderValueChange)
         binding.layoutGenres.setOnMoreButtonClickListener {
@@ -127,14 +104,12 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
         binding.layoutGenresExclude.setOnMoreButtonClickListener {
             router.showTagsCatalogSheet(excludeMode = true)
         }
-        filter.observe().map { it.listFilter.isNotEmpty() }
-            .distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
-            .observe(viewLifecycleOwner) {
-                binding.buttonReset.isEnabled = it
-            }
+        filter.canSaveFilter.observe(viewLifecycleOwner) {
+            binding.buttonSave.isEnabled = it
+            binding.buttonReset.isEnabled = it
+        }
+        binding.buttonSave.setOnClickListener(this)
         binding.buttonReset.setOnClickListener(this)
-        binding.buttonDone.setOnClickListener(this)
         addSheetCallback(this, viewLifecycleOwner)
         binding.layoutBottom.doOnLayout {
             dialog?.findViewById<View>(materialR.id.design_bottom_sheet)?.let { sheet ->
@@ -193,13 +168,7 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
     private fun SheetFilterBinding.adjustForEmbeddedLayout() {
         layoutBody.updatePadding(top = layoutBody.paddingBottom)
         scrollView.scrollIndicators = 0
-        buttonDone.isVisible = false
         this.root.layoutParams?.height = ViewGroup.LayoutParams.MATCH_PARENT
-        buttonReset.updateLayoutParams<LinearLayout.LayoutParams> {
-            weight = 0f
-            width = LinearLayout.LayoutParams.WRAP_CONTENT
-            gravity = Gravity.END or Gravity.CENTER_VERTICAL
-        }
     }
 
     override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -224,9 +193,10 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
     }
 
     override fun onClick(v: View) {
+        val filter = FilterCoordinator.require(this)
         when (v.id) {
-            R.id.button_done -> dismiss()
-            R.id.button_reset -> FilterCoordinator.require(this).reset()
+            R.id.button_save -> showSaveFilterDialog(filter)
+            R.id.button_reset -> filter.clearSavedFilter()
         }
     }
 
@@ -288,32 +258,12 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
             is ContentType -> filter.toggleContentType(data, !chip.isChecked)
             is ContentRating -> filter.toggleContentRating(data, !chip.isChecked)
             is Demographic -> filter.toggleDemographic(data, !chip.isChecked)
-            is PersistableFilter -> filter.setAdjusted(data.filter)
             is String -> if (chip.isChecked) {
                 filter.setAuthor(null)
             } else {
                 filter.setAuthor(data)
             }
             null -> router.showTagsCatalogSheet(excludeMode = chip.parentView?.id == R.id.chips_genresExclude)
-        }
-    }
-
-    override fun onChipLongClick(chip: Chip, data: Any?): Boolean {
-        return when (data) {
-            is PersistableFilter -> {
-                showSavedFilterMenu(chip, data)
-                true
-            }
-
-            else -> false
-        }
-    }
-
-    override fun onChipCloseClick(chip: Chip, data: Any?) {
-        when (data) {
-            is PersistableFilter -> {
-                showSavedFilterMenu(chip, data)
-            }
         }
     }
 
@@ -524,61 +474,6 @@ class FilterSheetFragment : BaseAdaptiveSheet<SheetFilterBinding>(),
             ),
         )
         b.sliderYearsRange.setValuesRounded(currentValueFrom, currentValueTo)
-    }
-
-    private fun onSavedPresetsChanged(value: FilterProperty<PersistableFilter>) {
-        val b = viewBinding ?: return
-        b.layoutSavedFilters.isGone = value.isEmpty()
-        if (value.isEmpty()) {
-            return
-        }
-        val chips = value.availableItems.map { f ->
-            ChipsView.ChipModel(
-                title = f.name,
-                isChecked = f in value.selectedItems,
-                data = f,
-                isDropdown = true,
-            )
-        }
-        b.chipsSavedFilters.setChips(chips)
-    }
-
-    private fun showSavedFilterMenu(anchor: View, preset: PersistableFilter) {
-        val menu = PopupMenu(context ?: return, anchor)
-        val filter = FilterCoordinator.require(this)
-        menu.inflate(R.menu.popup_saved_filter)
-        menu.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_delete -> filter.deleteSavedFilter(preset.id)
-                R.id.action_rename -> onRenameFilterClick(preset)
-            }
-            true
-        }
-        menu.show()
-    }
-
-    private fun onRenameFilterClick(preset: PersistableFilter) {
-        val filter = FilterCoordinator.require(this)
-        val existingNames = filter.savedFilters.value.availableItems.mapToSet { it.name }
-        buildAlertDialog(context ?: return) {
-            val input = setEditText(
-                inputType = EditorInfo.TYPE_CLASS_TEXT or EditorInfo.TYPE_TEXT_FLAG_CAP_SENTENCES,
-                singleLine = true,
-            )
-            input.filters += InputFilter.LengthFilter(MAX_TITLE_LENGTH)
-            input.setHint(R.string.enter_name)
-            input.setText(preset.name)
-            setTitle(R.string.rename)
-            setPositiveButton(R.string.save) { _, _ ->
-                val text = input.text?.toString()?.trim()
-                if (text.isNullOrEmpty() || text in existingNames) {
-                    Toast.makeText(context, R.string.invalid_value_message, Toast.LENGTH_SHORT).show()
-                } else {
-                    filter.renameSavedFilter(preset.id, text)
-                }
-            }
-            setNegativeButton(android.R.string.cancel, null)
-        }.show()
     }
 
     private companion object {

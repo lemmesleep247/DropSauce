@@ -56,7 +56,7 @@ class MihonFilterViewModel @AssistedInject constructor(
 	}
 
 	fun reset() {
-		filter.reset()
+		filter.clearSavedFilter()
 		load(resetExpanded = true)
 	}
 

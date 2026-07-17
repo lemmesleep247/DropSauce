@@ -18,6 +18,8 @@ data class PersistableFilter(
     @Serializable(with = MangaListFilterSerializer::class)
     @SerialName("filter")
     val filter: MangaListFilter,
+    @SerialName("sort_order")
+    val sortOrder: String? = null,
 ) {
 
     val id: Int

@@ -6,10 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.chip.Chip
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseFragment
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
@@ -29,7 +31,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class FilterHeaderFragment : BaseFragment<FragmentFilterHeaderBinding>(), ChipsView.OnChipClickListener,
-    ChipsView.OnChipCloseClickListener {
+    ChipsView.OnChipCloseClickListener, ChipsView.OnChipLongClickListener {
 
     @Inject
     lateinit var filterHeaderProducer: FilterHeaderProducer
@@ -45,6 +47,7 @@ class FilterHeaderFragment : BaseFragment<FragmentFilterHeaderBinding>(), ChipsV
         super.onViewBindingCreated(binding, savedInstanceState)
         binding.chipsTags.onChipClickListener = this
         binding.chipsTags.onChipCloseClickListener = this
+        binding.chipsTags.onChipLongClickListener = this
         filterHeaderProducer.observeHeader(filter)
             .flowOn(Dispatchers.Default)
             .observe(viewLifecycleOwner, ::onDataChanged)
@@ -56,9 +59,9 @@ class FilterHeaderFragment : BaseFragment<FragmentFilterHeaderBinding>(), ChipsV
         when (data) {
             is MangaTag -> filter.toggleTag(data, !chip.isChecked)
             is PersistableFilter -> if (chip.isChecked) {
-                filter.reset()
+                filter.clearSavedFilter()
             } else {
-                filter.setAdjusted(data.filter)
+                filter.applySavedFilter(data)
             }
 
             is String -> Unit
@@ -86,6 +89,18 @@ class FilterHeaderFragment : BaseFragment<FragmentFilterHeaderBinding>(), ChipsV
             is Int -> filter.setYear(YEAR_UNKNOWN)
             is IntRange -> filter.setYearRange(YEAR_UNKNOWN, YEAR_UNKNOWN)
         }
+    }
+
+    override fun onChipLongClick(chip: Chip, data: Any?): Boolean {
+        val savedFilter = data as? PersistableFilter ?: return false
+        PopupMenu(requireContext(), chip).apply {
+            menu.add(R.string.delete)
+            setOnMenuItemClickListener {
+                filter.deleteSavedFilter(savedFilter.id)
+                true
+            }
+        }.show()
+        return true
     }
 
     private fun onDataChanged(header: FilterHeaderModel) {

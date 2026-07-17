@@ -51,31 +51,16 @@ class SavedFiltersRepository @Inject constructor(
         source: MangaSource,
         name: String,
         filter: MangaListFilter,
+        sortOrder: String?,
     ): PersistableFilter = withContext(Dispatchers.Default) {
         val persistableFilter = PersistableFilter(
             name = name,
             source = source,
             filter = filter,
+            sortOrder = sortOrder,
         )
         persist(persistableFilter)
         persistableFilter
-    }
-
-    suspend fun save(
-        filter: PersistableFilter,
-    ) = withContext(Dispatchers.Default) {
-        persist(filter)
-    }
-
-    suspend fun rename(source: MangaSource, id: Int, newName: String) = withContext(Dispatchers.Default) {
-        val filter = load(source, id) ?: return@withContext
-        val newFilter = filter.copy(name = newName)
-        val prefs = getPrefs(source)
-        prefs.edit(commit = true) {
-            remove(key(id))
-            putString(key(newFilter.id), Json.encodeToString(newFilter))
-        }
-        newFilter
     }
 
     suspend fun delete(source: MangaSource, id: Int) = withContext(Dispatchers.Default) {
@@ -90,17 +75,6 @@ class SavedFiltersRepository @Inject constructor(
         val json = Json.encodeToString(persistableFilter)
         prefs.edit(commit = true) {
             putString(key(persistableFilter.id), json)
-        }
-    }
-
-    private fun load(source: MangaSource, id: Int): PersistableFilter? {
-        val prefs = getPrefs(source)
-        val json = prefs.getString(key(id), null) ?: return null
-        return try {
-            Json.decodeFromString<PersistableFilter>(json)
-        } catch (e: SerializationException) {
-            e.printStackTraceDebug()
-            null
         }
     }
 

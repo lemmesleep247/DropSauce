@@ -2,15 +2,12 @@ package org.koitharu.kotatsu.filter.ui.mihon
 
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import androidx.core.view.doOnLayout
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -32,6 +29,7 @@ import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.databinding.SheetFilterMihonBinding
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
+import org.koitharu.kotatsu.filter.ui.showSaveFilterDialog
 
 @AndroidEntryPoint
 class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), AdaptiveSheetCallback {
@@ -56,8 +54,13 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 		val adapter = MihonFilterAdapter(viewModel)
 		binding.recyclerView.layoutManager = LinearLayoutManager(binding.root.context)
 		binding.recyclerView.adapter = adapter
+		val filter = FilterCoordinator.require(this)
+		binding.buttonSave.setOnClickListener { showSaveFilterDialog(filter) }
 		binding.buttonReset.setOnClickListener { viewModel.reset() }
-		binding.buttonDone.setOnClickListener { dismiss() }
+		filter.canSaveFilter.observe(viewLifecycleOwner) {
+			binding.buttonSave.isEnabled = it
+			binding.buttonReset.isEnabled = it
+		}
 		viewModel.items.observe(viewLifecycleOwner, adapter)
 		// The adapter diffs asynchronously, so listen for the actual data dispatch and re-measure
 		// after the RecyclerView lays the new items out.
@@ -191,13 +194,7 @@ class MihonFilterSheetFragment : BaseAdaptiveSheet<SheetFilterMihonBinding>(), A
 	}
 
 	private fun SheetFilterMihonBinding.adjustForEmbeddedLayout() {
-		buttonDone.isVisible = false
 		root.layoutParams?.height = ViewGroup.LayoutParams.MATCH_PARENT
-		buttonReset.updateLayoutParams<LinearLayout.LayoutParams> {
-			weight = 0f
-			width = LinearLayout.LayoutParams.WRAP_CONTENT
-			gravity = Gravity.END or Gravity.CENTER_VERTICAL
-		}
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {

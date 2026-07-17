@@ -36,6 +36,8 @@
     <string name="add_new_category">New category</string>
     <string name="add">Add</string>
     <string name="save">Save</string>
+    <string name="save_filter">Save filter</string>
+    <string name="filter_name_exists">A filter with this name already exists</string>
     <string name="share">Share</string>
     <string name="create_shortcut">Create shortcut</string>
     <string name="share_s">Share %s</string>

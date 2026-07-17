@@ -74,6 +74,7 @@ class FilterCoordinator @Inject constructor(
 
     private val currentListFilter = MutableStateFlow(restoreSortFilter())
     private val currentSortOrder = MutableStateFlow(repository.defaultSortOrder)
+    private val initialSortOrder = repository.defaultSortOrder
     private val defaultDynamicSortLabel = MutableStateFlow<String?>(null)
 
     private val availableSortOrders = repository.sortOrders
@@ -282,12 +283,24 @@ class FilterCoordinator @Inject constructor(
     val savedFilters: StateFlow<FilterProperty<PersistableFilter>> = combine(
         savedFiltersRepository.observeAll(repository.source),
         currentListFilter,
-    ) { available, applied ->
+        currentSortOrder,
+    ) { available, applied, sortOrder ->
+        val appliedWithoutQuery = applied.copy(query = null)
+        val appliedSort = if (isDynamicFilter) null else sortOrder.name
         FilterProperty(
             availableItems = available,
-            selectedItems = setOfNotNull(available.find { it.filter == applied }),
+            selectedItems = setOfNotNull(
+                available.find {
+                    val savedSort = it.sortOrder ?: if (isDynamicFilter) null else initialSortOrder.name
+                    it.filter == appliedWithoutQuery && savedSort == appliedSort
+                },
+            ),
         )
     }.stateIn(coroutineScope, SharingStarted.Lazily, FilterProperty.EMPTY)
+
+    val canSaveFilter: StateFlow<Boolean> = combine(currentListFilter, currentSortOrder) { filter, sortOrder ->
+        filter.copy(query = null).isNotEmpty() || (!isDynamicFilter && sortOrder != initialSortOrder)
+    }.stateIn(coroutineScope, SharingStarted.Eagerly, false)
 
     private val filterHost: MihonFilterHost?
         get() = repository as? MihonFilterHost
@@ -457,12 +470,37 @@ class FilterCoordinator @Inject constructor(
         set(newFilter)
     }
 
-    fun renameSavedFilter(id: Int, newName: String) = coroutineScope.launch {
-        savedFiltersRepository.rename(repository.source, id, newName)
+    fun saveCurrentFilter(name: String) = coroutineScope.launch {
+        savedFiltersRepository.save(
+            source = repository.source,
+            name = name,
+            filter = currentListFilter.value.copy(query = null),
+            sortOrder = if (isDynamicFilter) null else currentSortOrder.value.name,
+        )
     }
 
     fun deleteSavedFilter(id: Int) = coroutineScope.launch {
         savedFiltersRepository.delete(repository.source, id)
+    }
+
+    fun isSavedFilterNameTaken(name: String): Boolean =
+        savedFilters.value.availableItems.any { it.name.equals(name, ignoreCase = true) }
+
+    fun applySavedFilter(savedFilter: PersistableFilter) {
+        val query = currentListFilter.value.query
+        setAdjusted(savedFilter.filter.copy(query = query))
+        val savedSortOrder = savedFilter.sortOrder ?: if (isDynamicFilter) null else initialSortOrder.name
+        savedSortOrder?.let { name ->
+            availableSortOrders.firstOrNull { it.name == name }?.let(::setSortOrder)
+        }
+    }
+
+    fun clearSavedFilter() {
+        val query = currentListFilter.value.query
+        currentListFilter.value = MangaListFilter(query = query)
+        if (!isDynamicFilter) {
+            setSortOrder(initialSortOrder)
+        }
     }
 
     fun setQuery(value: String?) {

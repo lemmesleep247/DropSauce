@@ -55,11 +55,12 @@ class FilterHeaderProducer @Inject constructor(
         limit: Int,
     ): List<ChipsView.ChipModel> {
         val result = ArrayDeque<ChipsView.ChipModel>(savedFilters.availableItems.size + limit + 3)
+        val activeSavedFilter = savedFilters.selectedItems.singleOrNull()
         if (isDynamic) {
             // Dynamic Mihon sources encode their filters into tags; show only the active ones (the real
             // sort lives on the toolbar button, so it's excluded here). DB tag suggestions don't map to
             // the source's FilterList, so they are not shown.
-            for (tag in tagsProperty.selectedItems) {
+            for (tag in tagsProperty.selectedItems - activeSavedFilter?.filter?.tags.orEmpty()) {
                 if (tag.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX)) {
                     continue
                 }
@@ -81,22 +82,7 @@ class FilterHeaderProducer @Inject constructor(
             if (tags.size < limit) {
                 tags = tags + tagsProperty.availableItems.take(limit - tags.size)
             }
-            if (tags.isEmpty() && selectedTags.isEmpty()) {
-                return emptyList()
-            }
-            for (saved in savedFilters.availableItems) {
-                val model = ChipsView.ChipModel(
-                    title = saved.name,
-                    isChecked = saved in savedFilters.selectedItems,
-                    data = saved,
-                )
-                if (model.isChecked) {
-                    selectedTags.removeAll(saved.filter.tags)
-                    result.addFirst(model)
-                } else {
-                    result.addLast(model)
-                }
-            }
+            activeSavedFilter?.let { selectedTags.removeAll(it.filter.tags) }
             for (tag in tags) {
                 val model = ChipsView.ChipModel(
                     title = tag.title,
@@ -187,6 +173,16 @@ class FilterHeaderProducer @Inject constructor(
         val hasTags = result.any { it.data is MangaTag }
         if (hasTags) {
             result.addFirst(moreTagsChip())
+        }
+        savedFilters.availableItems.asReversed().forEach { saved ->
+            result.addFirst(
+                ChipsView.ChipModel(
+                    title = saved.name,
+                    isChecked = saved in savedFilters.selectedItems,
+                    isCheckedIconVisible = false,
+                    data = saved,
+                ),
+            )
         }
         return result
     }

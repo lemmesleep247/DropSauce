@@ -1085,9 +1085,18 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
         val updateActiveColor: (Int) -> Unit = { color ->
             when (colorTarget) {
-                EPUB_COLOR_TEXT -> foreground = color
-                EPUB_COLOR_HIGHLIGHT -> highlighter = color
-                else -> background = color
+                EPUB_COLOR_TEXT -> {
+                    foreground = color
+                    settings.epubCustomTextColor = color
+                }
+                EPUB_COLOR_HIGHLIGHT -> {
+                    highlighter = color
+                    settings.epubCustomHighlightColor = color
+                }
+                else -> {
+                    background = color
+                    settings.epubCustomBackgroundColor = color
+                }
             }
         }
         val customSelected = theme == EPUB_THEME_CUSTOM
@@ -1101,10 +1110,10 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 720.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 20.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1126,35 +1135,46 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             )
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            "white" to R.string.epub_theme_light,
-                            "gray" to R.string.epub_theme_dark,
-                            "black" to R.string.epub_theme_black,
-                        ).forEach { (value, label) ->
-                            val selected = theme == value
-                            Surface(
-                                onClick = { theme = value },
-                                shape = RoundedCornerShape(16.dp),
-                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                ),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text(
-                                    text = stringResource(label),
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
-                                )
+                    listOf(
+                        EPUB_THEME_SYSTEM to R.string.epub_theme_system,
+                        "white" to R.string.epub_theme_light,
+                        "gray" to R.string.epub_theme_dark,
+                        "black" to R.string.epub_theme_black,
+                    ).chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (value, label) ->
+                                val selected = theme == value
+                                Surface(
+                                    onClick = {
+                                        theme = value
+                                        settings.epubTheme = value
+                                    },
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                    ),
+                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = stringResource(label),
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            modifier = Modifier.padding(horizontal = 4.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                     Surface(
-                        onClick = { theme = EPUB_THEME_CUSTOM },
+                        onClick = {
+                            theme = EPUB_THEME_CUSTOM
+                            settings.epubTheme = EPUB_THEME_CUSTOM
+                        },
                         shape = RoundedCornerShape(20.dp),
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         border = androidx.compose.foundation.BorderStroke(
@@ -1165,7 +1185,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     ) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(16.dp).alpha(if (customSelected) 1f else 0.38f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
                                 text = stringResource(R.string.epub_theme_custom),
@@ -1202,8 +1222,8 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                     }
                                 }
                             }
-                            EPUB_COLOR_PRESETS.chunked(6).forEach { row ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            EPUB_COLOR_PRESETS.chunked(8).forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     row.forEach { color ->
                                         Surface(
                                             onClick = { updateActiveColor(color) },
@@ -1256,18 +1276,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             }
                         }
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
-                        TextButton(
-                            onClick = {
-                                settings.epubCustomBackgroundColor = background
-                                settings.epubCustomTextColor = foreground
-                                settings.epubCustomHighlightColor = highlighter
-                                settings.epubTheme = theme
-                                onDismiss()
-                            },
-                        ) { Text(stringResource(R.string.apply)) }
-                    }
             }
         }
     }
@@ -1281,15 +1289,12 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     }
 
     private fun canonicalEpubTheme(value: String): String = when (value) {
+        EPUB_THEME_SYSTEM -> EPUB_THEME_SYSTEM
         "light", "white" -> "white"
         "dark", "gray" -> "gray"
         "black" -> "black"
         EPUB_THEME_CUSTOM -> EPUB_THEME_CUSTOM
-        else -> if (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
-            "gray"
-        } else {
-            "white"
-        }
+        else -> EPUB_THEME_SYSTEM
     }
 
     @Composable
@@ -1672,6 +1677,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 	private companion object {
 		const val EPUB_FONT_CUSTOM = "custom"
 		const val EPUB_THEME_CUSTOM = "custom"
+		const val EPUB_THEME_SYSTEM = "system"
 		const val EPUB_COLOR_BACKGROUND = "background"
 		const val EPUB_COLOR_TEXT = "text"
 		const val EPUB_COLOR_HIGHLIGHT = "highlight"

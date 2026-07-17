@@ -100,6 +100,10 @@
 -dontwarn okio.**
 -dontwarn okhttp3.**
 
+# zstd JNI (okhttp3.zstd CompressionInterceptor) — native code resolves
+# ZstdCompressor/ZstdDecompressor via JNI FindClass, invisible to R8.
+-keep class com.squareup.zstd.** { *; }
+
 # UniFile (used by Mihon DiskUtil signatures)
 -keep class com.hippo.unifile.** { *; }
 -keep interface com.hippo.unifile.** { *; }

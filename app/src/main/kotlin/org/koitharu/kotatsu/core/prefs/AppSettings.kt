@@ -274,9 +274,9 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_EPUB_PUBLISHER_STYLE, false)
 		set(value) = prefs.edit { putBoolean(KEY_EPUB_PUBLISHER_STYLE, value) }
 
-	// "white" | "gray" | "black" | "custom" - page colors of the EPUB reader only
+	// "system" | "white" | "gray" | "black" | "custom" - page colors of the EPUB reader only
 	var epubTheme: String
-		get() = prefs.getString(KEY_EPUB_THEME, "white") ?: "white"
+		get() = prefs.getString(KEY_EPUB_THEME, "system") ?: "system"
 		set(value) = prefs.edit { putString(KEY_EPUB_THEME, value) }
 
 	var epubCustomBackgroundColor: Int

@@ -419,7 +419,7 @@ internal fun RelatedSection(
 				modifier = Modifier
 					.height(200.dp)
 					.fillMaxWidth()
-					.clip(RoundedCornerShape(20.dp)),
+					.maskClip(RoundedCornerShape(20.dp)),
 			)
 			Spacer(Modifier.height(8.dp))
 			Text(

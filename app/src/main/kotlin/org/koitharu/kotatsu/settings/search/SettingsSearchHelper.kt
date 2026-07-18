@@ -177,6 +177,7 @@ class SettingsSearchHelper @Inject constructor(
 			group(sectionCrumbs, "Image") { crumbs ->
 				addItem(AppSettings.KEY_32BIT_COLOR, R.string.enhanced_colors, R.string.enhanced_colors_summary, crumbs, ReaderSettingsFragment::class.java)
 				addItem(AppSettings.KEY_READER_OPTIMIZE, R.string.reader_optimize, R.string.reader_optimize_summary, crumbs, ReaderSettingsFragment::class.java)
+				addItem(AppSettings.KEY_READER_UPSCALE, R.string.reader_upscale, R.string.reader_upscale_summary, crumbs, ReaderSettingsFragment::class.java)
 				addItem(AppSettings.KEY_READER_CROP, R.string.crop_pages, breadcrumbs = crumbs, fragmentClass = ReaderSettingsFragment::class.java, keywordArrayRes = intArrayOf(R.array.reader_crop))
 			}
 			group(sectionCrumbs, "Display") { crumbs ->

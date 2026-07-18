@@ -73,6 +73,8 @@ import org.koitharu.kotatsu.local.data.isEpub
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.data.TapGridSettings
 import org.koitharu.kotatsu.reader.domain.TapGridArea
+import org.koitharu.kotatsu.reader.domain.UpscaleEffect
+import org.koitharu.kotatsu.reader.ui.upscale.UpscalePreviewDialog
 import org.koitharu.kotatsu.reader.ui.config.ReaderConfigSheet
 import org.koitharu.kotatsu.reader.ui.epub.EpubReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
@@ -214,10 +216,14 @@ class ReaderActivity :
             ReaderMenuProvider(
                 onOpenMenu = ::openMenu,
                 onSearchBook = ::openEpubSearch,
+                onShowUpscalePreview = ::showUpscalePreview,
                 isEpub = { readerManager.isEpub },
+                isUpscaleActive = { UpscaleEffect.activePages.value.isNotEmpty() },
                 isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
             ),
         )
+        UpscaleEffect.activePages.map { it.isNotEmpty() }.distinctUntilChanged()
+            .observe(this, MenuInvalidator(this))
 
         observeWindowLayout()
 
@@ -600,6 +606,10 @@ class ReaderActivity :
 
 	private fun openEpubSearch() {
 		(readerManager.currentReader as? EpubReaderFragment)?.showBookSearch()
+	}
+
+	private fun showUpscalePreview() {
+		UpscalePreviewDialog.show(supportFragmentManager)
 	}
 
     override fun toggleScreenOrientation() {

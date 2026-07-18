@@ -4,6 +4,8 @@ import android.content.ComponentCallbacks2
 import android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
+import android.os.PowerManager
 import android.view.View
 import androidx.annotation.CallSuper
 import androidx.core.view.isGone
@@ -27,6 +29,7 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.databinding.LayoutPageInfoBinding
 import org.koitharu.kotatsu.parsers.util.ifZero
 import org.koitharu.kotatsu.reader.domain.PageLoader
+import org.koitharu.kotatsu.reader.domain.UpscaleEffect
 import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
 import org.koitharu.kotatsu.reader.ui.pager.vm.PageState
 import org.koitharu.kotatsu.reader.ui.pager.vm.PageViewModel
@@ -90,6 +93,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 			onReady()
 		}
 		ssiv.applyDownSampling(isResumed())
+		applyUpscale()
 	}
 
 	fun reloadImage() {
@@ -98,6 +102,9 @@ abstract class BasePageHolder<B : ViewBinding>(
 	}
 
 	fun bind(data: ReaderPage) {
+		if (boundData?.id != data.id) {
+			clearUpscale()
+		}
 		boundData = data
 		viewModel.onBind(data.toMangaPage())
 		onBind(data)
@@ -137,6 +144,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 
 	@CallSuper
 	open fun onRecycled() {
+		clearUpscale()
 		viewModel.onRecycle()
 		ssiv.recycle()
 	}
@@ -196,8 +204,38 @@ abstract class BasePageHolder<B : ViewBinding>(
 				}
 			}
 
-			is PageState.Shown -> Unit
+			is PageState.Shown -> ssiv.post { applyUpscale() }
 		}
+	}
+
+	private fun applyUpscale() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+			return
+		}
+		// gate on the page's native resolution vs screen, not the current zoom level,
+		// so high-res pages never get processed no matter how far the user zooms in
+		val fitScale = if (ssiv.isReady && ssiv.sWidth > 0) {
+			ssiv.width / ssiv.sWidth.toFloat()
+		} else {
+			0f
+		}
+		val isPowerSaveMode = context.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true
+		val effect = if (settings.isUpscaleEnabled && !isPowerSaveMode && fitScale > UpscaleEffect.MIN_SCALE) {
+			UpscaleEffect.create(fitScale)
+		} else {
+			null
+		}
+		boundData?.let { UpscaleEffect.registerView(it.id, ssiv) }
+		ssiv.setRenderEffect(effect)
+		boundData?.let { UpscaleEffect.setActive(it.id, effect != null) }
+	}
+
+	private fun clearUpscale() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+			return
+		}
+		ssiv.setRenderEffect(null)
+		boundData?.let { UpscaleEffect.setActive(it.id, false) }
 	}
 
 	protected fun SubsamplingScaleImageView.applyDownSampling(isForeground: Boolean) {

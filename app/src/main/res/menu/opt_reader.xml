@@ -11,6 +11,13 @@
 		app:showAsAction="always" />
 
 	<item
+		android:id="@+id/action_upscale_preview"
+		android:icon="@drawable/ic_sparkles"
+		android:title="@string/upscale_preview"
+		android:visible="false"
+		app:showAsAction="always" />
+
+	<item
 		android:id="@+id/action_reader_menu"
 		android:icon="@drawable/ic_more_vert"
 		android:title="@string/options"

@@ -127,6 +127,7 @@ private fun ReaderScreen(
 	var webtoonPullGesture by rememberBooleanPref(AppSettings.KEY_WEBTOON_PULL_GESTURE, false)
 	var enhancedColors by rememberBooleanPref(AppSettings.KEY_32BIT_COLOR, false)
 	var readerOptimize by rememberBooleanPref(AppSettings.KEY_READER_OPTIMIZE, false)
+	var readerUpscale by rememberBooleanPref(AppSettings.KEY_READER_UPSCALE, false)
 	var readerCrop by rememberStringSetPref(AppSettings.KEY_READER_CROP, emptySet())
 	var readerFullscreen by rememberBooleanPref(AppSettings.KEY_READER_FULLSCREEN, true)
 	var readerOrientation by rememberStringPref(
@@ -352,6 +353,19 @@ private fun ReaderScreen(
 						
 						shape = pos.shape,
 					)
+				}
+				if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+					item { pos ->
+						SwitchSettingsItem(
+							title = stringResource(R.string.reader_upscale),
+							subtitle = stringResource(R.string.reader_upscale_summary),
+							checked = readerUpscale,
+							onCheckedChange = { readerUpscale = it },
+							icon = R.drawable.ic_sparkles,
+
+							shape = pos.shape,
+						)
+					}
 				}
 				item { pos ->
 					SwitchSettingsItem(

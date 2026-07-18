@@ -640,6 +640,14 @@
     <string name="manual">Manual</string>
     <string name="disable_nsfw_summary">Disable NSFW sources and hide adult manga from list if possible</string>
     <string name="state_paused">Paused</string>
+    <string name="reader_upscale">AI upscaling (beta)</string>
+    <string name="reader_upscale_summary">Sharpen low-resolution pages on the GPU using an Anime4K-based shader. Android 13+</string>
+    <string name="upscale_preview">AI upscaling preview</string>
+    <string name="upscale_preview_original">Original</string>
+    <string name="upscale_preview_ai">Upscaled</string>
+    <string name="upscale_not_applied">This page is already high resolution, upscaling is not applied</string>
+    <string name="upscale_preview_description">Only pages whose native resolution is well below your screen get sharpened on the GPU while you read. Everything runs on-device and works offline, and upscaling pauses automatically while battery saver is on.</string>
+    <string name="upscale_open_settings">Upscaling settings</string>
     <string name="reader_optimize">Reduce memory consumption (beta)</string>
     <string name="reader_optimize_summary">Reduce offscreen pages quality to use less memory</string>
     <string name="state">State</string>

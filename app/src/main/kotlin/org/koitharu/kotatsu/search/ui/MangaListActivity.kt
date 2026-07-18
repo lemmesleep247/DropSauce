@@ -6,8 +6,8 @@ import android.text.TextPaint
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
+import android.util.TypedValue
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.children
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -189,26 +189,29 @@ class MangaListActivity :
 	}
 
 	/**
-	 * While a search action view is expanded, Toolbar hides all its other children — including the
-	 * CollapsingToolbarLayout's internal anchor view — which stops the CTL from drawing the title
-	 * even in the expanded (below-the-toolbar) position. Re-show the anchor so the expanded title
-	 * stays visible, and make the collapsed title transparent so it fades out on collapse instead
-	 * of overlapping the search field.
+	 * While a search action view is expanded, Toolbar hides the CollapsingToolbarLayout's internal
+	 * title anchor, so the CTL cannot draw the title at all — even in the expanded position below
+	 * the toolbar. Swap in a real TextView at the expanded title's exact position for the duration
+	 * of the search; it lives in the parallax layer, so it collapses away like the title would.
 	 */
 	fun setSearchExpanded(expanded: Boolean) {
 		val ctl = viewBinding.collapsingToolbarLayout ?: return
+		val textView = viewBinding.textTitleSearch ?: return
 		if (expanded) {
-			ctl.setCollapsedTitleTextColor(Color.TRANSPARENT)
-			viewBinding.toolbar.post {
-				viewBinding.toolbar.children.forEach { child ->
-					if (child.javaClass == View::class.java) {
-						child.isVisible = true
-					}
-				}
+			textView.typeface = ctl.expandedTitleTypeface
+			textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, ctl.expandedTitleTextSize)
+			textView.setTextColor(getThemeColor(materialR.attr.colorOnSurface))
+			textView.text = ctl.title
+			textView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+				marginStart = ctl.expandedTitleMarginStart
+				marginEnd = ctl.expandedTitleMarginEnd
+				// The CTL aligns the expanded title's baseline expandedTitleMarginBottom above the
+				// layout bottom; subtract the descent so this view's baseline lands on that line.
+				bottomMargin = (ctl.expandedTitleMarginBottom - textView.paint.fontMetrics.descent)
+					.roundToInt().coerceAtLeast(0)
 			}
-		} else {
-			ctl.setCollapsedTitleTextColor(getThemeColor(materialR.attr.colorOnSurface))
 		}
+		textView.isVisible = expanded
 	}
 
 	private fun configureSortButton() {

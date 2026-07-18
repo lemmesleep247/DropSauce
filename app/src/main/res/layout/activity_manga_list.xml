@@ -73,6 +73,21 @@
 
 			</LinearLayout>
 
+			<!-- Stand-in for the expanded title while a search action view is open: Toolbar hides
+			     the CTL's title anchor during search, so the CTL can't draw the title even in the
+			     expanded position. Styled and positioned in MangaListActivity.setSearchExpanded. -->
+			<TextView
+				android:id="@+id/text_title_search"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_gravity="bottom|start"
+				android:singleLine="true"
+				android:ellipsize="end"
+				android:includeFontPadding="false"
+				android:visibility="gone"
+				app:layout_collapseMode="parallax"
+				tools:text="Title" />
+
 			<com.google.android.material.appbar.MaterialToolbar
 				android:id="@id/toolbar"
 				android:layout_width="match_parent"

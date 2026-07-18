@@ -302,9 +302,9 @@
 	</style>
 
 	<style name="Widget.Kotatsu.FastScroller" parent="">
-		<item name="thumbColor">?colorTertiary</item>
-		<item name="bubbleColor">?colorTertiary</item>
-		<item name="bubbleTextColor">?colorOnTertiary</item>
+		<item name="thumbColor">?colorPrimary</item>
+		<item name="bubbleColor">?colorPrimary</item>
+		<item name="bubbleTextColor">?colorOnPrimary</item>
 		<item name="trackColor">?colorOutline</item>
 		<item name="bubbleSize">small</item>
 		<item name="scrollerOffset">@dimen/grid_spacing_outer</item>

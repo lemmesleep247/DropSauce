@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -75,6 +77,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -639,11 +642,24 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 if (page == 0) {
+                    EpubTextSizeSection(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        enabled = editable,
+                    )
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        EpubTextSizeSection(Modifier.weight(1f), enabled = editable)
+                        EpubSliderSection(
+                            modifier = Modifier.weight(1f),
+                            icon = R.drawable.ic_reader_vertical,
+                            title = stringResource(R.string.epub_paragraph_spacing),
+                            value = settings.epubParagraphSpacing,
+                            range = 0..48,
+                            suffix = " dp",
+                            defaultValue = 0,
+                            enabled = editable,
+                        ) { settings.epubParagraphSpacing = it }
                         EpubSliderSection(Modifier.weight(1f), R.drawable.ic_reader_vertical, stringResource(R.string.epub_line_height), settings.epubLineHeight, 100..240, "%", defaultValue = 160, enabled = editable) { settings.epubLineHeight = it }
                     }
                     Row(
@@ -762,6 +778,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         var current by remember { mutableIntStateOf(value.coerceIn(range)) }
         EpubSettingCard(
             icon, title, "$current$suffix", modifier = modifier, compact = true, enabled = enabled,
+            resetEnabled = current != defaultValue,
             onReset = { current = defaultValue.also(onChange) },
         ) {
             EpubContinuousSlider(
@@ -1079,6 +1096,14 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun EpubThemeSheet(onDismiss: () -> Unit) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val scope = rememberCoroutineScope()
+        val dismissAnimated: () -> Unit = {
+            scope.launch {
+                sheetState.hide()
+                onDismiss()
+            }
+        }
         var theme by remember { mutableStateOf(canonicalEpubTheme(settings.epubTheme)) }
         var background by remember { mutableIntStateOf(settings.epubCustomBackgroundColor) }
         var foreground by remember { mutableIntStateOf(settings.epubCustomTextColor) }
@@ -1091,6 +1116,11 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
         val hsv = remember(activeColor) {
             FloatArray(3).also { android.graphics.Color.colorToHSV(activeColor, it) }
+        }
+        var hexColor by remember(colorTarget) { mutableStateOf(activeColor.toHexColor()) }
+        LaunchedEffect(activeColor) {
+            val current = activeColor.toHexColor()
+            if (!hexColor.equals(current, ignoreCase = true)) hexColor = current
         }
         val updateActiveColor: (Int) -> Unit = { color ->
             when (colorTarget) {
@@ -1110,8 +1140,8 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
         val customSelected = theme == EPUB_THEME_CUSTOM
         ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            onDismissRequest = dismissAnimated,
+            sheetState = sheetState,
             dragHandle = null,
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
@@ -1135,7 +1165,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             modifier = Modifier.weight(1f),
                         )
                         FilledTonalIconButton(
-                            onClick = onDismiss,
+                            onClick = dismissAnimated,
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
@@ -1256,8 +1286,34 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                     }
                                 }
                             }
-                            EpubSaturationSlider(hsv[1], customSelected) {
-                                updateActiveColor(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], it, hsv[2])))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                OutlinedTextField(
+                                    value = hexColor,
+                                    onValueChange = { input ->
+                                        val digits = input.filter {
+                                            it.isDigit() || it.lowercaseChar() in 'a'..'f'
+                                        }.take(6).uppercase()
+                                        hexColor = "#$digits"
+                                        if (digits.length == 6) {
+                                            updateActiveColor(0xFF000000.toInt() or digits.toInt(16))
+                                        }
+                                    },
+                                    enabled = customSelected,
+                                    singleLine = true,
+                                    label = { Text(stringResource(R.string.epub_color_hex)) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                                    modifier = Modifier.weight(1f),
+                                )
+                                EpubSaturationSlider(
+                                    value = hsv[1],
+                                    enabled = customSelected,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    updateActiveColor(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], it, hsv[2])))
+                                }
                             }
                             Text(stringResource(R.string.epub_theme_preview), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             Surface(
@@ -1290,12 +1346,19 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     }
 
     @Composable
-    private fun EpubSaturationSlider(value: Float, enabled: Boolean, onChange: (Float) -> Unit) {
-        Column {
+    private fun EpubSaturationSlider(
+        value: Float,
+        enabled: Boolean,
+        modifier: Modifier = Modifier,
+        onChange: (Float) -> Unit,
+    ) {
+        Column(modifier) {
             Text(stringResource(R.string.epub_color_saturation), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Slider(value = value, onValueChange = onChange, enabled = enabled, valueRange = 0f..1f)
         }
     }
+
+    private fun Int.toHexColor() = "#%06X".format(this and 0xFFFFFF)
 
     private fun canonicalEpubTheme(value: String): String = when (value) {
         EPUB_THEME_SYSTEM -> EPUB_THEME_SYSTEM
@@ -1314,6 +1377,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         compact: Boolean = false,
         enabled: Boolean = true,
+        resetEnabled: Boolean = true,
         onReset: (() -> Unit)? = null,
         content: @Composable ColumnScope.() -> Unit,
     ) {
@@ -1340,8 +1404,14 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     if (compact) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             if (onReset != null) {
-                                IconButton(onClick = onReset, enabled = enabled, modifier = Modifier.size(28.dp)) {
-                                    Icon(painterResource(R.drawable.ic_revert), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                IconButton(onClick = onReset, enabled = enabled && resetEnabled, modifier = Modifier.size(28.dp)) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_revert),
+                                        null,
+                                        tint = if (resetEnabled) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                        modifier = Modifier.size(18.dp),
+                                    )
                                 }
                             }
                             if (value != null) Text(value, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -1349,8 +1419,14 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (onReset != null) {
-                                IconButton(onClick = onReset, enabled = enabled, modifier = Modifier.size(28.dp)) {
-                                    Icon(painterResource(R.drawable.ic_revert), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                IconButton(onClick = onReset, enabled = enabled && resetEnabled, modifier = Modifier.size(28.dp)) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_revert),
+                                        null,
+                                        tint = if (resetEnabled) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                        modifier = Modifier.size(18.dp),
+                                    )
                                 }
                                 Spacer(Modifier.width(4.dp))
                             }
@@ -1370,6 +1446,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         EpubSettingCard(
             R.drawable.ic_size_large, stringResource(R.string.epub_text_size), "$textSize%",
             modifier = modifier, compact = true, enabled = enabled,
+            resetEnabled = textSize != 100,
             onReset = { textSize = 100.also { settings.epubFontSize = it } },
         ) {
             EpubContinuousSlider(

@@ -25,6 +25,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentContainerView
 import androidx.core.content.withStyledAttributes
 import androidx.core.view.GravityCompat
 import androidx.core.view.ancestors
@@ -566,7 +567,10 @@ class FastScroller @JvmOverloads constructor(
 	}
 
 	private fun findValidParent(view: View): ViewGroup? = view.ancestors.firstNotNullOfOrNull { p ->
-		if (p is FrameLayout || p is ConstraintLayout || p is CoordinatorLayout || p is RelativeLayout) {
+		// FragmentContainerView extends FrameLayout but throws for non-fragment children
+		if (p !is FragmentContainerView &&
+			(p is FrameLayout || p is ConstraintLayout || p is CoordinatorLayout || p is RelativeLayout)
+		) {
 			p
 		} else {
 			null

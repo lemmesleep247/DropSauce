@@ -90,13 +90,12 @@
 		app:layout_constraintStart_toStartOf="parent"
 		app:layout_constraintTop_toBottomOf="@id/scrollView_chips" />
 
-	<androidx.recyclerview.widget.RecyclerView
+	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
 		android:id="@+id/recyclerView"
 		android:layout_width="0dp"
 		android:layout_height="0dp"
 		android:layout_marginTop="24dp"
 		android:overScrollMode="ifContentScrolls"
-		android:scrollbars="vertical"
 		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
 		app:layout_constraintBottom_toBottomOf="parent"
 		app:layout_constraintEnd_toEndOf="parent"

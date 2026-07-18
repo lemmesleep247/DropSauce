@@ -61,13 +61,12 @@
 
 	</com.google.android.material.appbar.MaterialToolbar>
 
-	<androidx.recyclerview.widget.RecyclerView
+	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
 		android:id="@+id/recyclerView"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
 		android:clipToPadding="false"
 		android:padding="@dimen/list_spacing_normal"
-		android:scrollbars="vertical"
 		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
 		tools:listitem="@layout/item_manga_list" />
 

@@ -477,6 +477,7 @@
 	<string name="epub_font_invalid">That file is not a compatible font.</string>
 	<string name="epub_font_remove">Remove custom font</string>
 	<string name="epub_line_height">Line spacing</string>
+	<string name="epub_paragraph_spacing">Paragraph spacing</string>
 	<string name="epub_horizontal_margin">Horizontal margins</string>
 	<string name="epub_vertical_margin">Vertical margins</string>
 	<string name="epub_text_alignment">Text alignment</string>
@@ -503,6 +504,7 @@
 	<string name="epub_theme_preview_text">A quiet page for comfortable reading.</string>
 	<string name="epub_theme_preview_highlighted">comfortable</string>
 	<string name="epub_color_saturation">Saturation</string>
+	<string name="epub_color_hex">Hex</string>
 	<string name="epub_search_hint">Enter text to find</string>
 	<string name="epub_no_search_results">No matches found</string>
 	<string name="epub_untitled_chapter">Untitled chapter</string>

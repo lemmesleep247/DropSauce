@@ -34,7 +34,7 @@
 		app:layout_constraintTop_toTopOf="parent"
 		tools:text="@tools:sample/lorem[22]" />
 
-	<androidx.recyclerview.widget.RecyclerView
+	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
 		android:id="@+id/recyclerView_categories"
 		android:layout_width="0dp"
 		android:layout_height="wrap_content"
@@ -43,7 +43,6 @@
 		android:orientation="vertical"
 		android:paddingBottom="@dimen/list_spacing"
 		android:scrollIndicators="top"
-		android:scrollbars="vertical"
 		app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
 		app:layout_constrainedHeight="true"
 		app:layout_constraintBottom_toBottomOf="parent"

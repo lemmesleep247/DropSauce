@@ -3,13 +3,17 @@ package org.koitharu.kotatsu.reader.ui.epub
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.text.Html
 import android.text.Layout
 import android.text.NoCopySpan
 import android.text.Spannable
@@ -26,6 +30,7 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.CharacterStyle
 import android.text.style.ForegroundColorSpan
 import android.text.style.LineBackgroundSpan
+import android.text.style.LineHeightSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.text.style.TypefaceSpan
@@ -57,6 +62,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
+import coil3.ImageLoader
+import coil3.request.ImageRequest
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.textfield.TextInputEditText
@@ -65,6 +72,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -83,6 +91,7 @@ import org.koitharu.kotatsu.bookmarks.domain.epubHighlightUrl
 import org.koitharu.kotatsu.core.network.BaseHttpClient
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
+import org.koitharu.kotatsu.core.util.ext.getDrawableOrThrow
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.isNightMode
 import org.koitharu.kotatsu.core.util.ext.observe
@@ -95,6 +104,7 @@ import org.koitharu.kotatsu.reader.ui.pager.BaseReaderAdapter
 import org.koitharu.kotatsu.reader.ui.pager.BaseReaderFragment
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
+import java.net.URI
 import java.time.Instant
 import java.util.UUID
 import java.util.zip.ZipFile
@@ -117,6 +127,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	@Inject
 	@BaseHttpClient
 	lateinit var httpClient: OkHttpClient
+	@Inject
+	lateinit var imageLoader: ImageLoader
 
 	private var chapters: List<NativeChapter> = emptyList()
 	private val chapterDividerPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -189,6 +201,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				if (settings.epubFontFamily == EPUB_FONT_CUSTOM) scheduleReflow()
 			}
 		settings.observeAsFlow(AppSettings.KEY_EPUB_LINE_HEIGHT) { epubLineHeight }
+			.observe(viewLifecycleOwner) { scheduleReflow() }
+		settings.observeAsFlow(AppSettings.KEY_EPUB_PARAGRAPH_SPACING) { epubParagraphSpacing }
 			.observe(viewLifecycleOwner) { scheduleReflow() }
 		settings.observeAsFlow(AppSettings.KEY_EPUB_HORIZONTAL_PADDING) { epubHorizontalPadding }
 			.observe(viewLifecycleOwner) { scheduleReflow() }
@@ -341,15 +355,54 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 				val entry = zip.getEntry(chapter.entryName) ?: zip.getEntry(chapter.entryName.removePrefix("/"))
 				entry?.let { zip.getInputStream(it).bufferedReader().use { reader -> reader.readText() } }.orEmpty()
 			}
-			chapter.content = parseChapter(raw)
+			chapter.content = parseChapter(chapter, raw)
 		}
 	}
 
-	private fun parseChapter(raw: String): Spanned {
+	private fun parseChapter(chapter: NativeChapter, raw: String): Spanned {
 		val document = Jsoup.parse(raw)
 		document.select("script,style,noscript").remove()
-		val parsed = SpannableString(HtmlCompat.fromHtml(document.body().html(), HtmlCompat.FROM_HTML_MODE_LEGACY).trimmed())
+		document.select("svg").forEach { svg ->
+			val image = svg.selectFirst("image") ?: return@forEach
+			val source = image.attr("href").ifBlank { image.attr("xlink:href") }
+			if (source.isNotBlank()) svg.replaceWith(image.clone().tagName("img").attr("src", source))
+		}
+		val parsed = SpannableString(
+			HtmlCompat.fromHtml(
+				document.body().html(),
+				HtmlCompat.FROM_HTML_MODE_LEGACY,
+				Html.ImageGetter { source -> loadEpubImage(chapter, source) },
+				null,
+			).trimmed(),
+		)
 		return SpannedString(parsed).takeIf { it.isNotEmpty() } ?: EMPTY_CHAPTER_TEXT
+	}
+
+	private fun loadEpubImage(chapter: NativeChapter, source: String): Drawable? = runCatching {
+		val entryName = resolveEpubEntry(chapter.entryName, source)
+		val bytes = synchronized(archiveLock) {
+			val archive = archiveFiles[chapter.file] ?: return null
+			val entry = archive.getEntry(entryName) ?: archive.getEntry(entryName.removePrefix("/")) ?: return null
+			archive.getInputStream(entry).use { it.readBytes() }
+		}
+		val drawable = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+			?.let { BitmapDrawable(resources, it) }
+			?: runBlocking {
+				imageLoader.execute(ImageRequest.Builder(requireContext()).data(bytes).build()).getDrawableOrThrow()
+			}
+		val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: return null
+		val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: return null
+		val metrics = resources.displayMetrics
+		val maxWidth = (metrics.widthPixels - 2 * effectiveHorizontalPadding * metrics.density).toInt().coerceAtLeast(1)
+		val maxHeight = (metrics.heightPixels * MAX_IMAGE_HEIGHT_FRACTION).toInt().coerceAtLeast(1)
+		val scale = minOf(1f, maxWidth / width.toFloat(), maxHeight / height.toFloat())
+		drawable.setBounds(0, 0, (width * scale).toInt().coerceAtLeast(1), (height * scale).toInt().coerceAtLeast(1))
+		drawable
+	}.getOrNull()
+
+	private fun resolveEpubEntry(chapterEntry: String, source: String): String {
+		val cleanSource = source.substringBefore('#').substringBefore('?').replace(" ", "%20")
+		return URI("/${chapterEntry.replace('\\', '/')}").resolve(cleanSource).normalize().path.removePrefix("/")
 	}
 
 	private fun Spanned.trimmed(): CharSequence {
@@ -553,7 +606,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		val generation = ++renderGeneration
 		val key = "${container.width}:${container.height}:$effectiveFontSize:${readerTypeface.hashCode()}:" +
 			"${settings.epubCustomFontRevision}:" +
-			"$effectiveLineHeight:$effectiveHorizontalPadding:$effectiveVerticalPadding:" +
+			"$effectiveLineHeight:$effectiveParagraphSpacing:$effectiveHorizontalPadding:$effectiveVerticalPadding:" +
 			"$effectiveTextAlign:${settings.epubReadingMode}:${settings.isEpubPublisherStyleEnabled}"
 		container.setBackgroundColor(backgroundColor)
 		if (pages.isNotEmpty() && paginationKey == key && pageRange?.contains(locator.chapter) == true) {
@@ -729,6 +782,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			text.getSpans(0, text.length, RelativeSizeSpan::class.java).forEach(text::removeSpan)
 			text.getSpans(0, text.length, TypefaceSpan::class.java).forEach(text::removeSpan)
 		}
+		applyParagraphSpacing(text)
 		highlights.forEach { bookmark ->
 			if (bookmark.chapterId != chapter.id) return@forEach
 			val highlight = bookmark.epubHighlight ?: return@forEach
@@ -739,6 +793,20 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 			text.setSpan(HighlightMarker(bookmark.pageId), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 		}
 		return text
+	}
+
+	private fun applyParagraphSpacing(text: Spannable) {
+		val extra = (effectiveParagraphSpacing * resources.displayMetrics.density).toInt()
+		if (extra == 0) return
+		var index = text.indexOf('\n')
+		while (index >= 0) {
+			var end = index + 1
+			while (end < text.length && text[end] == '\n') end++
+			if (end - index > 1) {
+				text.setSpan(ParagraphSpacingSpan(extra), end - 1, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+			}
+			index = text.indexOf('\n', end)
+		}
 	}
 
 	private fun applyTextStyle(textView: TextView, paged: Boolean) = with(textView) {
@@ -1198,6 +1266,8 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	}
 	private val effectiveFontSize get() = if (settings.isEpubPublisherStyleEnabled) 100 else settings.epubFontSize
 	private val effectiveLineHeight get() = if (settings.isEpubPublisherStyleEnabled) 120 else settings.epubLineHeight
+	private val effectiveParagraphSpacing get() =
+		if (settings.isEpubPublisherStyleEnabled) 0 else settings.epubParagraphSpacing
 	private val effectiveHorizontalPadding get() =
 		if (settings.isEpubPublisherStyleEnabled) PUBLISHER_HORIZONTAL_PADDING_DP else settings.epubHorizontalPadding
 	private val effectiveVerticalPadding get() =
@@ -1413,6 +1483,19 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 	private class HighlightMarker(val bookmarkId: Long) : CharacterStyle() {
 		override fun updateDrawState(tp: TextPaint) = Unit
 	}
+	private class ParagraphSpacingSpan(private val extra: Int) : LineHeightSpan {
+		override fun chooseHeight(
+			text: CharSequence,
+			start: Int,
+			end: Int,
+			spanstartv: Int,
+			v: Int,
+			fm: Paint.FontMetricsInt,
+		) {
+			fm.descent += extra
+			fm.bottom += extra
+		}
+	}
 	private class NativeChapter(
 		val id: Long,
 		val title: String,
@@ -1459,6 +1542,7 @@ class EpubReaderFragment : BaseReaderFragment<FragmentReaderEpubBinding>() {
 		private const val VERTICAL_MARGIN_MAX = 112
 		private const val PUBLISHER_HORIZONTAL_PADDING_DP = 20
 		private const val MAX_BOTTOM_MARGIN_DP = 96
+		private const val MAX_IMAGE_HEIGHT_FRACTION = 0.75f
 		private const val ACTION_DICTIONARY = 0x455001
 		private const val ACTION_HIGHLIGHT = 0x455002
 		private const val ACTION_REMOVE_HIGHLIGHT = 0x455003

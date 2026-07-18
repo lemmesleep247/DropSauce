@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.recyclerview.widget.RecyclerView
+<!-- The FastScroller adds itself to the RecyclerView's parent, and a FragmentContainerView
+     rejects non-fragment children — hence this wrapper. -->
+<FrameLayout
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools"
-	android:id="@+id/recyclerView"
 	android:layout_width="match_parent"
-	android:layout_height="match_parent"
-	android:clipToPadding="false"
-	android:padding="@dimen/list_spacing_normal"
-	android:orientation="vertical"
-	android:scrollbars="vertical"
-	tools:listitem="@layout/item_explore_source_list" />
+	android:layout_height="match_parent">
+
+	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
+		android:id="@+id/recyclerView"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:clipToPadding="false"
+		android:padding="@dimen/list_spacing_normal"
+		android:orientation="vertical"
+		tools:listitem="@layout/item_explore_source_list" />
+
+</FrameLayout>

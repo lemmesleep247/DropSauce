@@ -20,6 +20,20 @@
 			app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
 			app:toolbarId="@id/toolbar">
 
+			<!-- Stand-in for the expanded title while search is open: Toolbar hides the CTL's
+			     title anchor during search, so the CTL can't draw the title even when expanded.
+			     Styled and positioned in SettingsActivity.toggleSearchMode. -->
+			<TextView
+				android:id="@+id/text_title_search"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:layout_gravity="bottom|start"
+				android:singleLine="true"
+				android:ellipsize="end"
+				android:includeFontPadding="false"
+				android:visibility="gone"
+				app:layout_collapseMode="parallax" />
+
 			<com.google.android.material.appbar.MaterialToolbar
 				android:id="@id/toolbar"
 				android:layout_width="match_parent"

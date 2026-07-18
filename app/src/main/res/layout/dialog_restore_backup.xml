@@ -23,13 +23,12 @@
 		android:layout_gravity="center"
 		android:layout_marginVertical="32dp" />
 
-	<androidx.recyclerview.widget.RecyclerView
+	<org.koitharu.kotatsu.core.ui.list.fastscroll.FastScrollRecyclerView
 		android:id="@+id/recyclerView"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_marginTop="8dp"
 		android:clipToPadding="false"
-		android:scrollbars="vertical"
 		tools:listitem="@layout/item_checkable_multiple" />
 
 	<LinearLayout

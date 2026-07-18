@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -615,9 +616,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         }
     }
 
-
-
-    // EPUB books get a single simple menu: text size slider + automatic scroll & settings
+    // EPUB settings use a compact text page and a larger combined reading/style page.
     @Composable
     private fun EpubConfigContent() {
         val customFontName = remember(customFontUiRevision) { settings.epubCustomFontName }
@@ -625,7 +624,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         var readingMode by remember {
             mutableStateOf(if (settings.epubReadingMode == "paged") "paged_ltr" else settings.epubReadingMode)
         }
-        val pagerState = rememberPagerState(pageCount = { 3 })
+        val pagerState = rememberPagerState(pageCount = { 2 })
         val scope = rememberCoroutineScope()
         // Book formatting temporarily owns typography; reading behavior and page colors remain editable.
         val editable = !publisherStyleEnabled
@@ -669,7 +668,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                         EpubSliderSection(Modifier.weight(1f), R.drawable.ic_move_horizontal, stringResource(R.string.epub_horizontal_margin), settings.epubHorizontalPadding, 0..64, " dp", defaultValue = 20, enabled = editable) { settings.epubHorizontalPadding = it }
                         EpubSliderSection(Modifier.weight(1f), R.drawable.ic_gesture_vertical, stringResource(R.string.epub_vertical_margin), settings.epubVerticalPadding, 0..112, " dp", defaultValue = 112, enabled = editable && readingMode != "scroll") { settings.epubVerticalPadding = it }
                     }
-                } else if (page == 1) {
+                } else {
                     EpubReadModeSection(readingMode) { mode ->
                         readingMode = mode
                         settings.epubReadingMode = mode
@@ -700,14 +699,13 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                             enabled = editable,
                         ) { settings.epubTextAlign = it }
                     }
-                } else {
                     EpubFontSection(
                         selected = settings.epubFontFamily,
                         customFontName = customFontName,
                         enabled = editable,
                         onChooseCustom = {
-							epubFontPicker.launch(EPUB_FONT_MIME_TYPES)
-						},
+                            epubFontPicker.launch(EPUB_FONT_MIME_TYPES)
+                        },
                         onRemoveCustom = ::removeEpubCustomFont,
                     )
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -732,18 +730,35 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 .fillMaxWidth()
                 .padding(bottom = 12.dp + with(density) { navBarPadding.toDp() }),
         ) {
-            // Text is the compact height baseline; the other tabs are arranged to fit the same viewport.
-            var pagerHeight by remember { mutableStateOf(0.dp) }
+            var measuredHeights by remember { mutableStateOf(emptyList<Float>()) }
             SubcomposeLayout(modifier = Modifier.fillMaxWidth()) { constraints ->
                 val measureConstraints = Constraints(minWidth = constraints.maxWidth, maxWidth = constraints.maxWidth)
-                val baselinePx = subcompose("epub_text_height") { pageContent(0) }
-                    .maxOf { it.measure(measureConstraints).height }
-                pagerHeight = with(density) { baselinePx.toDp() }
+                val heights = List(2) { page ->
+                    subcompose("epub_page_height_$page") { pageContent(page) }
+                        .maxOf { it.measure(measureConstraints).height }
+                        .toFloat()
+                }
+                if (measuredHeights != heights) measuredHeights = heights
                 layout(0, 0) {}
+            }
+            val targetHeight = measuredHeights.getOrNull(pagerState.currentPage) ?: 0f
+            val animatedHeight = remember { Animatable(0f) }
+            var heightInitialized by remember { mutableStateOf(false) }
+            LaunchedEffect(targetHeight) {
+                if (targetHeight <= 0f) return@LaunchedEffect
+                if (heightInitialized) {
+                    animatedHeight.animateTo(
+                        targetHeight,
+                        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                    )
+                } else {
+                    animatedHeight.snapTo(targetHeight)
+                    heightInitialized = true
+                }
             }
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxWidth().height(pagerHeight),
+                modifier = Modifier.fillMaxWidth().height(with(density) { animatedHeight.value.toDp() }),
                 verticalAlignment = Alignment.Top,
             ) { page ->
                 Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -756,7 +771,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                 tabs = listOf(
                     Triple(stringResource(R.string.epub_text_tab), R.drawable.ic_appearance, 0),
                     Triple(stringResource(R.string.epub_reading_tab), R.drawable.ic_book_page, 1),
-                    Triple(stringResource(R.string.epub_style_tab), R.drawable.ic_title, 2),
                 ),
                 modifier = Modifier.align(Alignment.BottomCenter),
             )

@@ -83,7 +83,6 @@
     <string name="favourites">Likar</string>
     <string name="history">Historikk</string>
     <string name="network_error">Nettverksfeil</string>
-    <string name="list">Liste</string>
     <string name="loading_">Hentar fram …</string>
     <string name="close">Steng</string>
     <string name="try_again">Røyn att</string>
@@ -117,8 +116,6 @@
     <string name="open_in_browser">Opne i ein nettlesar</string>
     <string name="text_history_holder_primary">Det du les vert vist her</string>
     <string name="enter_password">Rit inn lykelordet</string>
-    <string name="repeat_password">Gjentak lykelordet</string>
-    <string name="passwords_mismatch">Lykelorda er ulike</string>
     <string name="reader_mode_hint">Brigde av oppsettet vedkjem berre denne mangaen</string>
     <string name="silent">Stille</string>
     <string name="captcha_required">Krev CAPTCHA</string>
@@ -129,10 +126,8 @@
     <string name="sign_in">Logg inn</string>
     <string name="next">Neste</string>
     <string name="confirm">Stadfest</string>
-    <string name="password_length_hint">Lykelordet må vera lengre enn fire teikn</string>
     <string name="backup_saved">Tryggleikskopi laga</string>
     <string name="queued">I kø</string>
-    <string name="about_app_translation_summary">Omset denne appen</string>
     <string name="genres">Slag</string>
     <string name="state_finished">Fullgjort</string>
     <string name="state_ongoing">I gang</string>
@@ -166,7 +161,6 @@
     <string name="bookmark_remove">Ta bort bokmerket</string>
     <string name="bookmarks">Bokmerke</string>
     <string name="removed_from_history">Teken bort ifrå historikken</string>
-    <string name="dns_over_https">DNS over HTTPS</string>
     <string name="default_mode">Forvald lesing</string>
     <string name="detect_reader_mode">Finn sjølvverkande ut av lesing</string>
     <string name="detect_reader_mode_summary">Finn sjølvverkande ut av om mangaen er ein nettserie</string>
@@ -180,7 +174,6 @@
     <string name="disable_all">Slå av alle</string>
     <string name="clear_cookies_summary">Kan løysa nokre feil. Alle godkjenningar vert ugilde</string>
     <string name="show_all">Vis alle</string>
-    <string name="invalid_domain_message">Ugildt domene</string>
     <string name="select_range">Vel område</string>
     <string name="clear_all_history">Tøm heile historikken</string>
     <string name="history_cleared">Tømte historikken</string>
@@ -216,11 +209,6 @@
     <string name="language">Språk</string>
     <string name="color_theme">Letar</string>
     <string name="show_in_grid_view">Vis som rutenett</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="theme_name_mamimi">Mamimi</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="nothing_here">Ingenting her</string>
     <string name="services">Tenester</string>
     <string name="download_started">Har byrja å hente</string>
@@ -231,14 +219,11 @@
     <string name="remove_category">Slett</string>
     <string name="text_empty_holder_primary">Her var det tomt …</string>
     <string name="wrong_password">Feil lykelord</string>
-    <string name="protect_application">Vern appen</string>
     <string name="auth_required">Logg inn for å sjå dette innhaldet</string>
-    <string name="protect_application_subtitle">Vern appen med eit lykelord</string>
     <string name="suggestions_info">All data vert handsama på eininga di og vert ikkje førte over til noka teneste</string>
     <string name="disabled">Avslegen</string>
     <string name="never">Aldri</string>
     <string name="only_using_wifi">Berre på Wi-Fi</string>
-    <string name="nsfw">18+</string>
     <string name="always">Alltid</string>
     <string name="preload_pages">Hent sider på forhand</string>
     <string name="appearance">Utsjånaden</string>
@@ -250,7 +235,6 @@
     <string name="bookmark_added">La til eit bokmerke</string>
     <string name="bookmark_removed">Tok bort bokmerket</string>
     <string name="undo">Angre</string>
-    <string name="use_fingerprint">Nytt fingermerke om tilgjengeleg</string>
     <string name="show_reading_indicators">Vis leseframgang</string>
     <string name="categories_delete_confirm">Slett dei valde hopane? \nDu kan ikkje angre. Alle mangaane inni vert tekne ut av likerlista.</string>
     <string name="options">Oppsett</string>
@@ -263,14 +247,11 @@
     <string name="import_completed_hint">Slett den opphavlege fila for å frigjera rom</string>
     <string name="import_will_start_soon">Byrjar å føra inn snart</string>
     <string name="contrast">Motsetjing</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_miku">Miku</string>
     <string name="settings_apply_restart_required">Byrja om appen for å nytta desse brigda</string>
     <string name="chapters">Kapittel</string>
     <string name="computing_">Utreknar…</string>
     <string name="chapter_d_of_d">Kapittel %1$d av %2$d</string>
     <string name="operation_not_supported">Ustødd gjerd</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="new_chapters">Nye kapittel</string>
     <string name="pages_animation">Siderørsle</string>
     <string name="text_feed_holder">Nye kapittel av det du les vert viste her</string>
@@ -294,7 +275,6 @@
     <string name="comics_archive_import_description">Vel ei eller fleire .cbz eller .zip-filer, kvar fil vert tydde som ein eigen manga.</string>
     <string name="clear_new_chapters_counters">Tøm au opplysingar om nye kapittel</string>
     <string name="scrobbling_empty_hint">Trykk «Meny → Spor» på ei mangadetaljside for å spore leseframdrifta.</string>
-    <string name="got_it">Skjønar</string>
     <string name="internal_storage">Indre gøyme</string>
     <string name="external_storage">Ytre gøyme</string>
     <string name="cannot_find_available_storage">Ingen tilgjengelege gøyme</string>

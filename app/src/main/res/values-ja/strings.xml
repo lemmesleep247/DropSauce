@@ -49,7 +49,6 @@
     <string name="operation_not_supported">この操作はサポートされていません</string>
     <string name="no_description">説明がありません</string>
     <string name="clear_pages_cache">ページのキャッシュをクリアする</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="settings">設定</string>
     <string name="light">ライト</string>
     <string name="filter">絞り込み</string>
@@ -104,8 +103,6 @@
     <string name="updates_feed_cleared">クリア</string>
     <string name="update">アップデート</string>
     <string name="track_sources">アップデートを確認</string>
-    <string name="repeat_password">パスワードを繰り返す</string>
-    <string name="passwords_mismatch">パスワードが違います</string>
     <string name="about">この本の詳細</string>
     <string name="app_version">現在のバージョン%s</string>
     <string name="clear_search_history">検索履歴をクリア</string>
@@ -118,7 +115,6 @@
     <string name="rotate_screen">画面を回転させる</string>
     <string name="enter_password">パスワードを入力してください</string>
     <string name="wrong_password">パスワードが間違っています</string>
-    <string name="protect_application">アプリを保護する</string>
     <string name="check_for_updates">最新のアップデートを確認する</string>
     <string name="no_update_available">利用可能なアップデートはありません</string>
     <string name="right_to_left">右から左</string>
@@ -133,7 +129,6 @@
     <string name="text_clear_updates_feed_prompt">すべての更新履歴を完全に消去しますか？</string>
     <string name="auth_required">このコンテンツを表示するにはサインインしてください</string>
     <string name="file_not_found">ファイルが見つかりません</string>
-    <string name="password_length_hint">パスワードは4文字以上である必要があります</string>
     <string name="just_now">ちょうど今</string>
     <string name="long_ago">ずっと前</string>
     <string name="backup_saved">バックアップを保存</string>
@@ -146,7 +141,6 @@
     <string name="text_clear_search_history_prompt">最近の検索クエリを全て完全に削除しますか？</string>
     <string name="zoom_mode_fit_width">幅を合わせる</string>
     <string name="check_for_new_chapters">新しいチャプターを探しています</string>
-    <string name="protect_application_subtitle">アプリを起動するためのパスワードを入力してください</string>
     <string name="create_backup">データバックアップを作成</string>
     <string name="captcha_solve">解決しました</string>
     <string name="tap_to_try_again">タップして再試行してください</string>
@@ -166,7 +160,6 @@
     <string name="genres">ジャンル</string>
     <string name="scale_mode">スケールモード</string>
     <string name="today">今日</string>
-    <string name="about_app_translation_summary">Kotatsuを翻訳する(Weblateのサイトに移動します)</string>
     <string name="next">次のページ</string>
     <string name="silent">サイレント</string>
     <string name="sign_in">サインイン</string>
@@ -230,7 +223,6 @@
     <string name="disable_battery_optimization_summary">バックグラウンドの更新チェックを支援</string>
     <string name="crash_text">何か問題が発生しました。開発者にバグレポートを提出し、解決にご協力ください。</string>
     <string name="disable_all">すべて無効にする</string>
-    <string name="use_fingerprint">利用可能な場合、指紋認証を使用する</string>
     <string name="report">報告</string>
     <string name="status_reading">読書</string>
     <string name="status_re_reading">再読込</string>
@@ -243,7 +235,6 @@
     <string name="clear_cookies_summary">いくつかの問題の場合に助けることができる。すべての認証が無効になります</string>
     <string name="show_reading_indicators">読書の進行状況インジケーターを表示</string>
     <string name="show_all">すべて表示</string>
-    <string name="invalid_domain_message">無効なドメイン</string>
     <string name="select_range">範囲を選択</string>
     <string name="not_found_404">コンテンツが見つからない、または削除された</string>
     <string name="manage">管理</string>
@@ -318,7 +309,6 @@
     <string name="theme_name_sakura">さくら</string>
     <string name="settings_apply_restart_required">この変更を適用するには、アプリケーションを再起動してください</string>
     <string name="comics_archive_import_description">.cbzまたは.zipファイルを1つ以上選択することができ、各ファイルは別のマンガとして認識されます。</string>
-    <string name="got_it">了解</string>
     <string name="show_on_shelf">棚に表示</string>
     <string name="invert_colors">色を反転させる</string>
     <string name="enable">有効</string>
@@ -591,11 +581,9 @@
     <string name="available_pattern">%1$sが有効</string>
     <string name="no_chapters_in_manga">この漫画には利用可能なチャプターが含まれていません</string>
     <string name="chapters_load_failed">チャプターリストの読み込みに失敗</string>
-    <string name="rename">リネーム</string>
     <string name="storage_and_network">ストレージとネットワーク</string>
     <string name="data_removal">データ削除</string>
     <string name="privacy">プライバシー</string>
-    <string name="source_broken_warning">この漫画ソースは破損しているとマークされています。一部の機能が動作しない可能性があります</string>
     <string name="download_default_directory">漫画ダウンロードのデフォルトディレクトリ</string>
     <string name="private_app_directory_warning">アプリケーションをアンインストールすると、このディレクトリとすべてのデータが削除されます</string>
     <string name="author">著者</string>
@@ -667,14 +655,12 @@
     <string name="show_floating_control_button">「続行」ボタンをフローティングで表示</string>
     <string name="unavailable">利用案内</string>
     <string name="manga_restricted_description">このマンガは、このソースで読み込むことはできません。 他のソースで検索するか、ブラウザで開くと、より多くの情報が得られます</string>
-    <string name="saved_filters">保存フィルター</string>
     <string name="chapters_grid_view">グリッドビュー</string>
     <string name="enter_name">名前を入力してください</string>
     <string name="theme_name_expressive">エクスプレス(テスト)</string>
     <string name="pull_to_prev_chapter">前の章を開く</string>
     <string name="pull_to_next_chapter">次の章を開く</string>
     <string name="state_abandoned">ドロップ</string>
-    <string name="speed_value">x%.1f</string>
     <string name="lock_screen_rotation">ロック スクリーンの回転</string>
     <string name="manual">マニュアル</string>
     <string name="reader_optimize_summary">画面外ページの品質を下げ、メモリ使用量を削減する</string>
@@ -703,8 +689,6 @@
     <string name="disable_connectivity_check">接続チェックを無効にする</string>
     <string name="tracker_debug_info">新しいチャプターログの確認</string>
     <string name="tracker_debug_info_summary">新規チャプター向けバックグラウンドチェックに関するデバッグ情報</string>
-    <string name="_new">新しい</string>
-    <string name="image_server">優先画像サーバ</string>
     <string name="pin">ピン</string>
     <string name="unpin">ピンを外す</string>
     <string name="source_pinned">ソース ピン留め</string>

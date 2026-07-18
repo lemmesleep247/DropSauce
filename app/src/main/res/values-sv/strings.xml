@@ -30,8 +30,6 @@
     <string name="popular">Populärt</string>
     <string name="updated">Uppdaterat</string>
     <string name="add_to_favourites">Lägg till som favorit</string>
-    <string name="filter">Filter</string>
-    <string name="standard">Standard</string>
     <string name="read">Läs</string>
     <string name="you_have_not_favourites_yet">Inga favoriter än</string>
     <string name="save">Spara</string>
@@ -41,7 +39,6 @@
     <string name="theme">Tema</string>
     <string name="follow_system">Systemtema</string>
     <string name="remove">Ta bort</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="add_new_category">Ny kategori</string>
     <string name="search">Sök</string>
     <string name="by_rating">Betyg</string>
@@ -62,8 +59,6 @@
     <string name="delete">Ta bort</string>
     <string name="clear_pages_cache">Rensa sidcache</string>
     <string name="text_delete_local_manga">Ta permanent bort \"%s\" från den här enheten\?</string>
-    <string name="error">Error</string>
-    <string name="webtoon">Webtoon</string>
     <string name="read_mode">Läsläge</string>
     <string name="grid_size">Rutnätsstorlek</string>
     <string name="search_on_s">Sök på %s</string>
@@ -85,7 +80,6 @@
     <string name="notifications_settings">Aviseringsinställningar</string>
     <string name="light_indicator">LED-indikator</string>
     <string name="notification_sound">Aviseringsljud</string>
-    <string name="vibration">Vibration</string>
     <string name="favourites_categories">Favoritkategorier</string>
     <string name="no_update_available">Inga tillgängliga uppdateringar</string>
     <string name="just_now">Just nu</string>
@@ -103,13 +97,11 @@
     <string name="sign_in">Logga in</string>
     <string name="auth_required">Logga in för att visa innehåll</string>
     <string name="next">Nästa</string>
-    <string name="password_length_hint">Lösenordet måste vara minst 4 tecken</string>
     <string name="text_clear_search_history_prompt">Permanent rensa alla senaste sökfrågor\?</string>
     <string name="welcome">Välkommen</string>
     <string name="tracker_warning">Vissa enheter har olika systembeteende vilket kan ha sönder bakgrundsjobb.</string>
     <string name="queued">Köad</string>
     <string name="chapter_is_missing">Kapitlet saknas</string>
-    <string name="about_app_translation_summary">Översätt denna app</string>
     <string name="auth_not_supported_by">Inloggning på %s stöds inte</string>
     <string name="state_finished">Färdig</string>
     <string name="show_pages_numbers">Numrerade sidor</string>
@@ -131,7 +123,6 @@
     <string name="always">Alltid</string>
     <string name="preload_pages">Förladdning av sidor</string>
     <string name="logged_in_as">Inloggad som %s</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Olika språk</string>
     <string name="search_chapters">Hitta kapitel</string>
     <string name="chapters_empty">Inga kapitel i denna manga</string>
@@ -169,12 +160,8 @@
     <string name="clear_updates_feed">Rensa uppdateringsflödet</string>
     <string name="track_sources">Leta efter uppdateringar</string>
     <string name="updates_feed_cleared">Rensat</string>
-    <string name="protect_application">Skydda appen</string>
     <string name="wrong_password">Fel lösenord</string>
-    <string name="repeat_password">Repetera lösenord</string>
-    <string name="passwords_mismatch">Lösenord stämmer inte överens</string>
     <string name="about">Om</string>
-    <string name="app_version">Version %s</string>
     <string name="check_for_updates">Leta efter uppdateringar</string>
     <string name="right_to_left">Höger-till-vänster</string>
     <string name="scale_mode">Skalningsläge</string>
@@ -194,7 +181,6 @@
     <string name="captcha_solve">Lös</string>
     <string name="clear_cookies">Rensa kakor</string>
     <string name="confirm">Bekräfta</string>
-    <string name="protect_application_subtitle">Ange ett lösenord för att starta appen med</string>
     <string name="backup_saved">Säkerhetskopia sparad</string>
     <string name="genres">Genrer</string>
     <string name="state_ongoing">Pågående</string>
@@ -204,7 +190,6 @@
     <string name="percent_string_pattern">%1$s%%</string>
     <string name="hide">Dölj</string>
     <string name="disable_all">Inaktivera alla</string>
-    <string name="invalid_domain_message">Ogiltig domän</string>
     <string name="dns_over_https">DNS över HTTPS</string>
     <string name="detect_reader_mode">Autodetektera läsarläge</string>
     <string name="disable_battery_optimization">Inaktivera batterioptimering</string>
@@ -222,7 +207,6 @@
     <string name="status_completed">Läst</string>
     <string name="status_on_hold">Pausad</string>
     <string name="status_dropped">Övergiven</string>
-    <string name="use_fingerprint">Använd biometrik om tillgängligt</string>
     <string name="show_reading_indicators">Visa indikatorer om läsförlopp</string>
     <string name="clear_cookies_summary">Kan vara till hjälp för att lösa vissa problem. Alla auktoriseringar kommer att ogiltigförklaras</string>
     <string name="download_slowdown">Begränsa nedladdningshastighet</string>
@@ -302,9 +286,7 @@
     <string name="clear_new_chapters_counters">Rensa även information om nya kapitel</string>
     <string name="retry">Försök igen</string>
     <string name="state_upcoming">Kommande</string>
-    <string name="content_type_hentai">Hentai</string>
     <string name="content_type_comics">Serier</string>
-    <string name="got_it">Jag förstår</string>
     <string name="pause">Pausa</string>
     <string name="genres_exclude">Exkludera genrer</string>
     <string name="content_rating">Innehållsklassificering</string>
@@ -343,8 +325,6 @@
     <string name="enhanced_colors">32-bitars färgläge</string>
     <string name="frequency_every_day">Varje dag</string>
     <string name="last_successful_backup">Senast lyckad säkerhetskopia: %s</string>
-    <string name="speed_value">x%.1f</string>
-    <string name="content_type_manga">Manga</string>
     <string name="manual">Manuell</string>
     <string name="disable_nsfw_summary">Inaktivera vuxenkällor och visa om möjligt inte manga för vuxna i listan</string>
     <string name="state_paused">Pausad</string>
@@ -398,9 +378,7 @@
     <string name="images_proxy_title">Proxy för bildoptimisering</string>
     <string name="too_many_requests_message">För många förfrågningar. Försök igen senare</string>
     <string name="type">Typ</string>
-    <string name="proxy">Proxy</string>
     <string name="color_theme">Färgtema</string>
-    <string name="theme_name_miku">Miku</string>
     <string name="reader_control_ltr">Ergonomiska kontroller i läsläge</string>
     <string name="settings_apply_restart_required">Var god starta om appen för att verkställa ändringarna</string>
     <string name="download_option_whole_manga">Hela mangan</string>
@@ -441,7 +419,6 @@
     <string name="data_not_restored_text">Kontrollera att du har valt den rätta säkerhetskopian</string>
     <string name="frequency_once_per_month">En gång i månaden</string>
     <string name="remove_completed_downloads_confirm">Din nedladdningshistorik kommer tas bort permanent. Inga nedladdade filer påverkas</string>
-    <string name="port">Port</string>
     <string name="progress">Förlopp</string>
     <string name="main_screen_sections">Huvudskärmssektioner</string>
     <string name="in_progress">Pågår</string>
@@ -463,9 +440,7 @@
     <string name="error_multiple_states_not_supported">Filtrering efter flera publiceringsstatusar stöds inte av denna mangakälla</string>
     <string name="error_filter_states_genre_not_supported">Filtrering efter både genrer och publiceringsstatusar stöds inte av denna källa</string>
     <string name="unsupported_backup_message">Var god välj en vederbörlig DropSauce-säkerhetskopiering</string>
-    <string name="content_type_manhua">Manhua</string>
     <string name="content_type_novel">Roman</string>
-    <string name="content_type_manhwa">Manhwa</string>
     <string name="error_connection_reset">Anslutning återställd av fjärrvärden</string>
     <string name="restoring_backup">Återställer säkerhetskopia</string>
     <string name="incognito">Inkognito</string>
@@ -486,8 +461,6 @@
     <string name="show_pages_thumbs">Visa sidors tumnaglar</string>
     <string name="show_pages_thumbs_summary">Aktivera \"Sidor\"-fliken på informationsskärmen</string>
     <string name="error_no_data_received">Ingen data tags emot från servern</string>
-    <string name="minutes_short">%d m</string>
-    <string name="seconds_short">%d s</string>
     <string name="less_frequently">Mindre frekvent</string>
     <string name="more_frequently">Mer frekvent</string>
     <string name="frequency_of_check">Intervall mellan kontroller</string>
@@ -534,7 +507,6 @@
     <string name="demographics">Demografi</string>
     <string name="user_manual">Användarhandbok</string>
     <string name="source_code">Källkod</string>
-    <string name="genre">Genre</string>
     <string name="download_added">Nedladdning tillagd</string>
     <string name="more_options">Fler val</string>
     <string name="download_over_cellular">Nedladdning sker över mobilnätet</string>
@@ -569,7 +541,6 @@
     <string name="disable_connectivity_check">Inaktivera anslutningskontroll</string>
     <string name="pin">Fastnåla</string>
     <string name="screenshots_block_incognito">Blockera i inkognitoläge</string>
-    <string name="image_server">Föredragen bildserver</string>
     <string name="source_unpinned">Källa lösgjord</string>
     <string name="reader_controls_in_bottom_bar">Läsarkontroller i nedre fältet</string>
     <string name="chapters_and_pages">Kapitel och sidor</string>
@@ -605,7 +576,6 @@
     <string name="last_used">Senast använd</string>
     <string name="webtoon_gaps">Springor i webtoon-läge</string>
     <string name="order_oldest">Äldsta</string>
-    <string name="minutes_seconds_short">%1$d m %2$d s</string>
     <string name="blocked_by_server_message">Du är blockerad av servern. Försök med en annan nätverksanslutning (VPN, proxy, osv.)</string>
     <string name="tracker_debug_info_summary">Felsökningsinformation om bakgrundskontroller av nya kapitel</string>
     <string name="disable_nsfw_notifications_summary">Visa inte aviseringar gällande uppdateringar av manga med vuxeninnehåll</string>
@@ -619,14 +589,8 @@
     <string name="rating">Betyg</string>
     <string name="search_everywhere">Sök överallt</string>
     <string name="badges_in_lists">Märken i listor</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="rating_safe">Alla åldrar</string>
     <string name="rating_suggestive">Suggestiv</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="theme_name_mamimi">Mamimi</string>
     <string name="backup_frequency">Säkerhetskopieringsintervall</string>
     <string name="backup_date_">Säkerhetskopieringsdatum: %s</string>
     <string name="last_read">Senast läst</string>

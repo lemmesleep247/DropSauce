@@ -8,19 +8,12 @@ import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.core.content.IntentCompat
-import androidx.core.os.BundleCompat
 import androidx.core.os.ParcelCompat
 import androidx.lifecycle.SavedStateHandle
 import org.koitharu.kotatsu.parsers.util.toArraySet
 import java.io.Serializable
 import java.util.EnumSet
 
-
-// https://issuetracker.google.com/issues/240585930
-
-inline fun <reified T : Parcelable> Bundle.getParcelableCompat(key: String): T? {
-	return BundleCompat.getParcelable(this, key, T::class.java)
-}
 
 inline fun <reified T : Parcelable> Intent.getParcelableExtraCompat(key: String): T? {
 	return IntentCompat.getParcelableExtra(this, key, T::class.java)

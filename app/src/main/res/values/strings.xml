@@ -55,7 +55,6 @@
     <string name="sort_order">Sorting order</string>
     <string name="filter">Filter</string>
     <string name="extension_filters">Extension Filter</string>
-    <string name="saved_filters">Saved filters</string>
     <string name="theme">Theme</string>
     <string name="light">Light</string>
     <string name="dark">Dark</string>
@@ -79,7 +78,6 @@
     <string name="read_mode">Read mode</string>
     <string name="grid_size">Grid size</string>
     <string name="ui_scale">Display size</string>
-    <string name="ui_scale_summary">Scale the whole app interface</string>
     <string name="ui_scale_smallest">Smallest</string>
     <string name="ui_scale_smaller">Smaller</string>
     <string name="ui_scale_default">Default</string>
@@ -151,7 +149,6 @@
     <string name="track_sources">Look for updates</string>
     <string name="enter_password">Enter password</string>
     <string name="wrong_password">Wrong password</string>
-    <string name="protect_application">Protect the app</string>
     <string name="require_unlock">Require unlock</string>
     <string name="require_unlock_summary">Use device authentication when returning to the app</string>
     <string name="require_unlock_unavailable">Set a screen lock in system settings to enable this option</string>
@@ -161,13 +158,10 @@
     <string name="lock_timeout_10_seconds">10 seconds</string>
     <string name="lock_timeout_1_minute">1 minute</string>
     <string name="lock_timeout_5_minutes">5 minutes</string>
-    <string name="repeat_password">Repeat the password</string>
-    <string name="passwords_mismatch">Mismatching passwords</string>
     <string name="about">About</string>
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="no_update_available">No updates available</string>
-    <string name="copy">Copy</string>
     <string name="right_to_left">Right-to-left</string>
     <string name="r_to_l">R-to-L</string>
     <string name="create_category">New category</string>
@@ -206,9 +200,7 @@
     <string name="data_restored_success">All data was restored</string>
     <string name="data_restored_with_errors">The data was restored, but there are errors</string>
     <string name="backup_include_source_settings">Source settings</string>
-    <string name="restore_diagnostics_title">Restore diagnostics</string>
     <string name="restore_report_restored_simple">Restored items: %1$d manga</string>
-    <string name="restore_report_missing_extensions_compact">Missing extensions:\n%1$s</string>
     <string name="just_now">Just now</string>
     <string name="yesterday">Yesterday</string>
     <string name="long_ago">Long ago</string>
@@ -229,16 +221,13 @@
     <string name="sign_in">Sign in</string>
     <string name="auth_required">Sign in to view this content</string>
     <string name="next">Next</string>
-    <string name="protect_application_subtitle">Enter a password to start the app with</string>
     <string name="confirm">Confirm</string>
-    <string name="password_length_hint">The password must be 4 characters or more</string>
     <string name="text_clear_search_history_prompt">Remove all recent search queries permanently?</string>
     <string name="welcome">Welcome</string>
     <string name="backup_saved">Backup saved</string>
     <string name="tracker_warning">Some devices have different system behavior, which may break background tasks.</string>
     <string name="queued">Queued</string>
     <string name="chapter_is_missing">The chapter is missing</string>
-    <string name="about_app_translation_summary">Translate this app</string>
     <string name="auth_not_supported_by">Logging in on %s is not supported</string>
     <string name="text_clear_cookies_prompt">You will be logged out from all sources</string>
     <string name="genres">Genres</string>
@@ -366,7 +355,6 @@
     <string name="status_on_hold">On hold</string>
     <string name="status_dropped">Dropped</string>
     <string name="disable_all">Disable all</string>
-    <string name="use_fingerprint">Use biometric if available</string>
     <string name="report">Report</string>
     <string name="show_reading_indicators">Show reading progress indicators</string>
     <string name="reading_indicator_disabled">@string/disabled</string>
@@ -374,7 +362,6 @@
     <string name="reading_indicator_chapters">Chapters read (e.g., 12/30)</string>
     <string name="clear_cookies_summary">Can help in case of some issues. All authorizations will be invalidated</string>
     <string name="show_all">Show all</string>
-    <string name="invalid_domain_message">Invalid domain</string>
     <string name="invalid_url">Only HTTPS URLs are allowed</string>
     <string name="select_range">Select range</string>
     <string name="clear_all_history">Clear all history</string>
@@ -461,7 +448,6 @@
     <string name="services">Services</string>
     <string name="download_started">Download started</string>
     <string name="extension_download_failed">Extension download failed. Check your connection and try again.</string>
-    <string name="got_it">Got it</string>
     <string name="user_agent">UserAgent header</string>
     <string name="settings_apply_restart_required">Please restart the application to apply these changes</string>
     <string name="comics_archive_import_description">Select one or more .cbz, .zip, .pdf or .epub files. Each file is imported as a separate title: PDFs are converted to comic pages, EPUB books keep their text chapters.</string>
@@ -473,9 +459,7 @@
 	<string name="epub_font_mono">Mono</string>
 	<string name="epub_font_custom">Custom</string>
 	<string name="epub_font_choose">Choose font</string>
-	<string name="epub_font_replace">Replace</string>
 	<string name="epub_font_invalid">That file is not a compatible font.</string>
-	<string name="epub_font_remove">Remove custom font</string>
 	<string name="epub_line_height">Line spacing</string>
 	<string name="epub_paragraph_spacing">Paragraph spacing</string>
 	<string name="epub_horizontal_margin">Horizontal margins</string>
@@ -510,7 +494,6 @@
 	<string name="epub_untitled_chapter">Untitled chapter</string>
 	<string name="epub_text_tab">Text</string>
 	<string name="epub_reading_tab">Reading</string>
-	<string name="epub_style_tab">Style</string>
     <string name="speed">Speed</string>
     <string name="show_on_shelf">Show on the Shelf</string>
     <string name="find_similar">Find similar</string>
@@ -846,10 +829,8 @@
     <string name="tracker_debug_info_summary">Debug information about background checks for new chapters</string>
     <string name="tap_to_review_affected_manga">Tap to review affected manga.</string>
     <!-- In plural, used for filter -->
-    <string name="_new">New</string>
     <string name="all_languages">All languages</string>
     <string name="screenshots_block_incognito">Block when incognito mode</string>
-    <string name="image_server">Preferred image server</string>
     <string name="inline_preference_pattern" translatable="false">%1$s: %2$s</string>
     <string name="crop_pages">Crop pages</string>
     <string name="pin">Pin</string>
@@ -980,7 +961,6 @@
     <!-- Button label, should be as short as possible -->
     <string name="incognito">Incognito</string>
     <string name="error_connection_reset">Connection reset by remote host</string>
-    <string name="not_set">Not set</string>
     <string name="test_connection">Test connection</string>
     <string name="clear_database">Clear database</string>
     <string name="clear_database_summary">Delete information about manga that is not used</string>
@@ -1090,11 +1070,9 @@
     <string name="manga_restricted_description">This manga is not available to read in this source. Try searching for it in other sources or opening it in a browser for more information</string>
     <string name="no_chapters_in_manga">This manga does not contain any chapters</string>
     <string name="chapters_load_failed">Failed to load chapter list</string>
-    <string name="rename">Rename</string>
     <string name="storage_and_network">Storage and network</string>
     <string name="data_removal">Data removal</string>
     <string name="privacy">Privacy</string>
-    <string name="source_broken_warning">This manga source has been marked as broken. Some features may not work</string>
     <string name="source_sort_broken_warning">This sorting order is broken. Reverted to the default sorting order</string>
     <string name="download_default_directory">Default directory for downloading manga</string>
     <string name="private_app_directory_warning">This directory with all data will be deleted if you uninstall the application</string>

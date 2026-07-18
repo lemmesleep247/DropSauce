@@ -3,16 +3,13 @@
     <string name="text_clear_cookies_prompt">Sinut kirjaudutaan ulos kaikista lähteistä, joihin sinulla on valtuutus</string>
     <string name="genres">Tyylilajit</string>
     <string name="auth_not_supported_by">%s -valtuutusta ei tueta</string>
-    <string name="about_app_translation_summary">Käännä tämä sovellus</string>
     <string name="chapter_is_missing">Luku puuttuu</string>
     <string name="queued">Jonossa</string>
     <string name="tracker_warning">Jotkin valmistajat voivat muuttaa järjestelmän käyttäytymistä, mikä voi keskeyttää taustatehtäviä.</string>
     <string name="backup_saved">Varmuuskopiointi tallennettu onnistuneesti</string>
     <string name="welcome">Tervetuloa</string>
     <string name="text_clear_search_history_prompt">Haluatko todella poistaa kaikki viimeaikaiset hakukyselyt\?</string>
-    <string name="password_length_hint">Salasanan on oltava vähintään 4 merkkiä</string>
     <string name="confirm">Vahvista</string>
-    <string name="protect_application_subtitle">Syötä salasana, joka vaaditaan, kun sovellus käynnistyy</string>
     <string name="next">Seuraava</string>
     <string name="auth_required">Sinun pitäisi valtuuttaa nähdäksesi tämän sisällön</string>
     <string name="sign_in">Kirjaudu sisään</string>
@@ -51,7 +48,6 @@
     <string name="check_for_updates">Tarkista päivitykset</string>
     <string name="app_version">Versio %s</string>
     <string name="about">Tietoja</string>
-    <string name="passwords_mismatch">Salasanat eivät täsmää</string>
     <string name="track_sources">Tarkista mangan päivitykset</string>
     <string name="update">Päivitä</string>
     <string name="rotate_screen">Käännä näyttöä</string>
@@ -103,7 +99,6 @@
     <string name="search_on_s">Hae kohteesta %s</string>
     <string name="grid_size">Ruudukon koko</string>
     <string name="read_mode">Lukutila</string>
-    <string name="webtoon">Webtoon</string>
     <string name="standard">Vakio</string>
     <string name="text_file_sizes">t|kt|Mt|Gt|Tt</string>
     <string name="clear_pages_cache">Tyhjennä sivujen välimuisti</string>
@@ -164,8 +159,6 @@
     <string name="history">Historia</string>
     <string name="favourites">Suosikit</string>
     <string name="local_storage">Paikallinen tallennustila</string>
-    <string name="repeat_password">Toista salasana</string>
-    <string name="protect_application">Suojaa sovellus</string>
     <string name="wrong_password">Väärä salasana</string>
     <string name="enter_password">Syötä salasana</string>
     <string name="state_finished">Päättynyt</string>
@@ -191,7 +184,6 @@
     <string name="never">Ei koskaan</string>
     <string name="reset_filter">Nollaa suodatin</string>
     <string name="logged_in_as">Kirjautunut sisään nimellä %s</string>
-    <string name="nsfw">18+</string>
     <string name="search_chapters">Etsi luku</string>
     <string name="percent_string_pattern">%1$s%%</string>
     <string name="various_languages">Eri kieliä</string>
@@ -230,7 +222,6 @@
     <string name="disable_battery_optimization_summary">Auttaa taustapäivitystarkastuksissa</string>
     <string name="crash_text">Jokin meni pieleen. Lähetä vikailmoitus kehittäjille, jotta voimme korjata sen.</string>
     <string name="disable_all">Poista kaikki käytöstä</string>
-    <string name="use_fingerprint">Käytä sormenjälkeä, jos käytettävissä</string>
     <string name="tracking">Seuranta</string>
     <string name="logout">Kirjaudu ulos</string>
     <string name="status_reading">Lukemassa</string>

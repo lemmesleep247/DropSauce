@@ -9,14 +9,13 @@ import androidx.activity.result.contract.ActivityResultContract
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.browser.BaseBrowserActivity
-import org.koitharu.kotatsu.browser.BrowserCallback
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.parsers.model.MangaSource
 
 @AndroidEntryPoint
-class SourceAuthActivity : BaseBrowserActivity(), BrowserCallback {
+class SourceAuthActivity : BaseBrowserActivity() {
 
 	override fun onCreate2(savedInstanceState: Bundle?, source: MangaSource, repository: MangaRepository?) {
 		if (repository == null) {

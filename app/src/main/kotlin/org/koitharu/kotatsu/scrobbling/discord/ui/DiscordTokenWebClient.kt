@@ -2,11 +2,10 @@ package org.koitharu.kotatsu.scrobbling.discord.ui
 
 import android.graphics.Bitmap
 import android.webkit.WebView
-import org.koitharu.kotatsu.browser.BrowserCallback
 import org.koitharu.kotatsu.browser.BrowserClient
 import org.koitharu.kotatsu.parsers.util.removeSurrounding
 
-class DiscordTokenWebClient(private val callback: Callback) : BrowserClient(callback, null) {
+class DiscordTokenWebClient(private val callback: DiscordAuthActivity) : BrowserClient(callback, null) {
 
 	override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
 		super.onPageStarted(view, url, favicon)
@@ -27,8 +26,4 @@ class DiscordTokenWebClient(private val callback: Callback) : BrowserClient(call
 		}
 	}
 
-	interface Callback : BrowserCallback {
-
-		fun onTokenObtained(token: String)
-	}
 }

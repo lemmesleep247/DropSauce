@@ -30,7 +30,6 @@
     <string name="text_file_not_supported">একটি ZIP অথবা CBZ ফাইল নিন</string>
     <string name="no_description">কোনো বর্ণনা নেই</string>
     <string name="clear_pages_cache">পেজের ক্যাচ পরিষ্কার করুন</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="share_image">ছবি শেয়ার করুন</string>
     <string name="_import">আমদানি</string>
     <string name="delete">মুছে ফেলুন</string>
@@ -69,7 +68,6 @@
     <string name="clear">পরিষ্কার</string>
     <string name="remove">সরিয়ে ফেলুন</string>
     <string name="save_page">পেজ সেভ করুন</string>
-    <string name="page_saved">Page saved</string>
     <string name="standard">স্ট্যান্ডার্ড</string>
     <string name="search_on_s">%s এ খুঁজুন</string>
     <string name="delete_manga">মানগা ডিলিট করুন</string>
@@ -89,11 +87,9 @@
     <string name="read_later">পরে পড়ুন</string>
     <string name="cannot_find_available_storage">সঞ্চয়স্থান উপলব্ধ নয়</string>
     <string name="ignore_ssl_errors">SSL ত্রুটি উপেক্ষা করুন</string>
-    <string name="text_feed_holder">New chapters of what you are reading are shown here</string>
     <string name="favourites_category_empty">খালি বিভাগ</string>
     <string name="pause">বিরতি</string>
     <string name="remove_completed">সম্পূর্ণভাবে সরান</string>
-    <string name="manga_save_location">Downloads folder</string>
     <string name="suggestions_notifications_summary">কখনও কখনও প্রস্তাবিত মাঙ্গা সহ বিজ্ঞপ্তিগুলি দেখান৷</string>
     <string name="updates_feed_cleared">সাফ করা হয়েছে</string>
     <string name="list_mode">তালিকার ধরন</string>
@@ -118,8 +114,6 @@
     <string name="zoom_mode_fit_center">ফিট সেন্টার</string>
     <string name="new_chapters">নতুন অধ্যায়</string>
     <string name="more">আরো</string>
-    <string name="protect_application">অ্যাপটি রক্ষা করুন</string>
-    <string name="passwords_mismatch">অমিল পাসওয়ার্ড</string>
     <string name="check_for_updates">হালনাগাদ এর জন্য অনুসন্ধান করুন</string>
     <string name="right_to_left">ডান থেকে বাম</string>
     <string name="clear_updates_feed">সাফ আপডেট ফিড</string>
@@ -131,20 +125,12 @@
     <string name="pages_animation">পৃষ্ঠা অ্যানিমেশন</string>
     <string name="other_storage">অন্যান্য স্টোরেজ</string>
     <string name="enter_password">পাসওয়ার্ড লিখুন</string>
-    <string name="repeat_password">পাসওয়ার্ড পুনরাবৃত্তি করুন</string>
     <string name="no_thanks">না ধন্যবাদ</string>
     <string name="text_local_holder_secondary">Save something from an online catalog or import it from a file।</string>
     <string name="text_local_holder_primary">আগে কিছু সংরক্ষণ করুন</string>
     <string name="suggestion_manga">পরামর্শ: %s</string>
     <string name="text_empty_holder_primary">এখানে খালি…</string>
     <string name="done">সম্পন্ন</string>
-    <string name="text_empty_holder_secondary_filtered">There are no manga matching the filters you selected</string>
-    <string name="zoom_mode_fit_height">Fit to height</string>
-    <string name="black_dark_theme">Black</string>
-    <string name="pages_saved">Pages saved</string>
-    <string name="zoom_mode_fit_width">Fit to width</string>
-    <string name="zoom_mode_keep_start">Keep at start</string>
-    <string name="enabled_d_of_d" tools:ignore="PluralsCandidate">%1$d of %2$d on</string>
     <string name="retry">পুনরায় চেষ্টা করুন</string>
     <string name="color_theme">কালার স্কিম</string>
     <string name="content_type_novel">উপন্যাস</string>
@@ -171,10 +157,8 @@
     <string name="disable_nsfw_notifications_summary">NSFW মাঙ্গা আপডেট সম্পর্কে বিজ্ঞপ্তি দেখাবেন না</string>
     <string name="tracker_debug_info">নতুন অধ্যায় লগ জন্য পরীক্ষা করা হচ্ছে</string>
     <string name="tracker_debug_info_summary">নতুন অধ্যায়গুলির জন্য পটভূমি পরীক্ষা সম্পর্কে তথ্য ডিবাগ করুন</string>
-    <string name="_new">নতুন</string>
     <string name="all_languages">সব ভাষা</string>
     <string name="screenshots_block_incognito">ছদ্মবেশী মোড হলে ব্লক করুন</string>
-    <string name="image_server">পছন্দের ইমেজ সার্ভার</string>
     <string name="crop_pages">পৃষ্ঠাগুলি কাটা</string>
     <string name="pin">পিন</string>
     <string name="unpin">আনপিন করুন</string>
@@ -190,8 +174,6 @@
     <string name="invalid_proxy_configuration">অবৈধ প্রক্সি কনফিগারেশন</string>
     <string name="show_quick_filters">দ্রুত ফিল্টার দেখান</string>
     <string name="show_quick_filters_summary">নির্দিষ্ট পরামিতি দ্বারা মাঙ্গা তালিকা ফিল্টার করার ক্ষমতা প্রদান করে</string>
-    <string name="sfw">SFW</string>
     <string name="skip_all">সব এড়িয়ে যান</string>
     <string name="stuck">আটকে গেছে</string>
-    <string name="source_broken_warning">এই মঙ্গা সূত্রটি\nভাঙ্গা হিসাবে চিহ্নিত। কিছু বৈশিষ্ট্য \nকাজ নাও হতে পারে</string>
 </resources>

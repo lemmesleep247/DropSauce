@@ -107,7 +107,6 @@ class BackupSettingsFragment : BaseComposeSettingsFragment(R.string.backup_resto
 					MigrationState.Idle -> stringResource(R.string.migrate_from_kotatsu_summary)
 				}
 				BackupScreen(
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onCreateBackup = {
 						createLocalBackupLauncher.launch(
 							BackupUtils.generateFileName(requireContext()),
@@ -222,7 +221,6 @@ class BackupSettingsFragment : BaseComposeSettingsFragment(R.string.backup_resto
 
 @Composable
 private fun BackupScreen(
-	onBack: () -> Unit,
 	onCreateBackup: () -> Unit,
 	onRestoreLocal: () -> Unit,
 	onOpenPeriodic: () -> Unit,
@@ -230,7 +228,7 @@ private fun BackupScreen(
 	migrationSubtitle: String,
 	onMigrateFromKotatsu: () -> Unit,
 ) {
-	SettingsScaffold(title = stringResource(R.string.backup_restore), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup(title = stringResource(R.string.backup_restore)) {
 				item { pos ->

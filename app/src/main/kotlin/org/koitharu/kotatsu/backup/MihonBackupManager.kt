@@ -72,7 +72,6 @@ class MihonBackupManager @Inject constructor(
     val restoredTrackingCount: Int,
     val missingSources: List<String>,
     val missingTrackers: List<Int>,
-    val skippedItems: List<String>,
   )
 
   private class RestoreAccumulator(
@@ -81,7 +80,6 @@ class MihonBackupManager @Inject constructor(
   ) {
     val missingSources = missingSources.toMutableSet()
     val missingTrackers = missingTrackers.toMutableSet()
-    val skippedItems = mutableListOf<String>()
     var restoredMangaCount = 0
     var restoredTrackingCount = 0
 
@@ -90,7 +88,6 @@ class MihonBackupManager @Inject constructor(
       restoredTrackingCount = restoredTrackingCount,
       missingSources = missingSources.sorted(),
       missingTrackers = missingTrackers.sorted(),
-      skippedItems = skippedItems.toList(),
     )
   }
 

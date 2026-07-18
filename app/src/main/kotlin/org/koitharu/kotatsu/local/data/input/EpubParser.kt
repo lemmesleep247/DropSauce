@@ -104,11 +104,6 @@ object EpubParser {
 		)
 	}
 
-	@Blocking
-	fun readEntryText(file: File, entryName: String): String? = ZipFile(file).use { zip ->
-		zip.readEntry(entryName)
-	}
-
 	private fun ZipFile.readEntry(name: String): String? {
 		val entry = getEntry(name) ?: getEntry(name.removePrefix("/")) ?: return null
 		return getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }

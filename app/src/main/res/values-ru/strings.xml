@@ -114,9 +114,6 @@
     <string name="track_sources">Следить за обновлениями</string>
     <string name="enter_password">Введите пароль</string>
     <string name="wrong_password">Неверный пароль</string>
-    <string name="protect_application">Защитить приложение</string>
-    <string name="repeat_password">Повторите пароль</string>
-    <string name="passwords_mismatch">Пароли не совпадают</string>
     <string name="about">О программе</string>
     <string name="app_version">Версия %s</string>
     <string name="check_for_updates">Проверить обновления</string>
@@ -155,16 +152,13 @@
     <string name="sign_in">Войти</string>
     <string name="auth_required">Авторизуйтесь, чтобы просмотреть этот контент</string>
     <string name="next">Далее</string>
-    <string name="protect_application_subtitle">Введите пароль для запуска приложения</string>
     <string name="confirm">Подтвердить</string>
-    <string name="password_length_hint">Пароль должен состоять из 4 символов или более</string>
     <string name="welcome">Добро пожаловать</string>
     <string name="text_clear_search_history_prompt">Удалить все последние поисковые запросы навсегда\?</string>
     <string name="backup_saved">Резервная копия сохранена</string>
     <string name="tracker_warning">Некоторые устройства имеют различное поведение системы, что может привести к нарушению фоновых задач.</string>
     <string name="queued">В очереди</string>
     <string name="chapter_is_missing">Глава отсутствует</string>
-    <string name="about_app_translation_summary">Помочь с переводом приложения</string>
     <string name="auth_not_supported_by">Вход в %s не поддерживается</string>
     <string name="text_clear_cookies_prompt">Вы выйдете из всех источников</string>
     <string name="genres">Жанры</string>
@@ -191,7 +185,6 @@
     <string name="always">Всегда</string>
     <string name="preload_pages">Предварительная загрузка страниц</string>
     <string name="logged_in_as">Вы авторизованы как %s</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Разные языки</string>
     <string name="search_chapters">Найти главу</string>
     <string name="chapters_empty">В этой манге нет глав</string>
@@ -230,7 +223,6 @@
     <string name="disable_battery_optimization_summary">Помогает с фоновой проверкой обновлений</string>
     <string name="crash_text">Что-то пошло не так. Пожалуйста, отправьте отчёт разработчикам, чтобы помочь всё исправить.</string>
     <string name="disable_all">Отключить все</string>
-    <string name="use_fingerprint">Использовать биометрические данные, если они доступны</string>
     <string name="status_reading">Читаю</string>
     <string name="status_planned">Запланировано</string>
     <string name="status_on_hold">Отложено</string>
@@ -243,7 +235,6 @@
     <string name="show_reading_indicators">Показать индикаторы прогресса чтения</string>
     <string name="clear_cookies_summary">Может помочь в случае каких-либо проблем. Все авторизации будут аннулированы</string>
     <string name="show_all">Показать все</string>
-    <string name="invalid_domain_message">Неверное доменное имя</string>
     <string name="back">Назад</string>
     <string name="select_range">Выбрать диапазон</string>
     <string name="history_cleared">История очищена</string>
@@ -317,7 +308,6 @@
     <string name="download_started">Загрузка началась</string>
     <string name="settings_apply_restart_required">Пожалуйста, перезапустите приложение, чтобы применить эти изменения</string>
     <string name="user_agent">Заголовок UserAgent</string>
-    <string name="got_it">Понятно</string>
     <string name="comics_archive_import_description">Вы можете выбрать один или несколько файлов .cbz или .zip, каждый файл будет распознан как отдельная манга.</string>
     <string name="folder_with_images_import_description">Вы можете выбрать каталог с архивами или изображениями. Каждый архив (или подкаталог) будет распознан как глава.</string>
     <string name="speed">Скорость</string>
@@ -421,7 +411,6 @@
     <string name="frequency_once_per_month">Один раз в месяц</string>
     <string name="backups_output_directory">Каталог для сохранения резервных копий</string>
     <string name="last_successful_backup">Последняя резервная копия: %s</string>
-    <string name="speed_value">x%.1f</string>
     <string name="lock_screen_rotation">Блокировка поворота экрана</string>
     <string name="sources_catalog">Каталог источников</string>
     <string name="content_type_manga">Манга</string>
@@ -564,7 +553,6 @@
     <string name="disable_nsfw_notifications">Отключить уведомления NSFW</string>
     <string name="disable_nsfw_notifications_summary">Не показывать уведомления об обновлениях манги NSFW</string>
     <string name="disable">Откл.</string>
-    <string name="_new">Новое</string>
     <string name="all_languages">Все языки</string>
     <string name="screenshots_block_incognito">Блокировать в режиме инкогнито</string>
     <string name="source_pinned">Источник закреплён</string>
@@ -575,7 +563,6 @@
     <string name="pin">Закрепить</string>
     <string name="unpin">Открепить</string>
     <string name="source_unpinned">Источник откреплён</string>
-    <string name="image_server">Сервер изображений</string>
     <string name="external_source">Внешний/плагин</string>
     <string name="plugin_incompatible">Несовместимый плагин или внутренняя ошибка. Убедитесь, что вы используете последнюю версию плагина и DropSauce</string>
     <string name="text_empty_holder_secondary_filtered">Нет манги, соответствующей выбранным вами фильтрам</string>
@@ -591,7 +578,6 @@
     <string name="low_rating">Низкий рейтинг</string>
     <string name="retry">Повторить</string>
     <string name="too_many_requests_message_retry">Слишком много запросов. Попробуйте ещё раз после %s</string>
-    <string name="sfw">SFW</string>
     <string name="skip_all">Пропустить все</string>
     <string name="stuck">Зависло</string>
     <string name="scrobbler_auth_required">Войдите в %s, чтобы продолжить</string>
@@ -728,7 +714,6 @@
     <string name="main_screen_fab">Показать плавающую кнопку «Продолжить»</string>
     <string name="main_screen_fab_summary">Позволяет продолжить чтение одним кликом. Эта кнопка не отображается в режиме инкогнито или при пустой истории</string>
     <string name="error_corrupted_zip">Повреждённый ZIP-архив (%s)</string>
-    <string name="discord_rpc">Discord Rich Presence</string>
     <string name="discord_token">Токен Discord</string>
     <string name="discord_token_summary">Введите свой токен Discord, чтобы включить Rich Presence</string>
     <string name="discord_token_description">Введите свой токен Discord или нажмите %s, чтобы получить его через браузер</string>
@@ -753,11 +738,9 @@
     <string name="pull_to_next_chapter">Отпустите, чтобы открыть следующую главу</string>
     <string name="reader_chapter_toast">Отображать сообщение о смене главы</string>
     <string name="reader_chapter_toast_summary">Показывать всплывающее сообщение с названием главы при переходе между главами</string>
-    <string name="rename">Переименовать</string>
     <string name="storage_and_network">Хранилище и сеть</string>
     <string name="data_removal">Удаление данных</string>
     <string name="privacy">Приватность</string>
-    <string name="source_broken_warning">Данный источник манги помечен как сломанный. Некоторые функции могут не работать</string>
     <string name="download_default_directory">Каталог по умолчанию для загрузки манги</string>
     <string name="private_app_directory_warning">Данный каталог вместе со всеми данными будет удалён при удалении приложения</string>
     <string name="available_pattern">%1$s доступно</string>

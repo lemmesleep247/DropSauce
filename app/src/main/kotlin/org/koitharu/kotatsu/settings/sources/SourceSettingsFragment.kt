@@ -138,7 +138,6 @@ class SourceSettingsFragment : BaseComposeSettingsFragment(0) {
 					initialLang = initialLang,
 					variantProvider = variantProvider,
 					uninstallPkg = uninstallPkg,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenBrowser = { url -> openBrowser(url) },
 					onClearCookies = { url -> confirmClearCookies(url) },
 					onUninstall = { pkg -> uninstallExtension(pkg) },
@@ -268,7 +267,6 @@ private fun SourceSettingsScreen(
 	initialLang: String?,
 	variantProvider: (String?) -> SourceVariant,
 	uninstallPkg: String?,
-	onBack: () -> Unit,
 	onOpenBrowser: (String) -> Unit,
 	onClearCookies: (String) -> Unit,
 	onUninstall: (String) -> Unit,
@@ -287,7 +285,7 @@ private fun SourceSettingsScreen(
 		onDispose { sourcePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
 	}
 
-	SettingsScaffold(title = "", onBack = onBack) {
+	SettingsScaffold {
 		if (!isValidSource) {
 			item {
 				SettingsGroup {

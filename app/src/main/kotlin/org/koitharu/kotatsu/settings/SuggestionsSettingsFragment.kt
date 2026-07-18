@@ -81,7 +81,6 @@ class SuggestionsSettingsFragment :
 			DropSauceTheme {
 				SuggestionsScreen(
 					tagsProvider = tagsCompletionProvider,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 				)
 			}
 		}
@@ -111,7 +110,6 @@ class SuggestionsSettingsFragment :
 @Composable
 private fun SuggestionsScreen(
 	tagsProvider: TagsAutoCompleteProvider,
-	onBack: () -> Unit,
 ) {
 	var enabled by rememberBooleanPref(AppSettings.KEY_SUGGESTIONS, false)
 	var wifiOnly by rememberBooleanPref(AppSettings.KEY_SUGGESTIONS_WIFI_ONLY, false)
@@ -121,7 +119,7 @@ private fun SuggestionsScreen(
 
 	var showTagsDialog by remember { mutableStateOf(false) }
 
-	SettingsScaffold(title = stringResource(R.string.suggestions), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup {
 				item { pos ->

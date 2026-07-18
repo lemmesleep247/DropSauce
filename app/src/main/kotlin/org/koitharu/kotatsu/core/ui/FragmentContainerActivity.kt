@@ -2,7 +2,6 @@ package org.koitharu.kotatsu.core.ui
 
 import android.os.Bundle
 import android.view.View
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
@@ -12,19 +11,14 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.databinding.ActivityContainerBinding
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
-import org.koitharu.kotatsu.main.ui.owners.SnackbarOwner
 
 @AndroidEntryPoint
 abstract class FragmentContainerActivity(private val fragmentClass: Class<out Fragment>) :
 	BaseActivity<ActivityContainerBinding>(),
-	AppBarOwner,
-	SnackbarOwner {
+	AppBarOwner {
 
 	override val appBar: AppBarLayout
 		get() = viewBinding.appbar
-
-	override val snackbarHost: CoordinatorLayout
-		get() = viewBinding.root
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)

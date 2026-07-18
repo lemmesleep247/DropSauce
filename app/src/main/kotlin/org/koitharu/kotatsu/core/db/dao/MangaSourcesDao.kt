@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import org.koitharu.kotatsu.core.db.entity.MangaSourceEntity
-import org.koitharu.kotatsu.parsers.network.CloudFlareHelper.PROTECTION_CAPTCHA
 
 @Dao
 abstract class MangaSourcesDao {
@@ -27,9 +26,6 @@ abstract class MangaSourcesDao {
 
 	@Upsert
 	abstract suspend fun upsert(entry: MangaSourceEntity)
-
-	@Query("SELECT * FROM sources WHERE cf_state = $PROTECTION_CAPTCHA")
-	abstract suspend fun findAllCaptchaRequired(): List<MangaSourceEntity>
 
 	fun dumpEnabled(): Flow<MangaSourceEntity> = flow {
 		val window = 10

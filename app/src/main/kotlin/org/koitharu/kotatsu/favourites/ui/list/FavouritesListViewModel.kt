@@ -180,7 +180,6 @@ class FavouritesListViewModel @Inject constructor(
 					is MangaGridModel -> model.copy(isPinned = true)
 					is MangaDetailedListModel -> model.copy(isPinned = true)
 					is MangaCompactListModel -> model.copy(isPinned = true)
-					else -> model
 				}
 			}
 		}

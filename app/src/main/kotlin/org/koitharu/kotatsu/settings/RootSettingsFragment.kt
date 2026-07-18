@@ -1,6 +1,5 @@
 package org.koitharu.kotatsu.settings
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -81,7 +80,6 @@ class RootSettingsFragment : BaseComposeSettingsFragment(R.string.settings) {
 					updateAvailable = update != null,
 					onSectionClick = { section -> openSection(section) },
 					onUpdateClick = { router.openAppUpdate() },
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 				)
 			}
 		}
@@ -100,12 +98,6 @@ class RootSettingsFragment : BaseComposeSettingsFragment(R.string.settings) {
 	private fun openSection(section: SettingsSection) {
 		val activity = activity as? SettingsActivity ?: return
 		activity.openFragment(section.fragmentClass, null, isFromRoot = true)
-	}
-
-	companion object {
-		// Required because SettingsActivity reads this on a tablet master pane.
-		@Suppress("unused")
-		fun newInstance(context: Context): RootSettingsFragment = RootSettingsFragment()
 	}
 }
 
@@ -175,13 +167,9 @@ private fun RootSettingsContent(
 	updateAvailable: Boolean,
 	onSectionClick: (SettingsSection) -> Unit,
 	onUpdateClick: () -> Unit,
-	onBack: () -> Unit,
 ) {
 	val ctx = LocalContext.current
-	SettingsScaffold(
-		title = stringResource(R.string.settings),
-		onBack = onBack,
-	) {
+	SettingsScaffold {
 		if (updateAvailable) {
 			item {
 				UpdateBanner(onClick = onUpdateClick)

@@ -6,8 +6,6 @@
 	<attr name="listItemTextViewStyle" />
 	<attr name="fastScrollerStyle" />
 	<attr name="tipViewStyle" />
-	<attr name="progressButtonStyle" />
-	<attr name="dotIndicatorStyle" />
 	<attr name="badgeViewStyle" />
 	<attr name="coverImageViewStyle" />
 

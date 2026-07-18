@@ -10,7 +10,7 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class DiscordAuthActivity : BaseBrowserActivity(), DiscordTokenWebClient.Callback {
+class DiscordAuthActivity : BaseBrowserActivity() {
 
 	@Inject
 	lateinit var settings: AppSettings
@@ -38,7 +38,7 @@ class DiscordAuthActivity : BaseBrowserActivity(), DiscordTokenWebClient.Callbac
 		else -> super.onOptionsItemSelected(item)
 	}
 
-	override fun onTokenObtained(token: String) {
+	fun onTokenObtained(token: String) {
 		settings.discordToken = token
 		setResult(RESULT_OK)
 		finish()

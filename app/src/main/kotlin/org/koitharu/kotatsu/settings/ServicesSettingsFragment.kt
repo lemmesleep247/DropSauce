@@ -72,7 +72,6 @@ class ServicesSettingsFragment : BaseComposeSettingsFragment(R.string.services) 
 				val summaries by scrobblerSummary.asStateFlow().collectAsState()
 				ServicesScreen(
 					scrobblerSummaries = summaries,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenSuggestions = {
 						(activity as? SettingsActivity)?.openFragment(
 							SuggestionsSettingsFragment::class.java,
@@ -166,7 +165,6 @@ class ServicesSettingsFragment : BaseComposeSettingsFragment(R.string.services) 
 @Composable
 private fun ServicesScreen(
 	scrobblerSummaries: Map<ScrobblerService, String?>,
-	onBack: () -> Unit,
 	onOpenSuggestions: () -> Unit,
 	onOpenStatistics: () -> Unit,
 	onScrobblerClick: (ScrobblerService) -> Unit,
@@ -181,7 +179,7 @@ private fun ServicesScreen(
 	val enabledLabel = stringResource(R.string.enabled)
 	val disabledLabel = stringResource(R.string.disabled)
 
-	SettingsScaffold(title = stringResource(R.string.services), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup(title = "General") {
 				item { pos ->

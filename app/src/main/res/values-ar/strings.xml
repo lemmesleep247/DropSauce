@@ -82,7 +82,6 @@
     <string name="suggestions_enable">تفعيل الاقتراحات</string>
     <string name="clear_feed">مسح الموجز</string>
     <string name="welcome">مرحبا</string>
-    <string name="about_app_translation_summary">ترجمة هذا التطبيق</string>
     <string name="vibration">اهتزاز</string>
     <string name="no_update_available">لا يوجد تحديثات</string>
     <string name="remove_category">حذف</string>
@@ -96,11 +95,9 @@
     <string name="auth_required">سجل الدخول لمشاهدة المحتوى</string>
     <string name="next">التالي</string>
     <string name="restore_backup">استعادة من نسخة احتياطية</string>
-    <string name="password_length_hint">كلمة السر يجب أن تكون 4 أحرف أو أكثر</string>
     <string name="text_feed_holder">فصول جديدة من ما تقرأه تظهر هنا</string>
     <string name="text_suggestion_holder">ابدأ بقراءة المانجا وستحصل على اقتراحات مخصصة</string>
     <string name="find_similar">ابحث عن متشابه</string>
-    <string name="protect_application_subtitle">أدخل كلمة السر لبدء التطبيق</string>
     <string name="suggestions">الاقتراحات</string>
     <string name="enabled">مفعل</string>
     <string name="text_clear_search_history_prompt">هل تريد إزالة استعلامات البحث الأخيرة نهائيًا؟</string>
@@ -129,8 +126,6 @@
     <string name="data_restored_with_errors">أستعيدت البيانات، لكن هناك أخطاء</string>
     <string name="new_chapters">فصول جديدة</string>
     <string name="exit_confirmation">تأكيد الخروج</string>
-    <string name="protect_application">حماية التطبيق</string>
-    <string name="passwords_mismatch">كلمة السر غير مطابقة</string>
     <string name="yesterday">أمس</string>
     <string name="check_for_updates">تحقق من وجود تحديثات</string>
     <string name="right_to_left">من اليمين الى اليسار</string>
@@ -150,7 +145,6 @@
     <string name="preparing_">جارٍ التحضير…</string>
     <string name="exit_confirmation_summary">اضغط مرتين للخروج من التطبيق</string>
     <string name="enter_password">ادخل كلمة السر</string>
-    <string name="repeat_password">كرر كلمة السر</string>
     <string name="data_restored_success">استعيدت جميع البيانات</string>
     <string name="external_storage">تخزين خارجي</string>
     <string name="silent">صامت</string>
@@ -217,7 +211,6 @@
     <string name="suggestions_excluded_genres">أقصاء التصنيفات</string>
     <string name="canceled">ألغيت</string>
     <string name="hide">أخفِ</string>
-    <string name="use_fingerprint">استخدم المقاييس الحيوية إذا كانت متاحة</string>
     <string name="suggestions_updating">تحديث الاقتراحات</string>
     <string name="percent_string_pattern">%1$s%%</string>
     <string name="chapters_will_removed_background">ستتم إزالة الفصول في الخلفية</string>
@@ -251,13 +244,11 @@
     <string name="text_downloads_list_holder">ليس لديك أية تنزيلات</string>
     <string name="bookmark_added">تم الإضافة للمحفظة</string>
     <string name="show_all">اظهر الكل</string>
-    <string name="invalid_domain_message">مجال غير صالح</string>
     <string name="history_cleared">تم مسح سجل التصفح</string>
     <string name="bookmarks_removed">تم الحذف من المحفظة</string>
     <string name="random">عشوائي</string>
     <string name="services">خدمات</string>
     <string name="download_started">بدأ التحميل</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="bookmark_removed">تم الحذف من المحفظة</string>
     <string name="select_range">اختر نطاق</string>
     <string name="clear_all_history">امسح كل السجل</string>
@@ -321,7 +312,6 @@
     <string name="mark_as_current">تسجيل على كونها الحالي</string>
     <string name="theme_name_mamimi">ماميمي</string>
     <string name="theme_name_kanade">كانادي</string>
-    <string name="got_it">وجدتها</string>
     <string name="resume">استئناف</string>
     <string name="cancel_all">إلغاء الكل</string>
     <string name="theme_name_rikka">ريكا</string>
@@ -506,13 +496,11 @@
     <string name="chapters_deleted_pattern">تمت إزالة %1$s، وتم مسح %2$s</string>
     <string name="delete_read_chapters_auto">حذف فصول المقروءة تلقائياً</string>
     <string name="last_used">آخر أستخدام</string>
-    <string name="_new">جديد</string>
     <string name="remove_from_history">حذف من السجل</string>
     <string name="all_languages">كل اللغات</string>
     <string name="screenshots_block_incognito">الحظر عند وضع التصفح المتخفي</string>
     <string name="alternatives">بدائل</string>
     <string name="empty_stats_text">لا توجد إحصائيات للفترة المحددة</string>
-    <string name="image_server">خادم الصور المُفضل</string>
     <string name="crop_pages">قص الصفحات</string>
     <string name="pin">تثبيت</string>
     <string name="unpin">إلغاء التثبيت</string>
@@ -587,8 +575,6 @@
     <string name="year">السنة</string>
     <string name="error_connection_reset">تم إعادة ضبط الاتصال</string>
     <string name="incognito">متخفي</string>
-    <string name="seconds_short">%d s</string>
-    <string name="minutes_seconds_short">%1$d m %2$d s</string>
     <string name="plugin_incompatible_with_cause">خطأ في الإضافة: %s\n تأكد من أنك تستخدم أحدث إصدار من الإضافة و كوتاتسو</string>
     <string name="invalid_proxy_configuration">تكوين الوكيل غير صالح</string>
     <string name="skip_all">تخطي الكل</string>

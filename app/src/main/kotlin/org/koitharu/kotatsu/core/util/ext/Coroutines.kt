@@ -13,7 +13,6 @@ import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.util.AcraCoroutineErrorHandler
 import org.koitharu.kotatsu.core.util.RetainedLifecycleCoroutineScope
 import org.koitharu.kotatsu.parsers.util.cancelAll
-import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -28,14 +27,6 @@ fun <T> Deferred<T>.getCompletionResultOrNull(): Result<T>? = if (isCompleted) {
 	getCompletionExceptionOrNull()?.let { error ->
 		Result.failure(error)
 	} ?: Result.success(getCompleted())
-} else {
-	null
-}
-
-fun <T> Deferred<T>.peek(): T? = if (isCompleted) {
-	runCatchingCancellable {
-		getCompleted()
-	}.getOrNull()
 } else {
 	null
 }

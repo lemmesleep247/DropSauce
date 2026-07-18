@@ -1,15 +1,13 @@
 package org.koitharu.kotatsu.util
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Ignore
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.koitharu.kotatsu.core.util.MultiMutex
 
@@ -27,21 +25,21 @@ class MultiMutexTest {
 	}
 
 	@Test
-	@Ignore("Cannot delay in test")
 	fun doubleLock() = runTest {
 		val mutex = MultiMutex<Int>()
-		repeat(2) {
-			launch(Dispatchers.Default) {
-				mutex.lock(1)
-			}
-		}
-		yield()
-		assertEquals(1, mutex.size)
-		mutex.unlock(1)
-		val tryLock = withTimeoutOrNull(1000) {
+		mutex.lock(1)
+		val secondLock = launch {
 			mutex.lock(1)
 		}
-		assertNull(tryLock)
+		runCurrent()
+		assertFalse(secondLock.isCompleted)
+		assertEquals(1, mutex.size)
+		mutex.unlock(1)
+		runCurrent()
+		assertTrue(secondLock.isCompleted)
+		assertEquals(1, mutex.size)
+		mutex.unlock(1)
+		assertTrue(mutex.isEmpty())
 	}
 
 	@Test

@@ -46,9 +46,7 @@
     <string name="delete">Excluir</string>
     <string name="operation_not_supported">Essa operação não é suportada</string>
     <string name="clear_pages_cache">Limpar cache de página</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">Padrão</string>
-    <string name="webtoon">Webtoon</string>
     <string name="read_mode">Modo leitura</string>
     <string name="grid_size">Tamanho da grade</string>
     <string name="search_on_s">Pesquisar em %s</string>
@@ -64,7 +62,6 @@
     <string name="open_in_browser">Abrir no navegador da web</string>
     <string name="notifications">Notificações</string>
     <string name="new_chapters">Novos capítulos</string>
-    <string name="download">Download</string>
     <string name="notifications_settings">Configurações das notificações</string>
     <string name="light_indicator">Indicador LED</string>
     <string name="remote_sources">Fontes de mangá</string>
@@ -97,8 +94,6 @@
     <string name="track_sources">Procure atualizações</string>
     <string name="enter_password">Digite a senha</string>
     <string name="wrong_password">Senha incorreta</string>
-    <string name="repeat_password">Repita a senha</string>
-    <string name="passwords_mismatch">Senhas incompatíveis</string>
     <string name="about">Cerca de</string>
     <string name="app_version">Versão %s</string>
     <string name="check_for_updates">Verifique se há atualizações</string>
@@ -130,14 +125,11 @@
     <string name="check_for_new_chapters">Em busca de novos capítulos</string>
     <string name="sign_in">Entrar</string>
     <string name="next">Próximo</string>
-    <string name="protect_application_subtitle">Digite a senha que será necessária quando a app for iniciado</string>
     <string name="confirm">Confirme</string>
-    <string name="password_length_hint">A senha deve ter 4 caracteres ou mais</string>
     <string name="backup_saved">Backup salvo</string>
     <string name="tracker_warning">Alguns aparelhos têm um comportamento de sistema diferente, o que pode interromper as tarefas em segundo plano.</string>
     <string name="welcome">Bem vindo</string>
     <string name="queued">Enfileirado</string>
-    <string name="about_app_translation_summary">Traduzir esta aplicação</string>
     <string name="chapter_is_missing">O capítulo está em falta</string>
     <string name="auth_not_supported_by">O login em %s não é suportado</string>
     <string name="genres">Gêneros</string>
@@ -162,7 +154,6 @@
     <string name="text_feed_holder">Novos capítulos de que está lendo são mostrados aqui</string>
     <string name="new_version_s">Nova versão: %s</string>
     <string name="rotate_screen">Girar o ecrã</string>
-    <string name="protect_application">Proteja a app</string>
     <string name="zoom_mode_fit_height">Ajustar à altura</string>
     <string name="black_dark_theme">Preto</string>
     <string name="black_dark_theme_summary">Usa menos energia em telas AMOLED</string>
@@ -191,7 +182,6 @@
     <string name="never">Nunca</string>
     <string name="preload_pages">Pré-carregar páginas</string>
     <string name="logged_in_as">Conectado como %s</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Vários idiomas</string>
     <string name="suggestions_updating">Atualização das sugestões</string>
     <string name="appearance">Aparência</string>
@@ -206,8 +196,6 @@
     <string name="compact">Compactar</string>
     <string name="bookmark_added">Marcador adicionado</string>
     <string name="prefetch_content">Pré-carregamento de conteúdo</string>
-    <string name="invalid_domain_message">Domínio inválido</string>
-    <string name="use_fingerprint">Usar biometria se disponível</string>
     <string name="suggestions_excluded_genres_summary">Especifique os gêneros que você não deseja ver nas sugestões</string>
     <string name="removal_completed">Remoção concluída</string>
     <string name="check_new_chapters_title">Verifique se há novos capítulos e notifique se houver</string>
@@ -301,22 +289,14 @@
     <string name="reader_control_ltr">Controle ergonômico do leitor</string>
     <string name="discard">Descartar</string>
     <string name="language">Idioma</string>
-    <string name="theme_name_mamimi">Mamimi</string>
     <string name="nothing_here">Não há nada aqui</string>
     <string name="services">Serviços</string>
     <string name="download_started">Descarga iniciada</string>
-    <string name="theme_name_miku">Miku</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_sakura">Sakura</string>
     <string name="color_theme">Esquema de cores</string>
     <string name="show_in_grid_view">Mostrar na visualização em grade</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
     <string name="settings_apply_restart_required">Por favor, reinicie o app para aplicar essas mudanças</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="scrobbling_empty_hint">Para acompanhar o progresso da leitura, selecione Menu → Vá até a tela de detalhes do mangá.</string>
     <string name="webtoon_zoom">Zoom Webtoon</string>
-    <string name="got_it">Entendi</string>
     <string name="comics_archive_import_description">Você pode selecionar um ou mais arquivos .cbz ou .zip, cada arquivo será reconhecido como um mangá separado.</string>
     <string name="folder_with_images_import_description">Você pode selecionar um diretório com arquivos ou imagens. Cada arquivo (ou subdiretório) será reconhecido como um capítulo.</string>
     <string name="address">Endereço</string>
@@ -349,7 +329,6 @@
     <string name="username">Nome de usuário</string>
     <string name="password">Senha</string>
     <string name="type">Tipo</string>
-    <string name="proxy">Proxy</string>
     <string name="resume">Retomar</string>
     <string name="paused">Pausado</string>
     <string name="cancel_all">Cancelar tudo</string>
@@ -416,7 +395,6 @@
     <string name="content_type_manga">Mangá</string>
     <string name="error_multiple_states_not_supported">A filtragem por múltiplos estados não é suportada por esta fonte</string>
     <string name="backup_frequency">Frequência de criação de backup</string>
-    <string name="content_type_hentai">Hentai</string>
     <string name="error_filter_states_genre_not_supported">A filtragem por gênero e estado não é suportado por esta fonte</string>
     <string name="error_filter_locale_genre_not_supported">A filtragem por gênero e localidade não é suportada por esta fonte</string>
     <string name="periodic_backups_enable">Ativar backups periódicos</string>
@@ -438,11 +416,9 @@
     <string name="skip">Pular</string>
     <string name="error_search_not_supported">A busca não é suportada por esta fonte</string>
     <string name="frequency_once_per_month">Uma vez por mês</string>
-    <string name="manual">Manual</string>
     <string name="reader_optimize_summary">Reduzir a qualidade das páginas fora do ecrã para usar menos memória</string>
     <string name="color_correction_apply_text">Essas configurações podem ser aplicadas globalmente ou apenas ao mangá atual. Se aplicadas globalmente, as configurações individuais não serão substituídas.</string>
     <string name="disable_nsfw_summary">Desative as fontes NSFW e oculte os mangás adultos da lista, se possível</string>
-    <string name="speed_value">x%.1f</string>
     <string name="backup_date_">Data de backup: %s</string>
     <string name="state">Estado</string>
     <string name="grayscale">Tons de Cinzento</string>
@@ -458,10 +434,8 @@
     <string name="rating_adult">Adulto</string>
     <string name="default_tab">Guia padrão</string>
     <string name="by_name_reverse">Nome invertido</string>
-    <string name="volume_">Volume %d</string>
     <string name="volume_unknown">Volume desconhecido</string>
     <string name="incognito_mode_hint">Seu progresso de leitura não será salvo</string>
-    <string name="vertical">Vertical</string>
     <string name="email_password_enter_hint">Coloque seu email e senha para continuar</string>
     <string name="mark_as_completed_prompt">Marcar o mangá selecionado como lido completamente?
 \n
@@ -557,7 +531,6 @@
     <string name="minutes_short">%d min</string>
     <string name="all_languages">Todos os idiomas</string>
     <string name="screenshots_block_incognito">Bloquear quando em modo anônimo</string>
-    <string name="image_server">Servidor de imagens preferencial</string>
     <string name="crop_pages">Recortar páginas</string>
     <string name="pin">Fixar</string>
     <string name="source_pinned">Fonte fixada</string>
@@ -570,7 +543,6 @@
     <string name="disable_nsfw_notifications_summary">Não mostrar notificações sobre atualizações de mangás NSFW</string>
     <string name="tracker_debug_info">Verificação de log de novos capítulos</string>
     <string name="tracker_debug_info_summary">Informações de depuração sobre verificações em segundo plano para novos capítulos</string>
-    <string name="_new">Novo</string>
     <string name="unpin">Desafixar</string>
     <string name="recent_sources">Fontes recentes</string>
     <string name="hours_minutes_short">%1$d hrs %2$d min</string>
@@ -596,11 +568,9 @@
     <string name="years">Anos</string>
     <string name="any">Qualquer</string>
     <string name="too_many_requests_message_retry">Muitas solicitações. Tente novamente depois %s</string>
-    <string name="seconds_short">%d s</string>
     <string name="show_quick_filters">Mostrar filtros rápidos</string>
     <string name="skip_all">Pular tudo</string>
     <string name="not_in_favorites">Não está nos favoritos</string>
-    <string name="minutes_seconds_short">%1$d m %2$d s</string>
     <string name="show_quick_filters_summary">Oferece a capacidade de filtrar listas de mangás por determinados parâmetros</string>
     <string name="unpopular">Impopular</string>
     <string name="filter_search_warning">Esta fonte não suporta pesquisa com filtros. Seus filtros foram limpos</string>
@@ -638,8 +608,6 @@
     <string name="allow_always">Permitir sempre</string>
     <string name="allow_once">Permitir uma vez</string>
     <string name="ask_every_time">Perguntar sempre</string>
-    <string name="content_type_manhua">Manhua</string>
-    <string name="content_type_manhwa">Manhwa</string>
     <string name="plugin_incompatible_with_cause">Erro de plug-in: %s\nCertifique-se de estar usando a versão mais recente do plugin e do DropSauce</string>
     <string name="screen_orientation">Orientação da tela</string>
     <string name="error_connection_reset">Conexão redefinida pelo host remoto</string>
@@ -647,8 +615,6 @@
     <string name="content_type_one_shot">Um tiro</string>
     <string name="demographic_kodomo">Criança</string>
     <string name="pages_saved">Páginas salvas</string>
-    <string name="demographic_shounen">Shounen</string>
-    <string name="demographic_shoujo">Shoujo</string>
     <string name="demographic_seinen">Jovem</string>
     <string name="demographic_josei">Mulher</string>
     <string name="portrait">Retrato</string>
@@ -658,7 +624,6 @@
     <string name="captcha_required_message">Esta fonte requer a resolução de um captcha para continuar</string>
     <string name="handle_links">Lidar com links</string>
     <string name="handle_links_summary">Lidar com links de mangá de aplicativos externos (por exemplo, navegador da web). Você também pode precisar habilitá-lo manualmente nas configurações do sistema do aplicativo</string>
-    <string name="email">Email</string>
     <string name="error_not_image">Formato inválido: imagem esperada, mas obteve %s</string>
     <string name="max_backups_count">Número máximo de backups</string>
     <string name="test_connection">Conexão de teste</string>
@@ -717,8 +682,6 @@
     <string name="creating_backup">Criando backup</string>
     <string name="reader_multitask">Abra o leitor em uma tarefa separada</string>
     <string name="reader_multitask_summary">Permite que você mantenha vários leitores com diferentes mangás abertos ao mesmo tempo</string>
-    <string name="theme_name_itsuka">Itsuka</string>
-    <string name="theme_name_totoro">Totoro</string>
     <string name="reader_navigation_inverted">https://hosted.weblate.org/translate/kotatsu/strings/pt/?checksum=b84ea9f18b9b4dde</string>
     <string name="reader_navigation_inverted_summary">https://hosted.weblate.org/translate/kotatsu/strings/pt/?checksum=b84ea9f18b9b4dde</string>
     <string name="book_effect">Fundo amarelaso (filtro de luz azul)</string>
@@ -743,7 +706,6 @@
     <string name="manga_restricted_description">Esse manga não está disponível para leitura nessa fonte. Tente pesquisá-lo em outras fontes ou abra-o no navegador para mais informação</string>
     <string name="no_chapters_in_manga">Esse manga não contém capítulos</string>
     <string name="chapters_load_failed">Falha ao carregar lista de capítulos</string>
-    <string name="saved_filters">Filtros salvos</string>
     <string name="enter_name">Digite o nome</string>
     <string name="pull_to_prev_chapter">Solte para abrir o capítulo anterior</string>
     <string name="pull_to_next_chapter">Solte para abrir o próximo capítulo</string>
@@ -754,9 +716,7 @@
     <string name="enable_pull_gesture_summary">Use o gesto de puxar para mudar de capítulo na webtoon</string>
     <string name="reader_chapter_toast">Mostrar pop-up de mudança de capítulo</string>
     <string name="reader_chapter_toast_summary">Mostrar uma mensagem pop-up com o título do capítulo quando ele for alterado</string>
-    <string name="rename">Renomear</string>
     <string name="storage_and_network">Armazenamento e internet</string>
     <string name="data_removal">Remover dados</string>
     <string name="privacy">Privacidade</string>
-    <string name="source_broken_warning">Esta fonte de mangá foi marcada como quebrada. Alguns recursos podem não funcionar</string>
 </resources>

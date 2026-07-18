@@ -61,7 +61,6 @@ class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_setti
 		setContent {
 			DropSauceTheme {
 				ReaderScreen(
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onTapActions = router::openReaderTapGridSettings,
 					onTitleTapToReadChanged = { activityRecreationHandle.recreateAll() },
 				)
@@ -77,7 +76,6 @@ class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_setti
 
 @Composable
 private fun ReaderScreen(
-	onBack: () -> Unit,
 	onTapActions: () -> Unit,
 	onTitleTapToReadChanged: () -> Unit,
 ) {
@@ -149,7 +147,7 @@ private fun ReaderScreen(
 
 	val isWebtoonMode = readerMode == ReaderMode.WEBTOON.name
 
-	SettingsScaffold(title = stringResource(R.string.reader_settings), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup(title = "Mode") {
 				item { pos ->

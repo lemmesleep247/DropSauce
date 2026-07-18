@@ -8,9 +8,6 @@ data class Progress(
 	val percent: Float
 		get() = if (total == 0) 0f else progress / total.toFloat()
 
-	val isEmpty: Boolean
-		get() = progress == 0
-
 	val isFull: Boolean
 		get() = progress == total
 
@@ -31,16 +28,6 @@ data class Progress(
 			total = total,
 		)
 	}
-
-	operator fun dec() = if (isEmpty) {
-		this
-	} else {
-		copy(
-			progress = progress - 1,
-			total = total,
-		)
-	}
-
 
 	operator fun plus(child: Progress) = Progress(
 		progress = progress * child.total + child.progress,

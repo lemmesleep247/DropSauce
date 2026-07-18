@@ -65,7 +65,6 @@
     <string name="operation_not_supported">Šī darbība nav atbalstīta</string>
     <string name="clear_pages_cache">Attīrīt lapas sīkdatnes</string>
     <string name="no_description">Nav apraksta</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="grid_size">Kastu izmērs</string>
     <string name="standard">Parastais</string>
     <string name="webtoon">\"Webtoon\"</string>
@@ -92,9 +91,6 @@
     <string name="read_later">Lasīt vēlāk</string>
     <string name="enter_password">Ievadi paroli</string>
     <string name="wrong_password">Nepareiza parole</string>
-    <string name="protect_application">Pasargāt aplikāciju</string>
-    <string name="repeat_password">Atkārto paroli</string>
-    <string name="passwords_mismatch">Nesakrīt paroles</string>
     <string name="about">Par</string>
     <string name="no_update_available">Nav jaunu atjauninājumu</string>
     <string name="right_to_left">Labi-kreisi</string>

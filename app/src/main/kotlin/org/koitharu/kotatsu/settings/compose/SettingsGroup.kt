@@ -25,13 +25,9 @@ data class GroupItemPosition(val index: Int, val total: Int) {
 	val shape: Shape get() = groupItemShape(index, total)
 }
 
-interface SettingsGroupScope {
-	fun item(content: @Composable (GroupItemPosition) -> Unit)
-}
-
-private class SettingsGroupScopeImpl : SettingsGroupScope {
-	val items = mutableListOf<@Composable (GroupItemPosition) -> Unit>()
-	override fun item(content: @Composable (GroupItemPosition) -> Unit) {
+class SettingsGroupScope {
+	internal val items = mutableListOf<@Composable (GroupItemPosition) -> Unit>()
+	fun item(content: @Composable (GroupItemPosition) -> Unit) {
 		items += content
 	}
 }
@@ -47,7 +43,7 @@ fun SettingsGroup(
 	title: String? = null,
 	content: SettingsGroupScope.() -> Unit,
 ) {
-	val scope = SettingsGroupScopeImpl()
+	val scope = SettingsGroupScope()
 	scope.content()
 	Column(modifier = modifier) {
 		if (title != null) {

@@ -62,7 +62,6 @@ class StorageAndNetworkSettingsFragment : BaseComposeSettingsFragment(R.string.s
 				val usage by viewModel.storageUsage.collectAsState(null)
 				StorageNetworkScreen(
 					usage = usage,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onDataRemoval = {
 						(activity as? SettingsActivity)?.openFragment(
 							DataCleanupSettingsFragment::class.java,
@@ -113,7 +112,6 @@ class StorageAndNetworkSettingsFragment : BaseComposeSettingsFragment(R.string.s
 @Composable
 private fun StorageNetworkScreen(
 	usage: StorageUsage?,
-	onBack: () -> Unit,
 	onDataRemoval: () -> Unit,
 	onOpenProxy: () -> Unit,
 	proxySummary: String,
@@ -157,7 +155,7 @@ private fun StorageNetworkScreen(
 		)
 	}
 
-	SettingsScaffold(title = stringResource(R.string.storage_and_network), onBack = onBack) {
+	SettingsScaffold {
 		// Inline storage chart + legend (segmented bar). Replaces the simple Info row.
 		item {
 			StorageUsageRow(

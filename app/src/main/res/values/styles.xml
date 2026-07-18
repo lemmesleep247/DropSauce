@@ -232,60 +232,8 @@
 		<item name="iconTint">@color/sel_toggle_button_fg</item>
 	</style>
 
-	<style name="Widget.Kotatsu.ToggleButton.Vertical.ReaderMode">
-		<item name="android:minHeight">64dp</item>
-		<item name="iconGravity">top</item>
-		<item name="iconSize">24dp</item>
-		<item name="iconPadding">2dp</item>
-		<item name="android:paddingStart">6dp</item>
-		<item name="android:paddingEnd">6dp</item>
-		<item name="android:paddingTop">12dp</item>
-		<item name="android:paddingBottom">10dp</item>
-		<item name="android:textAlignment">center</item>
-		<item name="android:singleLine">false</item>
-		<item name="android:elegantTextHeight">false</item>
-	</style>
-
 	<style name="Widget.Kotatsu.MaterialButtonToggleGroup.RectEdges" parent="Widget.Material3Expressive.MaterialButtonToggleGroup">
 		<item name="shapeAppearance">@xml/kotatsu_m3e_button_group_outer_shape</item>
-	</style>
-
-	<!-- Reader options sheet: round (pill) action buttons with the label beside the icon
-	     (Save page / Bookmark) -->
-	<style name="Widget.Kotatsu.ReaderOption.Round" parent="Widget.Material3.Button.TonalButton">
-		<item name="iconGravity">textStart</item>
-		<item name="iconSize">22dp</item>
-		<item name="iconPadding">8dp</item>
-		<item name="android:gravity">center</item>
-		<item name="android:textAlignment">center</item>
-		<item name="android:minHeight">60dp</item>
-		<item name="android:insetTop">0dp</item>
-		<item name="android:insetBottom">0dp</item>
-		<item name="android:paddingTop">8dp</item>
-		<item name="android:paddingBottom">8dp</item>
-		<item name="android:singleLine">true</item>
-		<item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
-		<item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Kotatsu.Circle</item>
-	</style>
-
-	<!-- Reader options sheet: square (rounded-corner) action buttons in a 2x2 grid -->
-	<style name="Widget.Kotatsu.ReaderOption.Square" parent="Widget.Material3.Button.TonalButton">
-		<item name="iconGravity">top</item>
-		<item name="iconSize">26dp</item>
-		<item name="iconPadding">4dp</item>
-		<item name="android:gravity">center</item>
-		<item name="android:textAlignment">center</item>
-		<item name="android:minHeight">88dp</item>
-		<item name="android:insetTop">0dp</item>
-		<item name="android:insetBottom">0dp</item>
-		<item name="android:paddingTop">14dp</item>
-		<item name="android:paddingBottom">14dp</item>
-		<item name="android:paddingStart">8dp</item>
-		<item name="android:paddingEnd">8dp</item>
-		<item name="android:singleLine">false</item>
-		<item name="android:maxLines">2</item>
-		<item name="android:textAppearance">?attr/textAppearanceLabelMedium</item>
-		<item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Kotatsu.ReaderSquare</item>
 	</style>
 
 	<style name="Widget.Kotatsu.ReaderFloatingToolbar" parent="Widget.Material3.FloatingToolbar">
@@ -309,8 +257,6 @@
 		<item name="bubbleSize">small</item>
 		<item name="scrollerOffset">@dimen/grid_spacing_outer</item>
 	</style>
-
-	<style name="Widget.Kotatsu.DotIndicator" parent="" />
 
 	<style name="Widget.Kotatsu.BadgeView" parent="">
 		<item name="android:textColor">@macro/m3_comp_badge_large_label_text_color</item>
@@ -353,26 +299,6 @@
 		<item name="android:textColor">@color/list_item_text_color</item>
 		<item name="titleTextAppearance">?attr/textAppearanceTitleSmall</item>
 		<item name="subtitleTextAppearance">?attr/textAppearanceBodySmall</item>
-	</style>
-
-	<style name="Widget.Kotatsu.ExploreButton" parent="Widget.Material3.Button.ElevatedButton.Icon">
-		<item name="android:minHeight">56dp</item>
-		<item name="android:singleLine">true</item>
-		<item name="shapeAppearance">?shapeAppearanceCornerExtraLarge</item>
-		<item name="android:ellipsize">marquee</item>
-		<item name="android:marqueeRepeatLimit">marquee_forever</item>
-		<item name="iconSize">22dp</item>
-		<item name="iconPadding">16dp</item>
-		<item name="iconGravity">start</item>
-		<item name="iconTint">?attr/colorPrimary</item>
-		<item name="android:textColor">?attr/colorPrimary</item>
-		<item name="android:insetTop">2dp</item>
-		<item name="android:insetBottom">2dp</item>
-		<item name="android:gravity">start|center_vertical</item>
-		<item name="backgroundTint">?attr/colorSurfaceContainerHigh</item>
-		<!-- Hack. Removing shadow. For AMOLED -->
-		<item name="android:outlineProvider">none</item>
-		<item name="elevation">24dp</item>
 	</style>
 
 	<style name="Widget.Kotatsu.ExploreButton.Secondary" parent="Widget.Material3.Button.TonalButton.Icon">
@@ -697,11 +623,6 @@
 	<style name="ShapeAppearanceOverlay.Kotatsu.Card.Expressive" parent="">
 		<item name="cornerFamily">rounded</item>
 		<item name="cornerSize">24dp</item>
-	</style>
-
-	<style name="ShapeAppearanceOverlay.Kotatsu.ReaderSquare" parent="">
-		<item name="cornerFamily">rounded</item>
-		<item name="cornerSize">28dp</item>
 	</style>
 
 	<style name="ShapeAppearanceOverlay.Kotatsu.CarouselItem" parent="">

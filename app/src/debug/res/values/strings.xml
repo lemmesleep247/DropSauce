@@ -1,4 +1,3 @@
 <resources>
 	<string name="app_name" translatable="false">Preview DropSauce</string>
-	<string name="strict_mode">Strict mode</string>
 </resources>

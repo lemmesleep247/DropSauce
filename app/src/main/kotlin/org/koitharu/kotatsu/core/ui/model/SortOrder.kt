@@ -2,7 +2,6 @@ package org.koitharu.kotatsu.core.ui.model
 
 import androidx.annotation.StringRes
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.core.model.SortDirection
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.model.SortOrder.ADDED
 import org.koitharu.kotatsu.parsers.model.SortOrder.ADDED_ASC
@@ -44,27 +43,4 @@ val SortOrder.titleRes: Int
 		POPULARITY_WEEK -> R.string.popular_in_week
 		POPULARITY_MONTH -> R.string.popular_in_month
 		POPULARITY_YEAR -> R.string.popular_in_year
-	}
-
-val SortOrder.direction: SortDirection
-	get() = when (this) {
-		UPDATED_ASC,
-		POPULARITY_ASC,
-		RATING_ASC,
-		NEWEST_ASC,
-		ADDED_ASC,
-		ALPHABETICAL -> SortDirection.ASC
-
-		UPDATED,
-		POPULARITY,
-		POPULARITY_HOUR,
-		POPULARITY_TODAY,
-		POPULARITY_WEEK,
-		POPULARITY_MONTH,
-		POPULARITY_YEAR,
-		RATING,
-		NEWEST,
-		ADDED,
-		RELEVANCE,
-		ALPHABETICAL_DESC -> SortDirection.DESC
 	}

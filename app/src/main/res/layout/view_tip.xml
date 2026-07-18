@@ -3,7 +3,6 @@
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools"
 	android:padding="@dimen/margin_normal"
-	tools:background="@drawable/bg_appwidget_card"
 	tools:backgroundTint="?colorBackgroundFloating"
 	tools:layout_height="wrap_content"
 	tools:layout_margin="16dp"

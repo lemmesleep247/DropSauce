@@ -85,7 +85,6 @@
     <string name="clear">지우기</string>
     <string name="text_local_holder_primary">먼저 아무거나 저장해보세요</string>
     <string name="text_feed_holder">여기서 읽고 있는 만화의 새로운 챕터들을 확인할 수 있습니다</string>
-    <string name="protect_application">앱 잠금 활성화</string>
     <string name="check_for_updates">업데이트 확인하기</string>
     <string name="right_to_left">오른쪽에서 왼쪽</string>
     <string name="zoom_mode_fit_center">가운데 맞춤</string>
@@ -96,7 +95,6 @@
     <string name="create_backup">백업하기</string>
     <string name="preparing_">준비중…</string>
     <string name="welcome">환영합니다</string>
-    <string name="about_app_translation_summary">이 앱을 번역하기</string>
     <string name="screenshots_block_nsfw">성인 컨텐츠에서만 차단</string>
     <string name="screenshots_allow">항상 허용</string>
     <string name="exclude_nsfw_from_suggestions">성인 만화(NSFW)는 추천하지 않기</string>
@@ -140,8 +138,6 @@
     <string name="wrong_password">잘못된 비밀번호</string>
     <string name="rotate_screen">화면 회전</string>
     <string name="track_sources">업데이트 확인하기</string>
-    <string name="repeat_password">비밀번호 재입력</string>
-    <string name="passwords_mismatch">일치하지 않는 비밀번호</string>
     <string name="app_version">%s 버전</string>
     <string name="about">정보</string>
     <string name="create_category">새로운 카테고리</string>
@@ -170,9 +166,7 @@
     <string name="sign_in">로그인</string>
     <string name="auth_required">로그인이 필요합니다</string>
     <string name="next">다음</string>
-    <string name="protect_application_subtitle">비밀번호를 입력하세요</string>
     <string name="confirm">확인</string>
-    <string name="password_length_hint">최소 4자리 이상의 비밀번호를 입력해 주세요</string>
     <string name="backup_saved">백업 저장됨</string>
     <string name="tracker_warning">몇몇 기기들은 시스템이 백그라운드 작업을 방해할 수 있습니다.</string>
     <string name="text_clear_search_history_prompt">모든 검색 기록을 영구적으로 삭제 하시겠어요\?</string>
@@ -192,7 +186,6 @@
     <string name="reset_filter">필터 초기화</string>
     <string name="only_using_wifi">와이파이에 연결된 경우에만</string>
     <string name="always">항상</string>
-    <string name="nsfw">18+</string>
     <string name="percent_string_pattern">%1$s%%</string>
     <string name="preload_pages">페이지 미리 로드하기</string>
     <string name="logged_in_as">%s로 로그인 됨</string>
@@ -206,7 +199,6 @@
     <string name="name">이름</string>
     <string name="disable_battery_optimization">배터리 최적화 해제하기</string>
     <string name="disable_battery_optimization_summary">백그라운드에서의 업데이트 확인이 안드로이드 시스템에 의해 중지되지 않습니다</string>
-    <string name="use_fingerprint">가능할 경우 지문 사용</string>
     <string name="select_range">범위 선택</string>
     <string name="history_cleared">기록 삭제됨</string>
     <string name="random">랜덤</string>
@@ -240,7 +232,6 @@
     <string name="report">제보하기</string>
     <string name="show_reading_indicators">읽기 진행 상황 표시</string>
     <string name="show_all">모두 보여주기</string>
-    <string name="invalid_domain_message">유효하지 않은 도메인</string>
     <string name="clear_all_history">모든 기록 삭제</string>
     <string name="last_2_hours">지난 2시간</string>
     <string name="manage">관리</string>

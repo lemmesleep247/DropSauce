@@ -20,7 +20,12 @@ import nl.adaptivity.xmlutil.serialization.XML
 import eu.kanade.tachiyomi.network.AndroidCookieJar
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
+import org.koitharu.kotatsu.core.network.CacheLimitInterceptor
+import org.koitharu.kotatsu.core.network.CloudFlareInterceptor
+import org.koitharu.kotatsu.core.network.CommonHeadersInterceptor
+import org.koitharu.kotatsu.core.network.GZipInterceptor
 import org.koitharu.kotatsu.core.network.MangaHttpClient
+import org.koitharu.kotatsu.core.network.RateLimitInterceptor
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.parsers.network.UserAgents
@@ -86,15 +91,14 @@ class KotoNetworkHelper(
 			// CloudFlareBlockedException on any 403/503 block page, which aborts extensions (e.g.
 			// Kagane) that deliberately request a Cloudflare-fronted page and ignore the result.
 			// Cloudflare handling for extensions is done by the dedicated interceptor below instead.
-			val name = interceptor.javaClass.simpleName
 			// Kotatsu throttles its native parsers globally, while Mihon only rate-limits when an
 			// extension opts in with OkHttpClient.Builder.rateLimit(). Never leak the app-wide
 			// limiter into the shared extension client.
 			if (
-				name != "GZipInterceptor" &&
-				name != "CloudFlareInterceptor" &&
-				name != "RateLimitInterceptor" &&
-				name != "CommonHeadersInterceptor"
+				interceptor !is GZipInterceptor &&
+				interceptor !is CloudFlareInterceptor &&
+				interceptor !is RateLimitInterceptor &&
+				interceptor !is CommonHeadersInterceptor
 			) {
 				addInterceptor(interceptor)
 			}
@@ -107,7 +111,7 @@ class KotoNetworkHelper(
 		baseClient.networkInterceptors
 			// Kotatsu clamps cache freshness to one hour for native parsers. Mihon preserves the
 			// server/extension cache policy, which avoids needless API and cover refetches.
-			.filterNot { it.javaClass.simpleName == "CacheLimitInterceptor" }
+			.filterNot { it is CacheLimitInterceptor }
 			.forEach(::addNetworkInterceptor)
 	}.build()
 

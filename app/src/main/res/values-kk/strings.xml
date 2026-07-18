@@ -114,8 +114,6 @@
     <string name="clear_search_history">Іздеу тарихын тазалау</string>
     <string name="track_sources">Жаңартуларды қарау</string>
     <string name="wrong_password">Қате құпиясөз</string>
-    <string name="protect_application">Қолданбаны қорғау</string>
-    <string name="passwords_mismatch">Құпиясөз бірдей емес</string>
     <string name="app_version">%s нұсқа</string>
     <string name="check_for_updates">Жаңартуды тексеру</string>
     <string name="right_to_left">Оңнан солға</string>
@@ -143,7 +141,6 @@
     <string name="sign_in">Кіру</string>
     <string name="auth_required">Бұны көру үшін тіркелгіге кіріңіз</string>
     <string name="chapter_is_missing">Тарау жоқ</string>
-    <string name="about_app_translation_summary">Қолданбаны аудару</string>
     <string name="auth_not_supported_by">%s кіру қолжетімсіз</string>
     <string name="state_finished">Аяқталған</string>
     <string name="text_clear_updates_feed_prompt">Жаңарту тарихын толықтау тазартайық па\?</string>
@@ -171,7 +168,6 @@
     <string name="disabled">Өшірулі</string>
     <string name="exclude_nsfw_from_suggestions">ҰЯТСЫЗ маңга ұсынбау</string>
     <string name="enabled">Қосулы</string>
-    <string name="repeat_password">Құпиясөзді қайталаңыз</string>
     <string name="zoom_mode_fit_center">Ортаға қою</string>
     <string name="scale_mode">Өлшеу режімі</string>
     <string name="text_clear_search_history_prompt">Соңғы іздеу тарихын толықтай жоямыз ба\?</string>
@@ -180,9 +176,7 @@
     <string name="tracker_warning">Кейбір құрылғылардың жүйесі бөлек, одан аялық тапсырмалар бұзылуы мүмкін.</string>
     <string name="queued">Кезекте</string>
     <string name="next">Келесі</string>
-    <string name="protect_application_subtitle">Қолданбаға кіру үшін құпиясөз енгізіңіз</string>
     <string name="confirm">Растау</string>
-    <string name="password_length_hint">Құпиясөзде 4, не одан көп таңба болу керек</string>
     <string name="status_re_reading">Қайталап оқып жатырмын</string>
     <string name="detect_reader_mode">Оқу режімін өздігінен анықтау</string>
     <string name="tracking">Бақылау</string>
@@ -231,7 +225,6 @@
     <string name="suggestions_excluded_genres">Жанрды шектеу</string>
     <string name="canceled">Доғарылды</string>
     <string name="hide">Жасыру</string>
-    <string name="use_fingerprint">Қолжетімді болса биометрика қолдану</string>
     <string name="suggestions_updating">Ұсынысты жаңарту</string>
     <string name="percent_string_pattern">%%%1$s</string>
     <string name="chapters_will_removed_background">Тараулар аяда жойылады</string>
@@ -240,7 +233,6 @@
     <string name="status_completed">Аяқталған</string>
     <string name="reset_filter">Сүзгіні тазарту</string>
     <string name="status_dropped">Тастап кеткен</string>
-    <string name="nsfw">18+</string>
     <string name="notifications_enable">Мәлімдеме қосу</string>
     <string name="never">Ешқашан</string>
     <string name="disable_battery_optimization">Қуат оңтайлығын өшіру</string>
@@ -248,7 +240,6 @@
     <string name="bookmarks">Бетбелгі</string>
     <string name="show_all">Бәрін көрсету</string>
     <string name="empty_favourite_categories">Таңдаулы санатыңыз жоқ</string>
-    <string name="invalid_domain_message">Қате дәмейін</string>
     <string name="zoom_in">Ұлғайту</string>
     <string name="captcha_required_summary">%s дұрыс істеуі үшін captcha өтіңіз</string>
     <string name="download_option_all_unread">Түгел оқылмаған тарау</string>
@@ -309,7 +300,6 @@
     <string name="web_view_unavailable">WebView қолжетімсіз: WebView провайдері орнатылғанын тексеріп көріңіз</string>
     <string name="port">Порт</string>
     <string name="not_found_404">Контент табылмады, жойылған-мыс</string>
-    <string name="got_it">Ұқтым</string>
     <string name="type">Түрі</string>
     <string name="search_hint">Маңга атын, жанрын я дереккөз атауын жазыңыз</string>
     <string name="frequency_once_per_week">Апта сайын</string>
@@ -369,7 +359,6 @@
     <string name="reorder">Ретін өзгерту</string>
     <string name="background">Ая</string>
     <string name="feed">Лек</string>
-    <string name="speed_value">x%.1f</string>
     <string name="downloads_removed">Жүктеп алғаныңыз жойылды</string>
     <string name="no_access_to_file">Бұл файлға я каталогқа рұқсатыңыз жоқ</string>
     <string name="mark_as_current">Қазіргі деп белгілеу</string>

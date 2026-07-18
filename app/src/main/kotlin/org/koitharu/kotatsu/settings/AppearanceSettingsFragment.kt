@@ -113,7 +113,6 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 				AppearanceScreen(
 					authSupported = authOk,
 					dynamicShortcutsAvailable = appShortcutManager.isDynamicShortcutsAvailable(),
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenLocaleSettings = ::openSystemLocaleSettings,
 					onOpenDetailsAppearance = {
 						(activity as? SettingsActivity)?.openFragment(
@@ -197,7 +196,6 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 private fun AppearanceScreen(
 	authSupported: Boolean,
 	dynamicShortcutsAvailable: Boolean,
-	onBack: () -> Unit,
 	onOpenLocaleSettings: () -> Unit,
 	onOpenDetailsAppearance: () -> Unit,
 	onOpenNavConfig: () -> Unit,
@@ -281,7 +279,7 @@ private fun AppearanceScreen(
 		stringResource(R.string.require_unlock_unavailable)
 	}
 
-	SettingsScaffold(title = stringResource(R.string.appearance), onBack = onBack) {
+	SettingsScaffold {
 		// The color scheme picker is its own inline widget (horizontal cards), rendered
 		// directly here rather than via a SettingsGroup row.
 		item {

@@ -29,6 +29,3 @@ fun Bookmark.toEntity() = BookmarkEntity(
 fun Collection<BookmarkEntity>.toBookmarks(manga: Manga) = map {
 	it.toBookmark(manga)
 }
-
-@JvmName("bookmarksIds")
-fun Collection<Bookmark>.ids() = map { it.pageId }

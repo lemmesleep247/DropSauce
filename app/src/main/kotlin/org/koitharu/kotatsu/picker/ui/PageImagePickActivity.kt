@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.viewModels
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
@@ -23,7 +22,6 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.databinding.ActivityPickerBinding
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
-import org.koitharu.kotatsu.main.ui.owners.SnackbarOwner
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.picker.ui.manga.MangaPickerFragment
 import org.koitharu.kotatsu.picker.ui.page.PagePickerFragment
@@ -34,17 +32,13 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class PageImagePickActivity : BaseActivity<ActivityPickerBinding>(),
-	AppBarOwner,
-	SnackbarOwner {
+	AppBarOwner {
 
 	@Inject
 	lateinit var pageSaveHelperFactory: PageSaveHelper.Factory
 
 	override val appBar: AppBarLayout
 		get() = viewBinding.appbar
-
-	override val snackbarHost: CoordinatorLayout
-		get() = viewBinding.root
 
 	private lateinit var pageSaveHelper: PageSaveHelper
 	private val viewModel by viewModels<PageImagePickViewModel>()

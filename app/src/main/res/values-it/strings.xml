@@ -59,9 +59,7 @@
     <string name="local_storage">Archiviazione locale</string>
     <string name="welcome">Benvenuto/a</string>
     <string name="text_clear_search_history_prompt">Vuoi davvero rimuovere tutte le ricerche recenti\?</string>
-    <string name="password_length_hint">La password deve essere di almeno 4 caratteri</string>
     <string name="confirm">Conferma</string>
-    <string name="protect_application_subtitle">Inserisci la password che sarà richiesta all\'avvio dell\'applicazione</string>
     <string name="next">Prossimo</string>
     <string name="sign_in">Accedi</string>
     <string name="clear_feed">Cancella il flusso</string>
@@ -85,9 +83,6 @@
     <string name="check_for_updates">Controlla gli aggiornamenti</string>
     <string name="app_version">Versione %s</string>
     <string name="about">Informazioni</string>
-    <string name="passwords_mismatch">Le password non corrispondono</string>
-    <string name="repeat_password">Ripeti la password</string>
-    <string name="protect_application">Proteggi l\'applicazione</string>
     <string name="wrong_password">Password sbagliata</string>
     <string name="enter_password">Inserisci la password</string>
     <string name="track_sources">Controlla gli aggiornamenti per il manga</string>
@@ -140,9 +135,6 @@
     <string name="search_on_s">Ricerca su %s</string>
     <string name="grid_size">Dimensione della griglia</string>
     <string name="read_mode">Modalità lettura</string>
-    <string name="webtoon">Webtoon</string>
-    <string name="standard">Standard</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="clear_pages_cache">Cancella la cache delle pagine</string>
     <string name="remove">Rimuovi</string>
     <string name="clear">Cancella</string>
@@ -164,7 +156,6 @@
     <string name="scale_mode">Modalità scala</string>
     <string name="chapter_is_missing">Capitolo mancante</string>
     <string name="queued">In coda</string>
-    <string name="about_app_translation_summary">Traduci questa applicazione</string>
     <string name="genres">Generi</string>
     <string name="text_clear_cookies_prompt">Sarai disconnesso/a da tutte le fonti in cui sei autorizzato/a</string>
     <string name="auth_not_supported_by">L\'autorizzazione su %s non è supportata</string>
@@ -191,7 +182,6 @@
     <string name="only_using_wifi">Solo usando il Wi-Fi</string>
     <string name="always">Sempre</string>
     <string name="logged_in_as">Registrato come %s</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Varie lingue</string>
     <string name="search_chapters">Trova un capitolo</string>
     <string name="chapters_empty">Nessun capitolo in questo manga</string>
@@ -230,7 +220,6 @@
     <string name="disable_battery_optimization_summary">Contribuisce ai controlli di aggiornamento in sfondo</string>
     <string name="crash_text">Qualcosa è andato storto. Si prega di inviare una segnalazione di bug agli sviluppatori per aiutarci a risolvere il problema.</string>
     <string name="disable_all">Disabilita tutto</string>
-    <string name="use_fingerprint">Usa le impronte digitali se disponibili</string>
     <string name="report">Segnala</string>
     <string name="tracking">Monitoraggio</string>
     <string name="status_reading">Lettura</string>
@@ -243,7 +232,6 @@
     <string name="status_planned">Pianificato</string>
     <string name="status_completed">Finito</string>
     <string name="status_dropped">Caduto</string>
-    <string name="invalid_domain_message">Dominio non valido</string>
     <string name="select_range">Seleziona l\'intervallo</string>
     <string name="not_found_404">Contenuto non trovato o rimosso</string>
     <string name="compact">Compatto</string>
@@ -307,14 +295,7 @@
     <string name="scrobbling_empty_hint">Per tenere traccia dell\'avanzamento della lettura, seleziona Menu → Traccia nella schermata dei dettagli del manga.</string>
     <string name="nothing_here">Non c\'è niente qui</string>
     <string name="services">Servizi</string>
-    <string name="theme_name_mamimi">Mamimi</string>
-    <string name="theme_name_kanade">Kanade</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_miku">Miku</string>
     <string name="download_started">Download iniziato</string>
-    <string name="theme_name_sakura">Sakura</string>
     <string name="zoom_in">Ingrandire</string>
     <string name="captcha_required_summary">%s richiede il completamento di un captcha per funzionare correttamente</string>
     <string name="sources_catalog">Catalogo fonti</string>
@@ -329,16 +310,13 @@
     <string name="related_manga_summary">Mostra una lista di manga correlati. In alcuni casi potrebbe essere imprecisa o mancante</string>
     <string name="remove_completed_downloads_confirm">La tua cronologia dei download sarà permanentemente cancellata. I file scaricati non saranno cancellati</string>
     <string name="reader_zoom_buttons_summary">Se mostrare o no i tasti di controllo dello zoom in basso a destra</string>
-    <string name="content_type_manga">Manga</string>
     <string name="tracker_wifi_only_summary">Non controllare nuovi capitoli mentre è in uso una connessione a consumo</string>
     <string name="error_multiple_states_not_supported">Questa fonte di manga non supporta il filtraggio per multipli stati</string>
     <string name="order_added">Aggiunto</string>
     <string name="on_device">Su dispositivo</string>
-    <string name="password">Password</string>
     <string name="download_option_whole_manga">L\'intero manga</string>
     <string name="settings_apply_restart_required">Riavvia l\'applicazione per applicare queste modifiche</string>
     <string name="backup_frequency">Frequenza creazione backup</string>
-    <string name="content_type_hentai">Hentai</string>
     <string name="user_agent">Header UserAgent</string>
     <string name="error_filter_states_genre_not_supported">Questa fonte non supporta il filtraggio per sia genere che stato</string>
     <string name="ignore_ssl_errors">Ignora errori SSL</string>
@@ -417,7 +395,6 @@
     <string name="folder_with_images_import_description">Puoi selezionare una cartella contenente archivi o immagini. Ogni archivio (o sottocartella) sarà riconosciuto come singolo capitolo.</string>
     <string name="background">Sfondo</string>
     <string name="disable_nsfw_summary">Disabilita fonti per adulti e nascondi manga per adulti dalla lista se possibile</string>
-    <string name="speed_value">x%.1f</string>
     <string name="downloads_removed">I download sono stati rimossi</string>
     <string name="no_access_to_file">Non hai accesso a questo file o cartella</string>
     <string name="restore_summary">Ripristina backup creato in precedenza</string>
@@ -446,8 +423,6 @@
     <string name="suggestion_manga">Consigliato: %s</string>
     <string name="color_black">Nero</string>
     <string name="this_month">Questo mese</string>
-    <string name="proxy">Proxy</string>
-    <string name="got_it">Ho capito</string>
     <string name="comics_archive_import_description">Puoi selezionare uno o più file .cbz o .zip, ogni file sarà riconosciuto come un manga a parte.</string>
     <string name="show_on_shelf">Mostra sullo Scaffale</string>
     <string name="state_upcoming">Prossime</string>
@@ -463,7 +438,6 @@
 \n
 \nAttenzione: l\'attuale avanzamento della lettura sarà perso.</string>
     <string name="volume_unknown">Volume sconosciuto</string>
-    <string name="volume_">Volume %d</string>
     <string name="category_hidden_done">Questa categoria è stata nascosta dalla schermata principale ed è accessibile tramite Menù → Gestisci categorie</string>
     <string name="remaining_time_pattern">%1$s %2$s</string>
     <string name="last_used">Ultimo utilizzo</string>
@@ -490,7 +464,6 @@
     <string name="long_ago_read">Letto molto tempo fa</string>
     <string name="unsupported_source">Questa fonte manga non è supportata</string>
     <string name="hours_short">%d ore</string>
-    <string name="minutes_short">%d m</string>
     <string name="toggle_ui">Mostra/nascondi UI</string>
     <string name="next_chapter">Prossimo capitolo</string>
     <string name="prev_page">Pagina precedente</string>
@@ -505,7 +478,6 @@
     <string name="show_pages_thumbs">Mostra le anteprime delle pagine</string>
     <string name="show_pages_thumbs_summary">Abilita la tab \"Pagine\" nella schermata di dettaglio</string>
     <string name="unsupported_backup_message">Si prega di selezione un file backup di DropSauce corretto</string>
-    <string name="hours_minutes_short">%1$d h %2$d m</string>
     <string name="fix">Aggiustamenti</string>
     <string name="missing_storage_permission">Non sono presenti i permessi per accedere al manga nella memoria esterna</string>
     <string name="webtoon_gaps">Gap in modalità webtoon</string>
@@ -517,7 +489,6 @@
     <string name="more_frequently">Più frequente</string>
     <string name="frequency_of_check">Frequenza di controllo</string>
     <string name="new_chapters_pattern">%1$s: %2$d</string>
-    <string name="_new">Nuovi</string>
     <string name="automatic">Automatico</string>
     <string name="all_languages">Tutte le lingue</string>
     <string name="delete_read_chapters">Cancella capitoli letti</string>
@@ -537,7 +508,6 @@
     <string name="statistics">Statistiche</string>
     <string name="migrate">Migrare</string>
     <string name="alternatives">Alternative</string>
-    <string name="image_server">Server delle immagini preferito</string>
     <string name="pin">Fissa</string>
     <string name="sources_pinned">Fonti fissate</string>
     <string name="source_pinned">Fonte fissta</string>
@@ -595,17 +565,13 @@
     <string name="retry">Riprovare</string>
     <string name="original_language">Lingua originale</string>
     <string name="year">Anno</string>
-    <string name="seconds_short">%d s</string>
     <string name="added_long_ago">Aggiunto da molto tempo</string>
     <string name="years">Anni</string>
     <string name="any">Qualsiasi</string>
     <string name="filter_search_warning">Questa sorgente non supporta la ricerca con filtri. I tuoi filtri sono stati azzerati</string>
     <string name="ask_every_time">Chiedi ogni volta</string>
     <string name="pages_saved">Pagine salvate correttamente</string>
-    <string name="minutes_seconds_short">%1$d m %2$d s</string>
     <string name="content_type_novel">Romanzo</string>
-    <string name="content_type_manhua">Manhua</string>
-    <string name="content_type_manhwa">Manhwa</string>
     <string name="recently_added">Aggiunto recentemente</string>
     <string name="popular_in_hour">Popolare in questo momento</string>
     <string name="content_type_image_set">Collezione immagini</string>
@@ -614,12 +580,9 @@
     <string name="popular_in_week">Popolare questa settimana</string>
     <string name="popular_in_year">Popolare quest\'anno</string>
     <string name="demographics">Demografici</string>
-    <string name="demographic_shounen">Shounen</string>
     <string name="manga_replaced">Manga \"%1$s\" (%2$s) rimpiazzato con \"%3$s\" (%4$s)</string>
     <string name="popular_in_month">Popolare questo mese</string>
     <string name="popular_today">Popolare oggi</string>
-    <string name="demographic_shoujo">Shoujo</string>
-    <string name="demographic_seinen">Seinen</string>
     <string name="source_code">Codice sorgente</string>
     <string name="start_download">Inizia download</string>
     <string name="user_manual">Manuale utente</string>
@@ -649,20 +612,13 @@
     <string name="no_fix_required">Nessuna correzione per \"%s\"</string>
     <string name="no_alternatives_found">Nessuna alternativa trovata per \"%s\"</string>
     <string name="chapter_selection_hint">Puoi selezionare i capitoli da scaricare tramite un click prolungato nell\'elemento nella lista dei capitoli.</string>
-    <string name="demographic_kodomo">Kodomo</string>
-    <string name="content_type_one_shot">One shot</string>
-    <string name="content_type_doujinshi">Doujinshi</string>
-    <string name="demographic_josei">Josei</string>
     <string name="content_type_artist_cg">CG Artist</string>
     <string name="content_type_game_cg">CG Game</string>
-    <string name="debug">Debug</string>
     <string name="delete_old_backups">Elimina i vecchi backup</string>
     <string name="delete_old_backups_summary">Elimina automaticamente i vecchi backup per liberare spazio nella memoria</string>
     <string name="error_connection_reset">Ripristino della connessione da parte dell\'host remoto</string>
-    <string name="incognito">Incognito</string>
     <string name="handle_links">Gestione link</string>
     <string name="handle_links_summary">Gestisci i link ai manga da applicazioni esterne (ad esempio, dal browser web). Potrebbe essere necessario abilitarlo manualmente nelle impostazioni di sistema dell\'applicazione</string>
-    <string name="email">Email</string>
     <string name="clear_database">Pulisci database</string>
     <string name="clear_database_summary">Elimina le informazioni sui manga che non vengono utilizzate</string>
     <string name="test_connection">Connessione test</string>
@@ -708,7 +664,6 @@
     <string name="additional_action_required">È necessaria un\'azione aggiuntiva</string>
     <string name="theme_name_expressive">Espressivo (Test)</string>
     <string name="hide_from_main_screen">Nascondi dalla schermata principale</string>
-    <string name="changelog">Changelog</string>
     <string name="changelog_summary">Cronologia delle modifiche delle versioni rilasciate di recente</string>
     <string name="collapse">Comprimi</string>
     <string name="adblock_summary">Blocca pubblicità nel browser incorporato (beta)</string>
@@ -722,13 +677,10 @@
     <string name="reader_multitask_summary">Ti consente di tenere aperti più lettori con manga diversi contemporaneamente</string>
     <string name="book_effect">Sfondo giallastro (filtro blu)</string>
     <string name="local_storage_cleanup">Pulizia dell\'archiviazione locale</string>
-    <string name="theme_name_itsuka">Itsuka</string>
-    <string name="theme_name_totoro">Totoro</string>
     <string name="main_screen">Schermata principale</string>
     <string name="main_screen_fab">Mostra il pulsante fluttuante Continua</string>
     <string name="main_screen_fab_summary">Permette di continuare la lettura con un solo tocco. Questo pulsante non apparirà in modalità in incognito o quando la cronologia è vuota</string>
     <string name="error_corrupted_zip">Archivio ZIP danneggato (%s)</string>
-    <string name="discord_rpc">Discord Rich Presence</string>
     <string name="discord_token">Token Discord</string>
     <string name="discord_rpc_summary">Mostra il tuo stato di lettura su Discord</string>
     <string name="discord_rpc_description">Leggendo manga su DropSauce - un’app per leggere manga</string>
@@ -751,15 +703,11 @@
     <string name="enable_pull_gesture_title">Abilita gesto di scorrimento</string>
     <string name="enable_pull_gesture_summary">Abilita gesto di scorrimento per cambiare capitolo in webtoon</string>
     <string name="two_page_scroll_sensitivity">Sensibilità di scorrimento a due pagine</string>
-    <string name="saved_filters">Filtri salvati</string>
     <string name="enter_name">Inserisci nome</string>
     <string name="reader_chapter_toast">Mostra popup di cambio capitolo</string>
     <string name="reader_chapter_toast_summary">Mostra un messaggio pop-up con un titolo del capitolo quando è cambiato</string>
-    <string name="rename">Rinomina</string>
     <string name="storage_and_network">Memoria e rete</string>
     <string name="data_removal">Rimozione dei dati</string>
-    <string name="privacy">Privacy</string>
-    <string name="source_broken_warning">Questa fonte manga è stata contrassegnata come non funzionante. Alcune funzioni potrebbero non essere disponibili</string>
     <string name="frequency_every_6_hours">Ogni 6 ore</string>
     <string name="download_default_directory">Cartella predefinita per scaricare manga</string>
     <string name="private_app_directory_warning">Questa cartella e tutti i suoi dati verranno eliminati se disinstalli l\'applicazione</string>

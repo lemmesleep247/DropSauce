@@ -1,6 +1,5 @@
 package org.koitharu.kotatsu.details.ui
 
-import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

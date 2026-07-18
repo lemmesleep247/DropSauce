@@ -53,12 +53,10 @@
     <string name="no_bookmarks_summary">您可以在閱讀漫畫時建立書籤</string>
     <string name="show_notification_new_chapters_on">您將會收到您正在閱讀的漫畫的更新通知</string>
     <string name="tracker_warning">一些裝置有不同的系統行為，這可能會破壞背景任務。</string>
-    <string name="protect_application_subtitle">輸入密碼以啟動應用程式</string>
     <string name="chapters_empty">此漫畫沒有章節</string>
     <string name="text_feed_holder">您想要閱讀的漫畫的新的章節會顯示在此</string>
     <string name="history_shortcuts_summary">通過長案應用程式圖示來提供最近的漫畫</string>
     <string name="app_update_available">已有可用的新版本應用程式</string>
-    <string name="password_length_hint">密碼必須是 4 個字元以上</string>
     <string name="auth_not_supported_by">不支援在 %s 上登錄</string>
     <string name="exit_confirmation_summary">點擊兩次返回鍵以退出應用程式</string>
     <string name="text_delete_local_manga">從裝置中永久刪除 \"%s\"?</string>
@@ -108,9 +106,6 @@
     <string name="track_sources">尋找更新</string>
     <string name="enter_password">輸入密碼</string>
     <string name="wrong_password">密碼錯誤</string>
-    <string name="protect_application">保護應用程式</string>
-    <string name="repeat_password">重複密碼</string>
-    <string name="passwords_mismatch">密碼不匹配</string>
     <string name="about">關於</string>
     <string name="app_version">版本 %s</string>
     <string name="check_for_updates">檢查更新</string>
@@ -134,7 +129,6 @@
     <string name="sign_in">登錄</string>
     <string name="next">下一頁</string>
     <string name="confirm">確認</string>
-    <string name="about_app_translation_summary">翻譯此應用程式</string>
     <string name="screenshots_policy">螢幕擷圖</string>
     <string name="screenshots_allow">允許</string>
     <string name="screenshots_block_nsfw">禁止 NSFW</string>
@@ -145,7 +139,6 @@
     <string name="always">總是</string>
     <string name="preload_pages">預載頁面</string>
     <string name="logged_in_as">以 %s 登入</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">各種語言</string>
     <string name="search_chapters">尋找章節</string>
     <string name="percent_string_pattern">%1$s%%</string>
@@ -162,14 +155,11 @@
     <string name="logout">登出</string>
     <string name="bookmark_remove">移除書籤</string>
     <string name="bookmarks">書籤</string>
-    <string name="use_fingerprint">若可用，請使用生物辨識</string>
     <string name="manage">管理</string>
     <string name="clear_new_chapters_counters">也清除關於新章節的資訊</string>
     <string name="compact">緊湊</string>
     <string name="prefetch_content">內容預先載入</string>
     <string name="mark_as_current">標記目前</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="got_it">知道了</string>
     <string name="settings_apply_restart_required">請重新啟動此應用程式以應用這些變更</string>
     <string name="speed">速度</string>
     <string name="show_on_shelf">在書架上顯示</string>
@@ -183,7 +173,6 @@
     <string name="cancel_all">取消全部</string>
     <string name="suggestion_manga">推薦: %s</string>
     <string name="enable">啟用</string>
-    <string name="proxy">Proxy</string>
     <string name="invalid_value_message">無效的值</string>
     <string name="downloaded">已下載</string>
     <string name="images_proxy_title">圖片最佳化代理</string>
@@ -201,9 +190,7 @@
     <string name="pages">頁數</string>
     <string name="_import">匯入</string>
     <string name="no_description">沒有描述</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">標準</string>
-    <string name="webtoon">Webtoon</string>
     <string name="search_on_s">在 %s 上搜尋</string>
     <string name="delete_manga">刪除漫畫</string>
     <string name="switch_pages">切換頁面</string>
@@ -260,9 +247,6 @@
     <string name="webtoon_zoom">Webtoon 縮放</string>
     <string name="network_unavailable">網路不可用</string>
     <string name="server_error">伺服器端錯誤 (%1$d)。請稍後重試</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_mamimi">Mamimi</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="suggestions_notifications_summary">偶爾顯示推薦漫畫通知</string>
     <string name="more">更多</string>
     <string name="downloads_removed">下載已被移除</string>
@@ -311,7 +295,6 @@
     <string name="disable_all">全部禁用</string>
     <string name="report">報告</string>
     <string name="show_all">選是全部</string>
-    <string name="invalid_domain_message">無效的網域</string>
     <string name="select_range">選擇範圍</string>
     <string name="clear_all_history">清除所有歷史紀錄</string>
     <string name="available">可用</string>
@@ -330,9 +313,6 @@
     <string name="local_manga_directories">本機漫畫目錄</string>
     <string name="authorization_optional">授權 (可選)</string>
     <string name="color_theme">顏色方案</string>
-    <string name="theme_name_miku">Miku</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
     <string name="pause">暫停</string>
     <string name="downloads_wifi_only">只通過 Wi-Fi 下載</string>
     <string name="by_name">名稱</string>
@@ -345,7 +325,6 @@
     <string name="state_ongoing">連載中</string>
     <string name="local_manga_processing">儲存的漫畫處裡</string>
     <string name="canceled">已取消</string>
-    <string name="dns_over_https">DNS over HTTPS</string>
     <string name="show_in_grid_view">在網格檢視中顯示</string>
     <string name="nothing_here">這裡沒有任何東西</string>
     <string name="no_thanks">不，謝謝</string>
@@ -362,7 +341,6 @@
     <string name="services">服務</string>
     <string name="enabled_d_of_d" tools:ignore="PluralsCandidate">%2$d 之 %1$d 啟用</string>
     <string name="user_agent">UserAgent 標頭</string>
-    <string name="reader_info_pattern">Ch. %1$d/%2$d Pg. %3$d/%4$d</string>
     <string name="download_option_all_chapters">所有 %s 翻譯的章節</string>
     <string name="download_option_next_unread_n_chapters">下一個未讀 %s</string>
     <string name="download_option_first_n_chapters">最初 %s</string>
@@ -449,7 +427,6 @@
     <string name="category_hidden_done">主屏上看不到此分類，可通過選單 → 管理分類來訪問</string>
     <string name="state_abandoned">拖入</string>
     <string name="disable_nsfw_summary">禁用NSFW圖源並儘可能從列表中隱藏成人漫畫</string>
-    <string name="speed_value">x%.1f</string>
     <string name="last_read">最後閱讀</string>
     <string name="content_type_hentai">紳士漫畫</string>
     <string name="grayscale">灰階</string>
@@ -567,7 +544,6 @@
     <string name="too_many_requests_message_retry">請求過多。請在 %s 之後再試</string>
     <string name="minutes_seconds_short">%1$d 分 %2$d 秒</string>
     <string name="disable_nsfw_notifications">停用 NSFW 通知</string>
-    <string name="_new">新</string>
     <string name="manga_replaced">漫畫「%1$s」（%2$s）已被「%3$s」（%4$s）取代</string>
     <string name="seconds_short">%d 秒</string>
     <string name="disable_connectivity_check">停用連線檢查</string>

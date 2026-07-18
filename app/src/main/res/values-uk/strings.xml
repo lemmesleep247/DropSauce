@@ -100,9 +100,6 @@
     <string name="update">Оновити</string>
     <string name="track_sources">Стежити за оновленнями</string>
     <string name="wrong_password">Неправильний пароль</string>
-    <string name="protect_application">Захистити застосунок</string>
-    <string name="repeat_password">Повторіть пароль</string>
-    <string name="passwords_mismatch">Паролі не співпадають</string>
     <string name="about">Про застосунок</string>
     <string name="app_version">Версія %s</string>
     <string name="check_for_updates">Перевірити наявність оновлень</string>
@@ -131,13 +128,10 @@
     <string name="sign_in">Увійти</string>
     <string name="auth_required">Увійдіть, щоб переглянути цей вміст</string>
     <string name="next">Далі</string>
-    <string name="protect_application_subtitle">Введіть пароль для запуску застосунку</string>
     <string name="confirm">Підтвердити</string>
-    <string name="password_length_hint">Пароль має містити 4 символи або більше</string>
     <string name="welcome">Ласкаво просимо</string>
     <string name="backup_saved">Резервна копія збережена</string>
     <string name="queued">У черзі</string>
-    <string name="about_app_translation_summary">Допомогти з перекладом застосунку</string>
     <string name="auth_not_supported_by">Вхід на %s не підтримується</string>
     <string name="text_clear_cookies_prompt">Ви вийдете з усіх джерел</string>
     <string name="state_finished">Завершена</string>
@@ -154,7 +148,6 @@
     <string name="only_using_wifi">Тільки по Wi-Fi</string>
     <string name="preload_pages">Попереднє завантаження сторінок</string>
     <string name="logged_in_as">Ви увійшли як %s</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Різні мови</string>
     <string name="search_chapters">Знайти розділ</string>
     <string name="chapters_empty">Немає розділів у цій манзі</string>
@@ -230,8 +223,6 @@
     <string name="disable_battery_optimization_summary">Допомагає з перевірками фонових оновлень</string>
     <string name="crash_text">Щось пішло не так. Будь ласка, надішліть звіт про помилку розробникам, щоб допомогти нам її виправити.</string>
     <string name="disable_all">Вимкнути все</string>
-    <string name="use_fingerprint">Використовувати біометричні дані, якщо вони доступні</string>
-    <string name="invalid_domain_message">Недійсний домен</string>
     <string name="report">Звіт</string>
     <string name="tracking">Відстеження</string>
     <string name="logout">Вийти</string>
@@ -317,7 +308,6 @@
     <string name="download_started">Завантаження розпочато</string>
     <string name="user_agent">Заголовок UserAgent</string>
     <string name="settings_apply_restart_required">Перезапустіть програму, щоб застосувати зміни</string>
-    <string name="got_it">Зрозумів</string>
     <string name="comics_archive_import_description">Ви можете вибрати один або кілька файлів .cbz або .zip, кожен файл буде розпізнано як окрема манґа.</string>
     <string name="folder_with_images_import_description">Ви можете вибрати каталог з архівами або зображеннями. Кожен архів (або підкаталог) буде розпізнано як розділ.</string>
     <string name="speed">Швидкість</string>
@@ -421,7 +411,6 @@
     <string name="frequency_once_per_month">Раз на місяць</string>
     <string name="last_successful_backup">Останнє успішне резервне копіювання: %s</string>
     <string name="backups_output_directory">Вихідний каталог резервних копій</string>
-    <string name="speed_value">x%.1f</string>
     <string name="lock_screen_rotation">Блокування повороту екрану</string>
     <string name="sources_catalog">Каталог джерел</string>
     <string name="content_type_manga">Манґа</string>
@@ -564,10 +553,8 @@
     <string name="tracker_debug_info_summary">Відлагоджувальна інформація про фонову перевірку наявності нових розділів</string>
     <string name="disable_nsfw_notifications_summary">Не відображати повідомлення про оновлення манґи NSFW</string>
     <string name="disable">Вимкнути</string>
-    <string name="_new">Нове</string>
     <string name="all_languages">Всі мови</string>
     <string name="screenshots_block_incognito">Блокувати в режимі інкогніто</string>
-    <string name="image_server">Сервер зображень</string>
     <string name="unpin">Відкріпити</string>
     <string name="source_pinned">Джерело закріплено</string>
     <string name="sources_pinned">Джерела закріплені</string>
@@ -592,7 +579,6 @@
     <string name="plugin_incompatible_with_cause">Помилка плагіна: %s\nПереконайтеся, що ви використовуєте останню версію плагіна та DropSauce</string>
     <string name="show_quick_filters">Показати швидкі фільтри</string>
     <string name="show_quick_filters_summary">Надає можливість фільтрувати списки манги за певними параметрами</string>
-    <string name="sfw">SFW</string>
     <string name="skip_all">Пропустити все</string>
     <string name="stuck">Зависло</string>
     <string name="not_in_favorites">Немає в обраних</string>
@@ -751,15 +737,12 @@
     <string name="enable_pull_gesture_title">Увімкнути жест потягування</string>
     <string name="enable_pull_gesture_summary">Використовуйте жест потягування для перемикання розділів у вебтуні</string>
     <string name="two_page_scroll_sensitivity">Чутливість прокручування на дві сторінки</string>
-    <string name="saved_filters">Збережені фільтри</string>
     <string name="enter_name">Введіть ім\'я</string>
     <string name="reader_chapter_toast">Показати спливаюче вікно зміни розділу</string>
     <string name="reader_chapter_toast_summary">Показувати спливаюче повідомлення з назвою розділу, коли її змінено</string>
-    <string name="rename">Перейменувати</string>
     <string name="storage_and_network">Зберігання та мережа</string>
     <string name="data_removal">Вилучення даних</string>
     <string name="privacy">Конфіденційність</string>
-    <string name="source_broken_warning">Це джерело манги позначено як непрацююче. Деякі функції можуть не працювати</string>
     <string name="frequency_every_6_hours">Кожні 6 годин</string>
     <string name="download_default_directory">Каталог за замовчуванням для завантаження манги</string>
     <string name="private_app_directory_warning">Цей каталог з усіма даними буде видалено, якщо ви видалите програму</string>

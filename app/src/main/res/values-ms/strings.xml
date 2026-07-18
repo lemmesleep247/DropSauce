@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="enter_password">Masukkan kata laluan</string>
-    <string name="repeat_password">Ulang kata laluan</string>
     <string name="zoom_mode_fit_center">Muat di tengah</string>
     <string name="create_category">Kategori baharu</string>
     <string name="scale_mode">Mod skala</string>
@@ -13,7 +12,6 @@
     <string name="chapters">Bab</string>
     <string name="list">Senarai</string>
     <string name="detailed_list">Senarai terperinci</string>
-    <string name="grid">Grid</string>
     <string name="list_mode">Mod senarai</string>
     <string name="settings">Tetapan</string>
     <string name="remote_sources">Sumber Manga</string>
@@ -50,12 +48,9 @@
     <string name="remove">Buang</string>
     <string name="save_page">Simpan muka surat</string>
     <string name="share_image">Kongsi imej</string>
-    <string name="_import">Import</string>
     <string name="text_file_not_supported">Pilih antara fail ZIP atau CBZ.</string>
     <string name="no_description">Tiada huraian</string>
     <string name="clear_pages_cache">Kosongkan cache muka surat</string>
-    <string name="standard">Standard</string>
-    <string name="webtoon">Webtoon</string>
     <string name="_continue">Sambung</string>
     <string name="error">Ralat</string>
     <string name="clear_search_history">Kosongkan sejarah carian</string>
@@ -80,8 +75,6 @@
     <string name="read_later">Baca kemudian</string>
     <string name="search_results">Hasil carian</string>
     <string name="track_sources">Cari kemas kini</string>
-    <string name="protect_application">Lindung apl</string>
-    <string name="passwords_mismatch">Kata laluan tidak padan</string>
     <string name="about">Tentang</string>
     <string name="app_version">Versi %s</string>
     <string name="check_for_updates">Semak kemas kini</string>
@@ -115,9 +108,7 @@
     <string name="sign_in">Log masuk</string>
     <string name="auth_required">Log masuk untuk melihat kandungan ini</string>
     <string name="next">Seterusnya</string>
-    <string name="protect_application_subtitle">Masukkan kata laluan untuk memulakan apl dengan</string>
     <string name="confirm">Sah</string>
-    <string name="password_length_hint">Kata laluan mesti mempunyai 4 aksara atau lebih</string>
     <string name="welcome">Selamat Datang</string>
     <string name="auth_not_supported_by">Log masuk pada %s tidak disokong</string>
     <string name="text_clear_cookies_prompt">Anda akan dilog keluar daripada semua sumber</string>
@@ -142,7 +133,6 @@
     <string name="always">Sentiasa</string>
     <string name="preload_pages">Pramuat muka surat</string>
     <string name="logged_in_as">Dilog masuk sebagai %s</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Pelbagai bahasa</string>
     <string name="search_chapters">Cari bab</string>
     <string name="chapters_empty">Tiada bab dalam manga ini</string>
@@ -181,11 +171,9 @@
     <string name="status_on_hold">Dijeda</string>
     <string name="status_dropped">Dihentikan</string>
     <string name="disable_all">Lumpuhkan semua</string>
-    <string name="use_fingerprint">Guna cap jari sekiranya tersedia</string>
     <string name="report">Lapor</string>
     <string name="show_reading_indicators">Tunjukkan penunjuk kemajuan pembacaan</string>
     <string name="show_all">Tunjuk semua</string>
-    <string name="invalid_domain_message">Domain tidak sah</string>
     <string name="select_range">Pilih julat</string>
     <string name="clear_all_history">Kosongkan semua sejarah</string>
     <string name="last_2_hours">2 jam lepas</string>
@@ -215,7 +203,6 @@
     <string name="queued">Dibariskan</string>
     <string name="chapter_is_missing">Bab ini hilang</string>
     <string name="backup_saved">Sandaran disimpan</string>
-    <string name="about_app_translation_summary">Terjemahkan apl ini</string>
     <string name="error_occurred">Sebuah ralat telah berlaku</string>
     <string name="share_s">Kongsi %s</string>
     <string name="nothing_found">Tiada dijumpai</string>
@@ -277,7 +264,6 @@
     <string name="automatic">Automatik</string>
     <string name="retry">Mencoba kembali</string>
     <string name="pages_saved">Halaman disimpan</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="text_empty_holder_secondary_filtered">Tidak ada manga yang cocok dengan filter yang Anda pilih</string>
     <string name="chapters_grid_view">Tampilan kisi</string>
     <string name="download_slowdown">Unduhan melambat</string>
@@ -316,12 +302,10 @@
     <string name="theme_name_expressive">Ekspresif (ujian)</string>
     <string name="color_theme">Skema warna</string>
     <string name="show_in_grid_view">Tunjukkan dalam paparan grid</string>
-    <string name="theme_name_miku">Miku</string>
     <string name="nothing_here">Tidak ada apa -apa di sini</string>
     <string name="scrobbling_empty_hint">Untuk Melacak Progres Membaca, Pilih Menu → LaCak Di Layar Butiran Manga.</string>
     <string name="services">Perkhidmatan</string>
     <string name="download_started">Muat turun bermula</string>
-    <string name="got_it">Mendapatnya</string>
     <string name="user_agent">Pengepala useragent</string>
     <string name="settings_apply_restart_required">Sila mulakan semula permohonan untuk menerapkan perubahan ini</string>
     <string name="comics_archive_import_description">Anda boleh memilih satu atau lebih fail .cbz atau .zip, setiap fail akan diiktiraf sebagai manga yang berasingan.</string>
@@ -368,12 +352,6 @@
     <string name="pull_to_prev_chapter">Siaran untuk membuka bab sebelumnya</string>
     <string name="pull_to_next_chapter">Siaran untuk membuka bab seterusnya</string>
     <string name="pull_top_no_prev">Tiada bab sebelumnya</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="theme_name_mamimi">Mamimi</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="pull_bottom_no_next">Tiada bab seterusnya</string>
     <string name="reader_info_bar_summary">Tunjukkan masa sekarang dan kemajuan membaca di bahagian atas skrin</string>
     <string name="show_pages_numbers_summary">Tunjukkan nombor halaman di sudut bawah</string>
@@ -434,15 +412,12 @@
     <string name="periodic_backups_enable">Dayakan sandaran berkala</string>
     <string name="backups_output_directory">Direktori Output Backup</string>
     <string name="last_successful_backup">Sandaran terakhir yang berjaya: %s</string>
-    <string name="speed_value">x%.1f</string>
     <string name="lock_screen_rotation">Putaran skrin kunci</string>
-    <string name="content_type_manga">Manga</string>
     <string name="content_type_comics">Komik</string>
     <string name="content_type_hentai">matang</string>
     <string name="content_type_other">Yang lain</string>
     <string name="sources_catalog">Sumber Katalog</string>
     <string name="no_manga_sources_found">Tiada sumber manga yang ada yang dijumpai oleh pertanyaan anda</string>
-    <string name="manual">Manual</string>
     <string name="disable_nsfw_summary">Lumpuhkan sumber NSFW dan sembunyikan manga dewasa dari senarai jika boleh</string>
     <string name="state_paused">Jeda</string>
     <string name="reader_optimize">Kurangkan Penggunaan Memori (Beta)</string>
@@ -546,8 +521,6 @@
     <string name="error_no_data_received">Tiada data diterima dari pelayan</string>
     <string name="unsupported_backup_message">Sila pilih fail sandaran DropSauce yang betul</string>
     <string name="hours_short">%d j</string>
-    <string name="minutes_short">%d m</string>
-    <string name="seconds_short">%d s</string>
     <string name="hours_minutes_short">%1$d j %2$d m</string>
     <string name="minutes_seconds_short">%1$d m %2$d d</string>
     <string name="fix">Betulkan</string>
@@ -575,26 +548,21 @@
     <string name="disable_nsfw_notifications_summary">Jangan tunjukkan pemberitahuan mengenai kemas kini manga NSFW</string>
     <string name="tracker_debug_info">Memeriksa log bab baru</string>
     <string name="tracker_debug_info_summary">Maklumat debug mengenai pemeriksaan latar untuk bab baru</string>
-    <string name="_new">Baru</string>
     <string name="all_languages">Semua bahasa</string>
     <string name="screenshots_block_incognito">Blok semasa mod penyamaran</string>
-    <string name="image_server">Pelayan Imej Pilihan</string>
     <string name="crop_pages">Halaman tanaman</string>
-    <string name="pin">Pin</string>
     <string name="unpin">Batalkan PIN</string>
     <string name="source_pinned">Sumber disematkan</string>
     <string name="source_unpinned">Sumber yang tidak diingini</string>
     <string name="sources_unpinned">Sumber yang tidak diingini</string>
     <string name="sources_pinned">Sumber disematkan</string>
     <string name="recent_sources">Sumber terkini</string>
-    <string name="external_source">External/plugin</string>
     <string name="plugin_incompatible">Plugin yang tidak serasi atau ralat dalaman. Pastikan anda menggunakan versi terkini plugin dan kotatsu</string>
     <string name="plugin_incompatible_with_cause">Ralat Plugin: %s\n Pastikan anda menggunakan versi terkini plugin dan kotatsu</string>
     <string name="connection_ok">Sambungan ok</string>
     <string name="invalid_proxy_configuration">Konfigurasi proksi tidak sah</string>
     <string name="show_quick_filters">Tunjukkan penapis cepat</string>
     <string name="show_quick_filters_summary">Memberi keupayaan untuk menapis senarai manga oleh parameter tertentu</string>
-    <string name="sfw">SFW</string>
     <string name="skip_all">Langkau semua</string>
     <string name="stuck">Terjebak</string>
     <string name="not_in_favorites">Tidak sesuai</string>
@@ -611,7 +579,6 @@
     <string name="no_fix_required">Tiada pembetulan diperlukan untuk \"%s\"</string>
     <string name="no_alternatives_found">Tiada alternatif yang dijumpai \"%s\"</string>
     <string name="manga_fix_prompt">Fungsi ini akan menemui sumber alternatif untuk manga yang dipilih. Tugas akan mengambil sedikit masa dan akan diteruskan di latar belakang</string>
-    <string name="content_type_novel">Novel</string>
     <string name="content_type_manhua">Komik Mandarin (manhua)</string>
     <string name="content_type_manhwa">Komik Korea (Manhwa)</string>
     <string name="recently_added">Baru-baru ini ditambah</string>
@@ -624,10 +591,6 @@
     <string name="original_language">Bahasa asal</string>
     <string name="year">Tahun</string>
     <string name="demographics">Demografi</string>
-    <string name="demographic_shounen">Shounen</string>
-    <string name="demographic_shoujo">Shoujo</string>
-    <string name="demographic_seinen">Seinen</string>
-    <string name="demographic_josei">Josei</string>
     <string name="years">Tahun</string>
     <string name="any">Mana-mana</string>
     <string name="filter_search_warning">Sumber ini tidak menyokong carian dengan penapis. Penapis anda telah dibersihkan</string>
@@ -635,7 +598,6 @@
     <string name="content_type_one_shot">Satu pukulan</string>
     <string name="content_type_doujinshi">Komik independen</string>
     <string name="content_type_image_set">Set imej</string>
-    <string name="content_type_artist_cg">Artist CG</string>
     <string name="content_type_game_cg">Permainan CG</string>
     <string name="debug">Awakutu</string>
     <string name="source_code">Kod sumber</string>
@@ -644,7 +606,6 @@
     <string name="error_not_image">Format tidak sah: Imej yang diharapkan tetapi mendapat %s</string>
     <string name="start_download">Mula muat turun</string>
     <string name="save_manga">Simpan manga</string>
-    <string name="genre">Genre</string>
     <string name="download_added">Muat turun ditambah</string>
     <string name="more_options">Lebih banyak pilihan</string>
     <string name="destination_directory">Direktori Destinasi</string>
@@ -722,8 +683,6 @@
     <string name="creating_backup">Membuat sandaran</string>
     <string name="reader_multitask">Buka pembaca dalam tugas yang berasingan</string>
     <string name="reader_multitask_summary">Membolehkan anda menyimpan beberapa pembaca dengan manga yang berbeza terbuka pada masa yang sama</string>
-    <string name="theme_name_itsuka">Itsuka</string>
-    <string name="theme_name_totoro">Totoro</string>
     <string name="book_effect">Latar belakang kekuningan (penapis biru)</string>
     <string name="local_storage_cleanup">Pembersihan Penyimpanan Tempatan</string>
     <string name="main_screen">Skrin utama</string>

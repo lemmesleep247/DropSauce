@@ -52,7 +52,6 @@ webkit = "1.15.0"
 workRuntime = "2.11.2"
 window = "1.5.1"
 composeBom = "2024.12.01"
-composeActivity = "1.13.0"
 graphicsShapes = "1.0.1"
 
 [libraries]
@@ -77,7 +76,6 @@ androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 androidx-runner = { module = "androidx.test:runner", version.ref = "testRunner" }
 androidx-swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
 androidx-transition = { module = "androidx.transition:transition-ktx", version.ref = "transition" }
@@ -132,9 +130,8 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = 
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
-androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 androidx-compose-runtime = { module = "androidx.compose.runtime:runtime" }
-androidx-compose-activity = { module = "androidx.activity:activity-compose", version.ref = "composeActivity" }
+androidx-compose-activity = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphicsShapes" }
 
 [plugins]

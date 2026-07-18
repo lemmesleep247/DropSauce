@@ -66,7 +66,6 @@ class ProxySettingsFragment : BaseComposeSettingsFragment(R.string.proxy) {
 			DropSauceTheme {
 				ProxyScreen(
 					isTesting = isTesting.asStateFlow(),
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onTestConnection = ::testConnection,
 				)
 			}
@@ -113,7 +112,6 @@ class ProxySettingsFragment : BaseComposeSettingsFragment(R.string.proxy) {
 @Composable
 private fun ProxyScreen(
 	isTesting: StateFlow<Boolean>,
-	onBack: () -> Unit,
 	onTestConnection: () -> Unit,
 ) {
 	val ctx = LocalContext.current
@@ -132,7 +130,7 @@ private fun ProxyScreen(
 
 	val proxyEnabled = proxyType != "DIRECT"
 
-	SettingsScaffold(title = stringResource(R.string.proxy), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup {
 				item { pos ->

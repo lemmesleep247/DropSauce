@@ -41,7 +41,6 @@
     <string name="share_image">छवि साझा करें</string>
     <string name="delete">मिटाएं</string>
     <string name="clear_pages_cache">पृष्ठ कैशे साफ करें</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">मानक</string>
     <string name="webtoon">वेबटून</string>
     <string name="remote_sources">मांगा स्रोत</string>
@@ -130,8 +129,6 @@
     <string name="chapters_will_removed_background">अध्याय पृष्ठभूमि में हटा दिए जाएंगे</string>
     <string name="comics_archive">कॉमिक्स संग्रह</string>
     <string name="webtoon_zoom">वेबटून जूम</string>
-    <string name="repeat_password">पासवर्ड दोहराएं</string>
-    <string name="passwords_mismatch">बेमेल पासवर्ड</string>
     <string name="app_version">संस्करण %s</string>
     <string name="check_for_updates">अद्यतनों के लिए जांचें</string>
     <string name="no_update_available">कोई अद्यतन उपलब्ध नहीं</string>
@@ -156,7 +153,6 @@
     <string name="welcome">स्वागत है</string>
     <string name="tracker_warning">कुछ डिवाइसों में अलग-अलग सिस्टम व्यवहार होता है, जो पृष्ठभूमि कार्यों को बाधित कर सकता है।</string>
     <string name="chapter_is_missing">अध्याय गायब है</string>
-    <string name="about_app_translation_summary">इस ऐप का अनुवाद करें</string>
     <string name="auth_not_supported_by">%s पर लॉगिन करना समर्थित नहीं है</string>
     <string name="text_clear_cookies_prompt">आप सभी स्रोतों से लॉग आउट हो जायेंगे</string>
     <string name="state_finished">समाप्त</string>
@@ -171,7 +167,6 @@
     <string name="never">कभी नहीं</string>
     <string name="only_using_wifi">केवल Wi-Fi पर</string>
     <string name="always">हमेशा</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">विभिन्न भाषाएं</string>
     <string name="search_chapters">अध्याय खोजें</string>
     <string name="percent_string_pattern">%1$s%%</string>
@@ -194,7 +189,6 @@
     <string name="detect_reader_mode_summary">स्वचालित रूप से पता लगाएं कि मंगा वेबटून है या नहीं</string>
     <string name="disable_battery_optimization">बैटरी अनुकूलन अक्षम करें</string>
     <string name="disable_all">सब अक्षम करें</string>
-    <string name="use_fingerprint">यदि उपलब्ध हो तो बायोमेट्रिक का उपयोग करें</string>
     <string name="report">रिपोर्ट</string>
     <string name="status_planned">योजना बनाई</string>
     <string name="status_reading">पढ़ रहा हूँ</string>
@@ -204,7 +198,6 @@
     <string name="status_dropped">गिरा दिया गया</string>
     <string name="show_reading_indicators">पठन प्रगति संकेतक दिखाएं</string>
     <string name="clear_cookies_summary">कुछ समस्या होने पर मदद मिल सकती है। सभी प्राधिकरण अमान्य कर दिए जाएंगे</string>
-    <string name="invalid_domain_message">अमान्य डोमेन</string>
     <string name="select_range">दायरा चुनें</string>
     <string name="clear_all_history">सारा इतिहास साफ करें</string>
     <string name="last_2_hours">पिछले 2 घंटे</string>
@@ -243,9 +236,6 @@
     <string name="language">भाषा</string>
     <string name="color_theme">रंग योजना</string>
     <string name="show_in_grid_view">ग्रिड दृश्य में दिखाएं</string>
-    <string name="theme_name_miku">Miku</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="scrobbling_empty_hint">पढ़ने की प्रगति को ट्रैक करने के लिए, मंगा विवरण स्क्रीन पर मेनू → ट्रैक का चयन करें।</string>
     <string name="services">सेवाएं</string>
     <string name="settings_apply_restart_required">कृपया इन परिवर्तनों को लागू करने के लिए एप्लिकेशन को पुनः आरंभ करें</string>
@@ -343,7 +333,6 @@
     <string name="periodic_backups_enable">आवधिक बैकअप सक्षम करें</string>
     <string name="backups_output_directory">बैकअप आउटपुट डायरेक्टरी</string>
     <string name="last_successful_backup">अंतिम सफल बैकअप: %s</string>
-    <string name="speed_value">x%.1f</string>
     <string name="content_type_manga">मंगा</string>
     <string name="content_type_hentai">हेंताई</string>
     <string name="content_type_comics">कॉमिक्स</string>
@@ -373,7 +362,6 @@
     <string name="none">कोई नहीं</string>
     <string name="config_reset_confirm">सेटिंग्स को तयशुदा मानों पर रीसेट करें? इस कार्रवाई को वापस नहीं किया जा सकता।</string>
     <string name="use_two_pages_landscape">परिदृश्य उन्मुखीकरण पर दो पृष्ठ अभिन्यास का उपयोग करें (बीटा)</string>
-    <string name="got_it">समझ गया</string>
     <string name="default_tab">तयशुदा टैब</string>
     <string name="download_option_all_chapters">अनुवाद सहित सभी अध्याय %s</string>
     <string name="download_option_whole_manga">संपूर्ण मंगा</string>
@@ -412,7 +400,6 @@
     <string name="history_shortcuts">हाल के मंगा शॉर्टकट दिखाएं</string>
     <string name="discard">त्यागें</string>
     <string name="wrong_password">गलत पासवर्ड</string>
-    <string name="protect_application">ऐप को सुरक्षित रखें</string>
     <string name="right_to_left">दाएं-से-बाएं</string>
     <string name="create_category">नई श्रेणी</string>
     <string name="zoom_mode_fit_center">केंद्र के अनुरूप</string>
@@ -443,11 +430,9 @@
     <string name="next">अगला</string>
     <string name="genres">शैलियां</string>
     <string name="logged_in_as">%s के रूप में लॉगिन किया गया</string>
-    <string name="protect_application_subtitle">ऐप शुरू करने के लिए पासवर्ड दर्ज करें</string>
     <string name="suggestions_updating">सुझाव अपडेट हो रहे हैं</string>
     <string name="confirm">पुष्टि करें</string>
     <string name="suggestions_excluded_genres_summary">वे शैलियां निर्दिष्ट करें जिन्हें आप सुझावों में नहीं देखना चाहते</string>
-    <string name="password_length_hint">पासवर्ड 4 वर्णों या अधिक का होना चाहिए</string>
     <string name="text_delete_local_manga_batch">डिवाइस से चयनित वस्तुएं स्थायी रूप से मिटाएं?</string>
     <string name="text_clear_search_history_prompt">हाल की सभी खोज क्वेरी को स्थायी रूप से हटा दें?</string>
     <string name="about">ऐप के बारे में</string>
@@ -470,10 +455,6 @@
     <string name="importing_manga">मंगा आयात किया जा रहा है</string>
     <string name="import_completed_hint">स्थान बचाने के लिए आप मूल फाइल को स्टोरेज से हटा सकते हैं</string>
     <string name="prefetch_content">सामग्री प्रीलोड हो रही है</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="theme_name_mamimi">Mamimi</string>
     <string name="nothing_here">यहां कुछ नहीं है</string>
     <string name="categories_delete_confirm">क्या आप वाकई चयनित पसंदीदा श्रेणियां मिटाना चाहते हैं? \nइसमें मौजूद सारा मंगा नष्ट हो जाएगा और इसे पूर्ववत नहीं किया जा सकता।</string>
     <string name="folder_with_images_import_description">आप अभिलेखों या छवियों वाली एक निर्देशिका का चयन कर सकते हैं। प्रत्येक संग्रह (या उपनिर्देशिका) को एक अध्याय के रूप में पहचाना जाएगा।</string>
@@ -564,10 +545,8 @@
     <string name="disable_nsfw_notifications_summary">NSFW मंगा अपडेट के बारे में सूचनाएं न दिखाएं</string>
     <string name="tracker_debug_info">नए अध्याय लॉग की जांच की जा रही है</string>
     <string name="tracker_debug_info_summary">नए अध्यायों के लिए पृष्ठभूमि जांच के बारे में जानकारी डीबग करें</string>
-    <string name="_new">नया</string>
     <string name="all_languages">सभी भाषाएं</string>
     <string name="screenshots_block_incognito">गुप्त मोड में ब्लॉक करें</string>
-    <string name="image_server">पसंदीदा छवि सर्वर</string>
     <string name="crop_pages">पृष्ठ काटें</string>
     <string name="pin">पिन करें</string>
     <string name="unpin">अनपिन करें</string>

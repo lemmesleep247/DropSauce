@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="cannot_find_available_storage">Ingen tilgjengelig lagring</string>
     <string name="manga_save_location">Mappe for nedlastninger</string>
     <string name="text_local_holder_secondary">Lagre fra nettbaserte kilder, eller importer filer.</string>
     <string name="tracker_warning">Noen enheter endrer systemoppførselen, noe som kan ødelegge for bakgrunnsoppgaver.</string>
     <string name="text_clear_search_history_prompt">Fjern alle nylige søkespørringer for godt\?</string>
-    <string name="password_length_hint">Passordet må være minst fire tegn</string>
-    <string name="protect_application_subtitle">Skriv inn passord å kreve for å starte programmet</string>
     <string name="auth_required">Logg inn for å se dette innholdet</string>
     <string name="check_for_new_chapters">Sjekker etter nye kapitler</string>
     <string name="text_clear_updates_feed_prompt">Tøm all oppdateringshistorikk for godt\?</string>
@@ -78,9 +75,6 @@
     <string name="create_category">Ny kategori</string>
     <string name="app_version">Versjon %s</string>
     <string name="about">Om</string>
-    <string name="passwords_mismatch">Passordene samsvarer ikke</string>
-    <string name="repeat_password">Gjenta passordet</string>
-    <string name="protect_application">Beskytt programmet</string>
     <string name="wrong_password">Feil passord</string>
     <string name="enter_password">Skriv inn passord</string>
     <string name="rotate_screen">Roter skjerm</string>
@@ -124,7 +118,6 @@
     <string name="light">Lys</string>
     <string name="by_name">Navn</string>
     <string name="theme">Drakt</string>
-    <string name="filter">Filter</string>
     <string name="sort_order">Sorteringsrekkefølge</string>
     <string name="by_rating">Vurdering</string>
     <string name="newest">Nyeste</string>
@@ -154,7 +147,6 @@
     <string name="list_mode">Listemodus</string>
     <string name="grid">Rutenett</string>
     <string name="detailed_list">Detaljert liste</string>
-    <string name="list">Liste</string>
     <string name="chapters">Kapittel</string>
     <string name="details">Detaljer</string>
     <string name="network_error">Nettverksfeil</string>
@@ -166,7 +158,6 @@
     <string name="queued">I kø</string>
     <string name="state_finished">Fullført</string>
     <string name="state_ongoing">Pågående</string>
-    <string name="about_app_translation_summary">Oversett dette programmet</string>
     <string name="auth_not_supported_by">Innlogging på %s støttes ikke</string>
     <string name="text_clear_cookies_prompt">Du vil bli utlogget fra alle kilder</string>
     <string name="genres">Sjangere</string>
@@ -191,7 +182,6 @@
     <string name="never">Aldri</string>
     <string name="only_using_wifi">Kun på Wi-Fi</string>
     <string name="logged_in_as">Innlogget som %s</string>
-    <string name="nsfw">18+</string>
     <string name="search_chapters">Finn kapittel</string>
     <string name="percent_string_pattern">%1$s%%</string>
     <string name="various_languages">Forskjellige språk</string>
@@ -200,7 +190,6 @@
     <string name="name">Navn</string>
     <string name="edit">Rediger</string>
     <string name="edit_category">Rediger kategori</string>
-    <string name="dns_over_https">DNS over HTTPS</string>
     <string name="default_mode">Forvalgt modus</string>
     <string name="removal_completed">Fjerning fullført</string>
     <string name="empty_favourite_categories">Ingen favorittkategorier</string>
@@ -250,11 +239,9 @@
     <string name="text_unsaved_changes_prompt">Lagre eller forkast ulagrede endringer\?</string>
     <string name="compact">Kompakt</string>
     <string name="disable_all">Skru av alle</string>
-    <string name="use_fingerprint">Bruk fingeravtrykk hvis tilgjengelig</string>
     <string name="notifications_enable">Skru på merknader</string>
     <string name="show_reading_indicators">Vis indikatorer for leseforløp</string>
     <string name="exit_confirmation">Avsluttingsbekreftelse</string>
-    <string name="invalid_domain_message">Ugyldig daomene</string>
     <string name="color_theme">Fargedrakt</string>
     <string name="language">Språk</string>
     <string name="storage_usage">Lagringsbruk</string>

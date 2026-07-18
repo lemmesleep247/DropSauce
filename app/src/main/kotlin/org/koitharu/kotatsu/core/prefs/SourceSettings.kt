@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.core.prefs
 import android.content.Context
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import androidx.core.content.edit
+import okhttp3.HttpUrl
 import org.koitharu.kotatsu.core.util.ext.getEnumValue
 import org.koitharu.kotatsu.core.util.ext.putEnumValue
 import org.koitharu.kotatsu.core.util.ext.sanitizeHeaderValue
@@ -12,7 +13,6 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
-import org.koitharu.kotatsu.settings.utils.validation.DomainValidator
 import java.io.File
 
 class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig {
@@ -57,7 +57,7 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 
 			is ConfigKey.Domain -> prefs.getString(key.key, key.defaultValue)
 				?.trim()
-				?.takeIf { DomainValidator.isValidDomain(it) }
+				?.takeIf(::isValidDomain)
 				?: key.defaultValue
 
 			is ConfigKey.ShowSuspiciousContent -> prefs.getBoolean(key.key, key.defaultValue)
@@ -85,6 +85,17 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 	}
 
 	companion object {
+
+		private fun isValidDomain(value: String): Boolean = runCatching {
+			require(value.isNotEmpty())
+			val parts = value.split(':')
+			require(parts.size <= 2)
+			val urlBuilder = HttpUrl.Builder()
+			urlBuilder.host(parts.first())
+			if (parts.size == 2) {
+				urlBuilder.port(parts[1].toInt())
+			}
+		}.isSuccess
 
 		fun getStorageName(sourceName: String): String {
 			val sourceId = sourceName

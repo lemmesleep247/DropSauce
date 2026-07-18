@@ -63,16 +63,14 @@ class PreviewSettingsFragment : BaseComposeSettingsFragment(R.string.details_app
 		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 		setContent {
 			DropSauceTheme {
-				DetailsAppearanceScreen(
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
-				)
+				DetailsAppearanceScreen()
 			}
 		}
 	}
 }
 
 @Composable
-private fun DetailsAppearanceScreen(onBack: () -> Unit) {
+private fun DetailsAppearanceScreen() {
 	val ctx = LocalContext.current
 	// Compact is listed first (and is the default for new installs), then Centralized.
 	val uiModeEntries = remember {
@@ -88,7 +86,7 @@ private fun DetailsAppearanceScreen(onBack: () -> Unit) {
 		DetailsUiMode.entries.firstOrNull { it.name == uiMode } ?: DetailsUiMode.COMPACT
 	}
 
-	SettingsScaffold(title = stringResource(R.string.details_appearance), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			DetailsStylePreview(centered = mode != DetailsUiMode.COMPACT, backdropEnabled = backdrop)
 		}

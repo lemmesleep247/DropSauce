@@ -2,11 +2,8 @@ package org.koitharu.kotatsu.core.image
 
 import android.os.Parcel
 import android.os.Parcelable
-import android.view.View
 import androidx.collection.ArrayMap
 import coil3.memory.MemoryCache
-import coil3.request.SuccessResult
-import coil3.util.CoilUtils
 import kotlinx.parcelize.Parceler
 import kotlinx.parcelize.Parcelize
 
@@ -39,10 +36,5 @@ class CoilMemoryCacheKey(
 			),
 		)
 
-		fun from(view: View): CoilMemoryCacheKey? {
-			return (CoilUtils.result(view) as? SuccessResult)?.memoryCacheKey?.let {
-				CoilMemoryCacheKey(it)
-			}
-		}
 	}
 }

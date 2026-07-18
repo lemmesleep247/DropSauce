@@ -42,9 +42,7 @@
     <string name="text_file_not_supported">Επιλέξτε ένα αρχείο ZIP ή CBZ.</string>
     <string name="no_description">Χωρίς περιγραφή</string>
     <string name="clear_pages_cache">Εκκαθάριση προσωρινής μνήμης σελίδων</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">Τυπικό</string>
-    <string name="webtoon">Webtoon</string>
     <string name="search_on_s">Αναζήτηση στο %s</string>
     <string name="delete_manga">Διαγραφή manga</string>
     <string name="text_delete_local_manga">Διαγραφή του \"%s\" από τη συσκευή;</string>
@@ -137,9 +135,6 @@
     <string name="text_local_holder_secondary">Αποθήκευσε κάτι από διαδικτυακές πηγές ή εισήγαγε το από αρχείο.</string>
     <string name="pages_animation">Κίνηση σελίδας</string>
     <string name="wrong_password">Λανθασμένος κωδικός</string>
-    <string name="protect_application">Προστασία εφαρμογής</string>
-    <string name="repeat_password">Επανάληψη κωδικού</string>
-    <string name="passwords_mismatch">Ασύμφωνοι κωδικοί</string>
     <string name="about">Σχετικά</string>
     <string name="app_version">Έκδοση %s</string>
     <string name="just_now">Μόλις τώρα</string>
@@ -152,7 +147,6 @@
     <string name="silent">Αθόρυβο</string>
     <string name="queued">Στην ουρά</string>
     <string name="chapter_is_missing">Λείπει το κεφάλαιο</string>
-    <string name="about_app_translation_summary">Μετάφρασε την εφαρμογή</string>
     <string name="auth_not_supported_by">Η σύνδεση στο %s δεν υποστηρίζεται</string>
     <string name="text_clear_cookies_prompt">Θα αποσυνδεθείς από όλες τις πηγές</string>
     <string name="state_finished">Ολοκληρώθηκε</string>
@@ -164,7 +158,6 @@
     <string name="preload_pages">Προφόρτωση σελίδων</string>
     <string name="logged_in_as">Συνδέθηκες ως %s</string>
     <string name="always">Πάντα</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Διάφορες γλώσσες</string>
     <string name="percent_string_pattern">%1$s%%</string>
     <string name="appearance">Εμφάνιση</string>
@@ -195,7 +188,6 @@
     <string name="track_sources">Ψάξε για ενημερώσεις</string>
     <string name="no_update_available">Δεν είναι διαθέσιμη κάποια ενημέρωση</string>
     <string name="data_restored_success">Όλα τα δεδομένα επαναφέρθηκαν</string>
-    <string name="protect_application_subtitle">Εισήγαγε κωδικό με τον οποίο θα ανοίγεις την εφαρμογή</string>
     <string name="captcha_required">Απαιτείται έλεγχος CAPTCHA</string>
     <string name="captcha_solve">Επίλυση</string>
     <string name="clear_cookies">Εκκαθάριση cookies</string>
@@ -206,7 +198,6 @@
     <string name="welcome">Καλώς ήρθες</string>
     <string name="text_clear_search_history_prompt">Εκκαθάριση όλων των πρόσφατων αναζητήσεων;</string>
     <string name="backup_saved">Το αντίγραφο ασφαλείας αποθηκεύτηκε</string>
-    <string name="password_length_hint">Ο κωδικός πρέπει να αποτελείται από 4, ή περισσότερους, χαρακτήρες</string>
     <string name="tracker_warning">Τα συστήματα μερικών συσκευών λειτουργούν διαφορετικά, και αυτό μπορεί να επηρεάσει τις λειτουργίες στο παρασκήνιο.</string>
     <string name="screenshots_policy">Πολιτική στιγμιότυπων οθόνης</string>
     <string name="screenshots_block_nsfw">Να μην επιτρέπονται σε NSFW manga</string>
@@ -223,9 +214,6 @@
     <string name="state_upcoming">Ανερχόμενο</string>
     <string name="by_name_reverse">Όνομα - αντεστρεμένα</string>
     <string name="advanced">Για προχωρημένους</string>
-    <string name="content_type_comics">Comics</string>
-    <string name="content_type_manga">Manga</string>
-    <string name="content_type_hentai">Hentai</string>
     <string name="content_type_other">Άλλα</string>
     <string name="sources_catalog">Κατάλογος πηγών</string>
     <string name="no_manga_sources_found">Η αναζήτηση σας δεν επέφερε διαθέσιμα manga</string>
@@ -313,7 +301,6 @@
     <string name="download_started">Η λήψη ξεκίνησε</string>
     <string name="manga_list">Λίστα manga</string>
     <string name="disable_nsfw">Απενεργοποιήση NSFW</string>
-    <string name="got_it">Έγινε</string>
     <string name="default_tab">Προεπιλεγμένη καρτέλα</string>
     <string name="download_option_all_chapters">Όλα τα μεταφρασμένα κεφάλαια %s</string>
     <string name="download_option_whole_manga">Ολόκληρο το manga</string>
@@ -356,7 +343,6 @@
     <string name="state_abandoned">Παρατήθηκε</string>
     <string name="manual">Χειροκίνητα</string>
     <string name="disable_nsfw_summary">Απενεργοποίηση NSFW πηγών και απόκρυψη manga για ενηλίκους από την λίστα αν είναι δυνατό</string>
-    <string name="speed_value">x%.1f</string>
     <string name="pause">Παύση</string>
     <string name="resume">Συνέχιση</string>
     <string name="paused">Σε παύση</string>
@@ -373,7 +359,6 @@
     <string name="error_corrupted_file">Μη έγκυρα δεδομένα επιστρέφονται ή το αρχείο είναι διεφθαρμένο</string>
     <string name="in_progress">Σε εξέλιξη</string>
     <string name="on_device">Στην συσκευή</string>
-    <string name="directories">Directories</string>
     <string name="main_screen_sections">Τμήματα αρχικής οθόνης</string>
     <string name="genres_search_hint">Ξεκίνα να γράφεις το όνομα του είδους</string>
     <string name="state_paused">Σε παύση</string>
@@ -444,7 +429,6 @@
     <string name="status_on_hold">Σε αναμονή</string>
     <string name="status_dropped">Διακόπηκε</string>
     <string name="disable_all">Απενεργοποίηση όλων</string>
-    <string name="use_fingerprint">Χρήση ανιχνευτή δακτυλικού αποτυπώματος αν διατίθεται</string>
     <string name="name">Όνομα</string>
     <string name="dns_over_https">DNS μέσω HTTPS</string>
     <string name="default_mode">Προεπιλεγμένη λειτουργία</string>
@@ -454,7 +438,6 @@
     <string name="report">Αναφορά</string>
     <string name="show_reading_indicators">Εμφάνιση δεικτών προόδου ανάγνωσης</string>
     <string name="show_all">Εμφάνιση όλων</string>
-    <string name="invalid_domain_message">Μη έγκυρο domain</string>
     <string name="select_range">Επιλογή εύρους</string>
     <string name="last_2_hours">Τελευταίες 2 ώρες</string>
     <string name="edit">Επεξεργασία</string>

@@ -35,9 +35,7 @@
     <string name="operation_not_supported">Thao tác này không được hỗ trợ</string>
     <string name="no_description">Không có mô tả</string>
     <string name="clear_pages_cache">Dọn dẹp bộ nhớ đệm trang truyện</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">Tiêu chuẩn</string>
-    <string name="webtoon">Webtoon</string>
     <string name="read_mode">Chế độ đọc</string>
     <string name="grid_size">Kích thước lưới</string>
     <string name="search_on_s">Tìm kiếm trên %s</string>
@@ -74,7 +72,6 @@
     <string name="rotate_screen">Xoay màn hình</string>
     <string name="track_sources">Kiểm tra tập / chương truyện mới</string>
     <string name="enter_password">Nhập mật khẩu</string>
-    <string name="repeat_password">Nhập lại mật khẩu</string>
     <string name="about">Giới thiệu</string>
     <string name="app_version">Phiên bản %s</string>
     <string name="check_for_updates">Chạm để kiểm tra bản cập nhật mới</string>
@@ -99,13 +96,10 @@
     <string name="sign_in">Đăng nhập</string>
     <string name="auth_required">Đăng nhập để xem nội dung này</string>
     <string name="next">Kế tiếp</string>
-    <string name="protect_application_subtitle">Hãy đặt mật khẩu để mở ứng dụng</string>
     <string name="confirm">Xác nhận</string>
-    <string name="password_length_hint">Mật khẩu phải có 4 ký tự hoặc hơn</string>
     <string name="text_clear_search_history_prompt">Xoá vĩnh viễn tất cả lịch sử tìm kiếm gần đây\?</string>
     <string name="queued">Trong hàng chờ</string>
     <string name="chapter_is_missing">Chương bị mất</string>
-    <string name="about_app_translation_summary">Dịch ứng dụng này</string>
     <string name="genres">Thể loại</string>
     <string name="state_finished">Đã hoàn thành</string>
     <string name="screenshots_policy">Chính sách chụp ảnh màn hình</string>
@@ -114,7 +108,6 @@
     <string name="exclude_nsfw_from_suggestions">Không đề xuất truyện NSFW</string>
     <string name="enabled">Đã bật</string>
     <string name="preload_pages">Tải trước trang</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Nhiều ngôn ngữ</string>
     <string name="search_chapters">Tìm kiếm chương</string>
     <string name="chapters_empty">Không có chương nào trong truyện này</string>
@@ -186,8 +179,6 @@
     <string name="updates_feed_cleared">Đã xoá</string>
     <string name="update">Cập nhật</string>
     <string name="wrong_password">Sai mật khẩu</string>
-    <string name="protect_application">Bảo vệ ứng dụng</string>
-    <string name="passwords_mismatch">Mật khẩu không trùng</string>
     <string name="zoom_mode_fit_width">Vừa chiều ngang</string>
     <string name="show_pages_numbers">Đánh số trang</string>
     <string name="data_restored_success">Tất cả dữ liệu đã được khôi phục</string>
@@ -250,7 +241,6 @@
     <string name="show_all">Hiện tất cả</string>
     <string name="confirm_exit">Nhấn back lần nữa để thoát</string>
     <string name="clear_all_history">Xoá toàn bộ lịch sử</string>
-    <string name="invalid_domain_message">Tên miền không hợp lệ</string>
     <string name="select_range">Chọn phạm vi</string>
     <string name="last_2_hours">2 giờ qua</string>
     <string name="history_cleared">Lịch sử đã được xoá</string>
@@ -265,7 +255,6 @@
     <string name="status_completed">Đã hoàn thành</string>
     <string name="clear_cookies_summary">Có thể giúp ích trong trường hợp có vấn đề. Mọi uỷ quyền sẽ bị vô hiệu hoá</string>
     <string name="manage">Quản lý</string>
-    <string name="use_fingerprint">Sử dụng vân tay / sinh trắc học (nếu có)</string>
     <string name="removed_from_favourites">Đã xoá khỏi danh mục yêu thích</string>
     <string name="error_no_space_left">Không đủ dung lượng lưu trữ trên thiết bị</string>
     <string name="options">Tuỳ chọn</string>
@@ -284,7 +273,6 @@
     <string name="contrast">Tương phản</string>
     <string name="webtoon_zoom">Phóng to truyện Webtoon</string>
     <string name="show_in_grid_view">Hiển thị dưới dạng lưới</string>
-    <string name="theme_name_miku">Miku</string>
     <string name="color_theme">Bảng màu</string>
     <string name="nothing_here">Không có gì ở đây cả</string>
     <string name="language">Ngôn ngữ</string>
@@ -293,13 +281,6 @@
     <string name="_import">Nhập</string>
     <string name="text_unsaved_changes_prompt">Lưu hoặc loại bỏ những thay đổi chưa được lưu?</string>
     <string name="download_started">Tải về đã bắt đầu</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="theme_name_mamimi">Mamimi</string>
-    <string name="theme_name_kanade">Kanade</string>
-    <string name="got_it">Đã hiểu</string>
     <string name="find_similar">Tìm truyện giống nhau</string>
     <string name="speed">Tốc độ</string>
     <string name="pause">Tạm dừng</string>
@@ -312,7 +293,6 @@
     <string name="downloads_cancelled">Đã huỷ tải xuống</string>
     <string name="suggestions_enable_prompt">Bạn có muốn nhận manga đề xuất đã cá nhân hóa không?</string>
     <string name="port">Cổng</string>
-    <string name="proxy">Proxy</string>
     <string name="downloaded">Đã tải xuống</string>
     <string name="password">Mật khẩu</string>
     <string name="username">Tên người dùng</string>
@@ -397,9 +377,6 @@
     <string name="frequency_twice_per_month">Hai lần mỗi tháng</string>
     <string name="categories">Thể loại</string>
     <string name="lock_screen_rotation">Khoá hướng màn hình</string>
-    <string name="content_type_manga">Manga</string>
-    <string name="content_type_hentai">Hentai</string>
-    <string name="content_type_comics">Comics</string>
     <string name="disable_nsfw_summary">Tắt các nguồn NSFW và ẩn các manga người lớn từ danh sách (nếu khả thi)</string>
     <string name="reader_optimize">Giảm tiêu tốn bộ nhớ (beta)</string>
     <string name="reader_optimize_summary">Giảm chất lượng các trang chưa hiển thị để dùng ít bộ nhớ hơn</string>
@@ -500,7 +477,6 @@
     <string name="show_pages_thumbs_summary">Bật \"Trang\" trong màn hình chi tiết</string>
     <string name="category_hidden_done">Danh mục này đã bị ẩn và có thể vào được qua Menu → Quản lý danh mục</string>
     <string name="manual">Bằng tay</string>
-    <string name="speed_value">x%.1f</string>
     <string name="preferred_download_format">Định dạng muốn tải xuống</string>
     <string name="single_cbz_file">Một file CBZ</string>
     <string name="multiple_cbz_files">Nhiều file CBZ</string>
@@ -554,10 +530,8 @@
     <string name="suggested_queries">Truy vấn được đề xuất</string>
     <string name="authors">Tác giả</string>
     <string name="blocked_by_server_message">Bạn bị chặn bởi máy chủ. Hãy thử sử dụng kết nối mạng khác (VPN, Proxy, v.v.)</string>
-    <string name="_new">Mới</string>
     <string name="all_languages">Tất cả các ngôn ngữ</string>
     <string name="screenshots_block_incognito">Chặn khi sử dụng chế độ ẩn danh</string>
-    <string name="image_server">Chất lượng hình ảnh</string>
     <string name="crop_pages">Cắt ảnh trang</string>
     <string name="pin">Ghim</string>
     <string name="unpin">Xóa ghim</string>
@@ -604,8 +578,6 @@
     <string name="no_fix_required">Không cần sửa đối với \"%s\"</string>
     <string name="recently_added">Đã thêm gần đây</string>
     <string name="content_type_novel">Tiểu thuyết</string>
-    <string name="content_type_manhua">Manhua</string>
-    <string name="content_type_manhwa">Manhwa</string>
     <string name="added_long_ago">Đã được thêm từ trước</string>
     <string name="popular_in_hour">Nổi bật trong giờ qua</string>
     <string name="popular_in_week">Nổi bật trong tuần</string>
@@ -615,18 +587,11 @@
     <string name="original_language">Ngôn ngữ gốc</string>
     <string name="year">Năm</string>
     <string name="demographics">Thể loại đối tượng</string>
-    <string name="demographic_shounen">Shounen</string>
-    <string name="demographic_shoujo">Shoujo</string>
-    <string name="demographic_seinen">Seinen</string>
-    <string name="demographic_josei">Josei</string>
     <string name="years">Năm</string>
     <string name="any">Bất kì</string>
     <string name="filter_search_warning">Bộ lọc của bạn đã bị xóa do nguồn đọc này không hỗ trợ cho việc tìm kiếm bằng bộ lọc</string>
     <string name="demographic_kodomo">Dành cho trẻ em</string>
-    <string name="content_type_one_shot">One shot</string>
     <string name="content_type_image_set">Đặt hình ảnh</string>
-    <string name="content_type_game_cg">Game CG</string>
-    <string name="content_type_doujinshi">Doujinshi</string>
     <string name="content_type_artist_cg">Họa sĩ CG</string>
     <string name="source_code">Mã nguồn</string>
     <string name="user_manual">Hướng dẫn sử dụng</string>
@@ -716,8 +681,6 @@
     <string name="creating_backup">Sao lưu dữ liệu</string>
     <string name="reader_multitask">Mở trình đọc sang 1 tác vụ riêng biệt</string>
     <string name="reader_multitask_summary">Tách trình đọc thành 1 tác vụ riêng biệt sẽ cho bạn khả năng mở và đọc nhiều truyện cùng một lúc (tốt hơn với máy tính bảng, Chrome OS và các giả lập Android cho phép mở đa cửa sổ trên máy tính như WSA,...)</string>
-    <string name="theme_name_itsuka">Itsuka</string>
-    <string name="theme_name_totoro">Totoro</string>
     <string name="reader_navigation_inverted">Đảo ngược phím điều khiển hướng đọc</string>
     <string name="reader_navigation_inverted_summary">Đảo ngược hướng của các phím điều khiển để đọc truyện như nút tăng / giảm âm lượng, D-pad (lên / xuống / trái / phải)</string>
     <string name="book_effect">Làm dịu ánh màu xanh của ảnh (chuyển sang màu vàng)</string>
@@ -748,16 +711,13 @@
     <string name="pull_bottom_no_next">Không còn chương nào để xem tiếp</string>
     <string name="enable_pull_gesture_title">Bật cử chỉ kéo - thả</string>
     <string name="enable_pull_gesture_summary">Sử dụng cử chỉ tay kéo - thả để chuyển chương trong chế độ đọc Webtoon</string>
-    <string name="saved_filters">Lưu bộ lọc tìm kiếm</string>
     <string name="enter_name">Hãy điền tên</string>
     <string name="two_page_scroll_sensitivity">Độ nhạy khi cuộn hai trang</string>
     <string name="reader_chapter_toast">Hiện thông báo chuyển chương</string>
     <string name="reader_chapter_toast_summary">Hiển thị một bong bóng nổi nho nhỏ ở phía dưới màn hình cùng với tên của chương truyện khi bạn đọc sang một chương truyện mới</string>
-    <string name="rename">Đặt tên</string>
     <string name="storage_and_network">Lưu trữ và mạng</string>
     <string name="data_removal">Xoá dữ liệu</string>
     <string name="privacy">Quyền riêng tư</string>
-    <string name="source_broken_warning">Nguồn đọc này đã được gắn là \"Không còn sử dụng được\". Một vài tính năng có thể sẽ không hoạt động</string>
     <string name="frequency_every_6_hours">6 tiếng một lần</string>
     <string name="download_default_directory">Đường dẫn mặc định để tải truyện về thiết bị</string>
     <string name="private_app_directory_warning">Đường dẫn này với tất cả dữ liệu của ứng dụng sẽ bị xóa nếu bạn gỡ ứng dụng DropSauce</string>

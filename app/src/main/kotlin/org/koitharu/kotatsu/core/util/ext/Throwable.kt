@@ -22,16 +22,13 @@ import org.koitharu.kotatsu.core.exceptions.CloudFlareBlockedException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.EmptyHistoryException
 import org.koitharu.kotatsu.core.exceptions.EmptyMangaException
-import org.koitharu.kotatsu.core.exceptions.IncompatiblePluginException
 import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
 import org.koitharu.kotatsu.core.exceptions.NoDataReceivedException
 import org.koitharu.kotatsu.core.exceptions.NonFileUriException
 import org.koitharu.kotatsu.core.exceptions.ProxyConfigException
-import org.koitharu.kotatsu.core.exceptions.SyncApiException
 import org.koitharu.kotatsu.core.exceptions.UnsupportedFileException
 import org.koitharu.kotatsu.core.exceptions.UnsupportedSourceException
 import org.koitharu.kotatsu.core.exceptions.WrapperIOException
-import org.koitharu.kotatsu.core.exceptions.WrongPasswordException
 import org.koitharu.kotatsu.core.model.isExternalSource
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.parsers.ErrorMessages.FILTER_BOTH_LOCALE_GENRES_NOT_SUPPORTED
@@ -105,7 +102,6 @@ private fun Throwable.getDisplayMessageOrNull(resources: Resources): String? = w
     is EmptyHistoryException -> resources.getString(R.string.history_is_empty)
     is EmptyMangaException -> reason?.let { resources.getString(it.msgResId) } ?: cause?.getDisplayMessage(resources)
     is ProxyConfigException -> resources.getString(R.string.invalid_proxy_configuration)
-    is SyncApiException,
     is ContentUnavailableException -> message
 
     is ParseException -> shortMessage
@@ -125,13 +121,6 @@ private fun Throwable.getDisplayMessageOrNull(resources: Resources): String? = w
     }
 
     is NoDataReceivedException -> resources.getString(R.string.error_no_data_received)
-    is IncompatiblePluginException -> {
-        cause?.getDisplayMessageOrNull(resources)?.let {
-            resources.getString(R.string.plugin_incompatible_with_cause, it)
-        } ?: resources.getString(R.string.plugin_incompatible)
-    }
-
-    is WrongPasswordException -> resources.getString(R.string.wrong_password)
     is NotFoundException -> resources.getString(R.string.not_found_404)
     is UnsupportedSourceException -> if (
         manga?.source?.isExternalSource() == true ||
@@ -220,7 +209,6 @@ fun Throwable.isReportable(): Boolean {
         || this is CloudFlareBlockedException
         || this is CloudFlareProtectedException
         || this is BadBackupFormatException
-        || this is WrongPasswordException
         || this is TooManyRequestExceptions
         || this is HttpStatusException
     ) {

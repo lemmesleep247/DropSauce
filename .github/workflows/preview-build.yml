@@ -78,13 +78,9 @@ jobs:
           MD5=$(md5sum "$DEST" | awk '{print $1}')
           SIZE=$(du -h "$DEST" | cut -f1)
 
-          # Checksums file shipped alongside the APK (verify with `sha256sum -c`).
-          sha256sum "$DEST" > "${DEST}.sha256sum"
-
           echo "apk_name=${DEST}" >> "$GITHUB_OUTPUT"
-          echo "tag=preview-${SAFE_REF}" >> "$GITHUB_OUTPUT"
 
-          # Release notes (also reused for the run summary).
+          # Write release details to the run summary.
           {
             echo "**Preview build of \`${GITHUB_REF_NAME}\`** — non-debuggable, no dev tooling, installs"
             echo "as a separate app (\`org.haziffe.dropsauce.preview\`, \"DropSauce Preview\")."
@@ -98,8 +94,7 @@ jobs:
             echo "| SHA-256 | \`${SHA256}\` |"
             echo "| SHA-1 | \`${SHA1}\` |"
             echo "| MD5 | \`${MD5}\` |"
-          } > release-notes.md
-          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload preview APK as a workflow artifact
         uses: actions/upload-artifact@v4

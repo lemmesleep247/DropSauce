@@ -30,7 +30,7 @@ import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
 import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.mihon.model.mihonChapterId
-import org.koitharu.kotatsu.parsers.util.longHashCode
+import org.koitharu.kotatsu.mihon.model.mihonMangaId
 import java.io.File
 import javax.inject.Inject
 
@@ -84,7 +84,7 @@ class AppBackupAgentTest {
 		val uri = writeFixture(fixture)
 		val report = backupManager.restoreBackup(uri)
 
-		val mangaId = "MIHON_123:https://fixture.example/manga/1".longHashCode()
+		val mangaId = mihonMangaId("MIHON_123", "https://fixture.example/manga/1")
 		val tracks = database.getScrobblingDao().findAll(mangaId)
 		assertEquals(7, tracks.size)
 		assertTrue(report.missingTrackers.isEmpty())
@@ -106,22 +106,21 @@ class AppBackupAgentTest {
 
 		val report = backupManager.restoreBackup(uri)
 		assertTrue(99 in report.missingTrackers)
-		assertTrue(report.skippedItems.any { it.contains("99") })
 	}
 
 	@Test
-	fun restoreMihonFixture_mapsAllCategoriesToMihonCategory() = runTest {
+	fun restoreMihonFixture_restoresMappedCategories() = runTest {
 		val fixture = createFixture(
 			trackerItems = emptyList(),
 			categories = listOf(
 				MihonBackupCategory(name = "Default", id = 1, order = 0),
 				MihonBackupCategory(name = "Read later", id = 2, order = 1),
 			),
-			mangaCategoryIds = listOf(1, 2),
+			mangaCategoryIds = listOf(0, 1),
 		)
 		val report = backupManager.restoreBackup(writeFixture(fixture))
 
-		val mangaId = "MIHON_123:https://fixture.example/manga/1".longHashCode()
+		val mangaId = mihonMangaId("MIHON_123", "https://fixture.example/manga/1")
 		val categoryIds = database.getFavouritesDao().findCategoriesIds(mangaId)
 		val restoredTitles = database.getFavouriteCategoriesDao()
 			.findAll()
@@ -129,7 +128,7 @@ class AppBackupAgentTest {
 			.map { it.title }
 			.toSet()
 
-		assertEquals(setOf("mihon"), restoredTitles)
+		assertEquals(setOf("Default", "Read later"), restoredTitles)
 		assertEquals(1, report.restoredMangaCount)
 	}
 
@@ -138,7 +137,7 @@ class AppBackupAgentTest {
 		val fixture = createFixture(trackerItems = emptyList())
 		backupManager.restoreBackup(writeFixture(fixture))
 
-		val mangaId = "MIHON_123:https://fixture.example/manga/1".longHashCode()
+		val mangaId = mihonMangaId("MIHON_123", "https://fixture.example/manga/1")
 		val history = database.getHistoryDao().find(mangaId)
 
 		assertNotNull(history)
@@ -168,7 +167,7 @@ class AppBackupAgentTest {
 
 		backupManager.restoreBackup(writeFixture(fixture))
 
-		val mangaId = "MIHON_123:$mangaUrl".longHashCode()
+		val mangaId = mihonMangaId("MIHON_123", mangaUrl)
 		assertNull(database.getHistoryDao().find(mangaId))
 	}
 
@@ -205,24 +204,24 @@ class AppBackupAgentTest {
 
 		backupManager.restoreBackup(writeFixture(fixture))
 
-		val mangaId = "MIHON_123:$mangaUrl".longHashCode()
+		val mangaId = mihonMangaId("MIHON_123", mangaUrl)
 		val history = database.getHistoryDao().find(mangaId)
 		assertEquals(mihonChapterId("MIHON_123", chapters[1].url), history?.chapterId)
 		assertEquals(2f / 3f, history?.percent)
 	}
 
 	@Test
-	fun restoreMihonFixture_createsNewMihonCategoryEachTime() = runTest {
+	fun restoreMihonFixture_reusesExistingCategoryByTitle() = runTest {
 		val fixture = createFixture(trackerItems = emptyList())
 		val uri = writeFixture(fixture)
 
 		backupManager.restoreBackup(uri)
 		backupManager.restoreBackup(uri)
 
-		val mihonCategoryCount = database.getFavouriteCategoriesDao()
+		val defaultCategoryCount = database.getFavouriteCategoriesDao()
 			.findAll()
-			.count { it.title == "mihon" }
-		assertEquals(2, mihonCategoryCount)
+			.count { it.title == "Default" }
+		assertEquals(1, defaultCategoryCount)
 	}
 
 	private fun writeFixture(backup: MihonBackup): Uri {

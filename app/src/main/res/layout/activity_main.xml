@@ -73,7 +73,7 @@
 					android:insetBottom="0dp"
 					android:insetLeft="0dp"
 					android:insetRight="0dp"
-					app:icon="@drawable/ic_settings_filled"
+					app:icon="@drawable/ic_settings"
 					app:iconSize="24dp"
 					app:iconPadding="0dp"
 					app:iconGravity="textStart"

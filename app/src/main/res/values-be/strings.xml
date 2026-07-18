@@ -108,9 +108,6 @@
     <string name="track_sources">Правяраць абнаўленні мангі</string>
     <string name="enter_password">Увядзіце пароль</string>
     <string name="wrong_password">Няверны пароль</string>
-    <string name="protect_application">Абараніць праграму</string>
-    <string name="repeat_password">Паўтарыце пароль</string>
-    <string name="passwords_mismatch">Паролі не супадаюць</string>
     <string name="about">Аб праграме</string>
     <string name="app_version">Версія %s</string>
     <string name="check_for_updates">Праверыць абнаўленні</string>
@@ -149,9 +146,7 @@
     <string name="sign_in">Увайсці</string>
     <string name="auth_required">Для прагляду гэтага кантэнту патрабуецца аўтарызацыя</string>
     <string name="next">Далей</string>
-    <string name="protect_application_subtitle">Калі ласка, увядзіце пароль, які спатрэбіцца пры запуску праграмы</string>
     <string name="confirm">Пацвердзіць</string>
-    <string name="password_length_hint">Пароль павінен змяшчаць не менш за 4 сімвалы</string>
     <string name="text_clear_search_history_prompt">Вы сапраўды хочаце выдаліць усе апошнія пошукавыя запыты?</string>
     <string name="tracker_warning">Некаторыя вытворцы могуць змяняць паводзіны сістэмы, што можа парушаць выкананне фонавых задач.</string>
     <string name="backup_saved">Рэзервовая копія паспяхова захавана</string>
@@ -164,7 +159,6 @@
     <string name="text_empty_holder_primary">Неяк тут пуста…</string>
     <string name="chapter_is_missing">Глава адсутнічае</string>
     <string name="queued">У чарзе</string>
-    <string name="about_app_translation_summary">Дапамагчы з перакладам праграмы</string>
     <string name="text_clear_cookies_prompt">Вы выйдзеце з усіх крыніц, у якіх вы аўтарызаваны</string>
     <string name="auth_not_supported_by">Аўтарызацыя на %s не падтрымліваецца</string>
     <string name="genres">Жанры</string>
@@ -187,7 +181,6 @@
     <string name="suggestions">Прапанова</string>
     <string name="reset_filter">Скінуць фільтр</string>
     <string name="always">Заўсёды</string>
-    <string name="nsfw">18+</string>
     <string name="never">Ніколі</string>
     <string name="only_using_wifi">Толькі праз Wi-Fi</string>
     <string name="logged_in_as">Вы аўтарызаваны як %s</string>
@@ -199,7 +192,6 @@
     <string name="hide">Схаваць</string>
     <string name="appearance">Знешні выгляд</string>
     <string name="disable_all">Адключыць усе</string>
-    <string name="use_fingerprint">Выкарыстоўваць біяметрычныя дадзеныя, калі яны даступныя</string>
     <string name="suggestions_updating">Абнаўленне рэкамендацый</string>
     <string name="local_manga_processing">Апрацоўка захаванай мангі</string>
     <string name="chapters_will_removed_background">Раздзелы будуць выдалены ў фонавым рэжыме</string>
@@ -231,7 +223,6 @@
     <string name="disable_battery_optimization">Адключыць аптымізацыю акумулятара</string>
     <string name="disable_battery_optimization_summary">Дапамагае з фонавай праверкай абнаўленняў</string>
     <string name="crash_text">Штосьці пайшло не так. Калі ласка, адпраўце справаздачу пра памылку распрацоўшчыкам, каб дапамагчы нам яе выправіць.</string>
-    <string name="invalid_domain_message">Памылковы дамен</string>
     <string name="report">Справаздача</string>
     <string name="tracking">Адсочванне</string>
     <string name="status_completed">Завершана</string>
@@ -317,7 +308,6 @@
     <string name="user_agent">Загаловак UserAgent</string>
     <string name="download_started">Спампоўка пачалася</string>
     <string name="settings_apply_restart_required">Калі ласка, перазапусціце праграму каб прымяніць змены</string>
-    <string name="got_it">Зразумеў</string>
     <string name="comics_archive_import_description">Вы можаце выбраць адзін або некалькі файлаў .cbz або .zip, кожны файл будзе распазнаны як асобная манга.</string>
     <string name="folder_with_images_import_description">Вы можаце выбраць каталог з архівамі або відарысамі. Кожны архіў (або падкаталог) будзе прызнаны раздзелам.</string>
     <string name="speed">Хуткасць</string>
@@ -421,7 +411,6 @@
     <string name="frequency_once_per_month">Адзін раз у месяц</string>
     <string name="last_successful_backup">Апошняе паспяховае рэзервовае капіраванне: %s</string>
     <string name="backups_output_directory">Вывадны каталог рэзервовых копій</string>
-    <string name="speed_value">x%.1f</string>
     <string name="lock_screen_rotation">Блакаванне павароту экрана</string>
     <string name="sources_catalog">Каталог крыніц</string>
     <string name="content_type_manga">Манга</string>
@@ -564,10 +553,8 @@
     <string name="disable_connectivity_check_summary">Прапусціць праверкі падключэння ў выпадку праблем з падключэннем (напрыклад, пераход у аўтаномны рэжым, нават калі сетка падключана)</string>
     <string name="disable_nsfw_notifications">Адключыць апавяшчэння NSFW</string>
     <string name="disable">Адкл.</string>
-    <string name="_new">Новае</string>
     <string name="all_languages">Усе мовы</string>
     <string name="screenshots_block_incognito">Блакіраваць у рэжыме інкогніта</string>
-    <string name="image_server">Сервер відарысаў</string>
     <string name="pin">Замацаваць</string>
     <string name="unpin">Адмацаваць</string>
     <string name="source_unpinned">Крыніца адмацавана</string>
@@ -582,7 +569,6 @@
     <string name="connection_ok">Злучэнне ў парадку</string>
     <string name="invalid_proxy_configuration">Няправільная канфігурацыя проксі</string>
     <string name="show_quick_filters_summary">Дае магчымасць фільтраваць спісы мангі па пэўных параметрах</string>
-    <string name="sfw">SFW</string>
     <string name="seconds_short">%d с</string>
     <string name="minutes_seconds_short">%1$d хв %2$d с</string>
     <string name="show_quick_filters">Паказаць хуткія фільтры</string>
@@ -728,7 +714,6 @@
     <string name="main_screen_fab">Паказаць плаваючую кнопку «Працягнуць»</string>
     <string name="main_screen_fab_summary">Дазваляе працягнуць чытанне адным пстрычкай мышы. Гэтая кнопка не адлюстроўваецца ў рэжыме інкогніта або калі гісторыя пустая</string>
     <string name="error_corrupted_zip">Пашкоджаны ZIP-архіў (%s)</string>
-    <string name="discord_rpc">Discord Rich Presence</string>
     <string name="discord_token">Токен Discord</string>
     <string name="discord_token_summary">Увядзіце свой токен Discord, каб уключыць Rich Presence</string>
     <string name="discord_token_description">Увядзіце свой токен Discord або націсніце %s, каб атрымаць яго з дапамогай браўзера</string>

@@ -328,7 +328,7 @@ class FilterCoordinator @Inject constructor(
                 defaultDynamicSortLabel.value = when (val ref = MihonFilterMapper.findSortFilter(defaults)) {
                     is MihonFilterMapper.SortRef.OfSort -> {
                         val idx = ref.filter.state?.index ?: 0
-                        ref.filter.values.getOrNull(idx)?.toString()
+                        ref.filter.values.getOrNull(idx)
                     }
                     is MihonFilterMapper.SortRef.OfSelect ->
                         ref.filter.values.getOrNull(ref.filter.state)?.toString()

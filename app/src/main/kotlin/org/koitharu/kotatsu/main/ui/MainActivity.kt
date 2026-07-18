@@ -65,7 +65,6 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
-import org.koitharu.kotatsu.core.util.ext.setProgressIcon
 import org.koitharu.kotatsu.core.util.ext.start
 import org.koitharu.kotatsu.databinding.ActivityMainBinding
 import org.koitharu.kotatsu.details.service.MangaPrefetchService
@@ -75,8 +74,6 @@ import org.koitharu.kotatsu.local.ui.LocalIndexUpdateService
 import org.koitharu.kotatsu.local.ui.LocalStorageCleanupWorker
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.main.ui.owners.BottomNavOwner
-import org.koitharu.kotatsu.main.ui.owners.MainFabInvalidator
-import org.koitharu.kotatsu.main.ui.owners.MainFabOwner
 import org.koitharu.kotatsu.main.ui.welcome.OnboardingActivity
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.remotelist.ui.MangaSearchMenuProvider
@@ -88,7 +85,7 @@ import org.koitharu.kotatsu.search.ui.suggestion.adapter.SearchSuggestionAdapter
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNavOwner, MainFabInvalidator,
+class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNavOwner,
 	View.OnClickListener,
 	SearchSuggestionItemCallback.SuggestionItemListener,
 	MainNavigationDelegate.OnFragmentChangedListener,
@@ -231,18 +228,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		when (v.id) {
 			R.id.fab, R.id.railFab -> {
 				v.hapticFeedback(HapticEffect.CONFIRM)
-				val fabOwner = navigationDelegate.primaryFragment as? MainFabOwner
-				if (fabOwner != null) {
-					fabOwner.onMainFabClick()
-				} else {
-					viewModel.openLastReader()
-				}
+				viewModel.openLastReader()
 			}
 		}
-	}
-
-	override fun invalidateMainFab() {
-		adjustFabVisibility()
 	}
 
 	private fun addMainOverflowMenuProvider(
@@ -437,12 +425,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		// navigation mode — or on the tablet nav rail, which has no floating bar — it keeps the old
 		// behaviour of a FAB shown only inside the history tab.
 		val useFloatingContinue = viewBinding.bottomNav != null && !settings.isLegacyNavigationBar
-		val fabOwner = fragment as? MainFabOwner
-		if (fabOwner != null && !actionModeDelegate.isActionModeStarted && !isSearchOpened) {
-			showMainFab("owner:${fragment::class.java.name}") { fab ->
-				configureOwnerFab(fab, fabOwner)
-			}
-		} else if (!useFloatingContinue && isResumeEnabled && !actionModeDelegate.isActionModeStarted &&
+		if (!useFloatingContinue && isResumeEnabled && !actionModeDelegate.isActionModeStarted &&
 			!isSearchOpened && fragment is HistoryListFragment
 		) {
 			showMainFab("continue", ::configureContinueFab)
@@ -491,16 +474,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		fab.setText(R.string._continue)
 		fab.setIconResource(R.drawable.ic_read)
 		fab.isEnabled = !viewModel.isLoading.value
-	}
-
-	private fun configureOwnerFab(fab: ExtendedFloatingActionButton, owner: MainFabOwner) {
-		fab.setText(owner.mainFabTextRes)
-		if (owner.isMainFabLoading) {
-			fab.setProgressIcon()
-		} else {
-			fab.setIconResource(owner.mainFabIconRes)
-		}
-		fab.isEnabled = owner.isMainFabEnabled
 	}
 
 	private fun adjustSearchUI(isOpened: Boolean) {

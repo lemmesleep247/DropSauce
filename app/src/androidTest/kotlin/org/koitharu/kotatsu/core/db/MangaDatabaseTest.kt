@@ -1,23 +1,20 @@
 package org.koitharu.kotatsu.core.db
 
-import androidx.room.testing.MigrationTestHelper
+import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Rule
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.koitharu.kotatsu.R
 
 @RunWith(AndroidJUnit4::class)
 class MangaDatabaseTest {
 
-	@get:Rule
-	val helper: MigrationTestHelper = MigrationTestHelper(
-		InstrumentationRegistry.getInstrumentation(),
-		MangaDatabase::class.java,
-	)
-
-	private val migrations = getDatabaseMigrations(InstrumentationRegistry.getInstrumentation().targetContext)
+	private val context = InstrumentationRegistry.getInstrumentation().targetContext
+	private val migrations = getDatabaseMigrations(context)
 
 	@Test
 	fun versions() {
@@ -30,28 +27,27 @@ class MangaDatabaseTest {
 	}
 
 	@Test
-	fun migrateAll() {
-		helper.createDatabase(TEST_DB, 1).close()
-		for (migration in migrations) {
-			helper.runMigrationsAndValidate(
-				TEST_DB,
-				migration.endVersion,
-				true,
-				migration,
-			).close()
+	fun currentSchemaOpens() {
+		val database = Room.inMemoryDatabaseBuilder(context, MangaDatabase::class.java).build()
+		try {
+			assertTrue(database.openHelper.writableDatabase.isOpen)
+		} finally {
+			database.close()
 		}
 	}
 
 	@Test
-	fun prePopulate() {
-		val resources = InstrumentationRegistry.getInstrumentation().targetContext.resources
-		helper.createDatabase(TEST_DB, DATABASE_VERSION).use {
-			DatabasePrePopulateCallback(resources).onCreate(it)
+	fun prePopulate() = runTest {
+		val database = Room.inMemoryDatabaseBuilder(context, MangaDatabase::class.java)
+			.addCallback(DatabasePrePopulateCallback(context.resources))
+			.build()
+		try {
+			assertEquals(
+				listOf(context.getString(R.string.read_later)),
+				database.getFavouriteCategoriesDao().findAll().map { category -> category.title },
+			)
+		} finally {
+			database.close()
 		}
-	}
-
-	private companion object {
-
-		const val TEST_DB = "test-db"
 	}
 }

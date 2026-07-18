@@ -35,17 +35,9 @@ class SuggestionRepository @Inject constructor(
 		}
 	}
 
-	suspend fun getRandomList(limit: Int): List<Manga> {
-		return db.getSuggestionDao().getRandom(limit).map {
-			it.toManga()
-		}
-	}
-
 	/**
-	 * Reactive variant of [getRandomList]: emits a fresh random subset whenever the set of stored
-	 * suggestions changes (e.g. after a manual refresh), so observers like the Explore carousel stay
-	 * in sync instead of being frozen until the next app start. Re-shuffles only when the suggestion
-	 * membership actually changes, not on unrelated row updates.
+	 * Emits a fresh random subset whenever the stored suggestions change. Re-shuffles only when
+	 * membership changes, not on unrelated row updates.
 	 */
 	fun observeRandomList(limit: Int): Flow<List<Manga>> {
 		return observeAll()
@@ -55,10 +47,6 @@ class SuggestionRepository @Inject constructor(
 
 	suspend fun clear() {
 		db.getSuggestionDao().deleteAll()
-	}
-
-	suspend fun isEmpty(): Boolean {
-		return db.getSuggestionDao().count() == 0
 	}
 
 	suspend fun getTopTags(limit: Int): List<MangaTag> {

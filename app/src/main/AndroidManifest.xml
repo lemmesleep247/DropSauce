@@ -133,9 +133,6 @@
 			</intent-filter>
 		</activity>
 		<activity
-			android:name="org.koitharu.kotatsu.history.ui.HistoryActivity"
-			android:label="@string/history" />
-		<activity
 			android:name="org.koitharu.kotatsu.tracker.ui.updates.UpdatesActivity"
 			android:label="@string/updates" />
 		<activity
@@ -211,9 +208,6 @@
 		<activity
 			android:name="org.koitharu.kotatsu.main.ui.protect.ProtectActivity"
 			android:noHistory="true"
-			android:windowSoftInputMode="adjustResize" />
-		<activity
-			android:name="org.koitharu.kotatsu.settings.protect.ProtectSetupActivity"
 			android:windowSoftInputMode="adjustResize" />
 		<activity
 			android:name="org.koitharu.kotatsu.download.ui.list.DownloadsActivity"

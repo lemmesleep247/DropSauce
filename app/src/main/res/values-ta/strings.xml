@@ -88,7 +88,6 @@
     <string name="text_search_holder_secondary">வினவலை மறுசீரமைக்க முயற்சிக்கவும்.</string>
     <string name="backup_saved">காப்புப்பிரதி சேமிக்கப்பட்டது</string>
     <string name="chapter_is_missing">அத்தியாயம் இல்லை</string>
-    <string name="about_app_translation_summary">இந்த பயன்பாட்டை மொழிபெயர்க்கவும்</string>
     <string name="auth_not_supported_by">%s இல் உள்நுழைவது ஆதரிக்கப்படவில்லை</string>
     <string name="text_clear_cookies_prompt">நீங்கள் அனைத்து மூலங்களிலிருந்தும் வெளியேறுவீர்கள்</string>
     <string name="genres">வகைகள்</string>
@@ -164,7 +163,6 @@
     <string name="tap_to_try_again">மீண்டும் முயற்சிக்க தட்டவும்</string>
     <string name="silent">அமைதியாக</string>
     <string name="captcha_required">கேப்ட்சா தேவை</string>
-    <string name="password_length_hint">கடவுச்சொல் 4 எழுத்துக்கள் அல்லது அதற்கு மேற்பட்டதாக இருக்க வேண்டும்</string>
     <string name="welcome">வரவேற்கிறோம்</string>
     <string name="tracker_warning">சில சாதனங்கள் வெவ்வேறு கணினி நடத்தைகளைக் கொண்டுள்ளன, அவை பின்னணி பணிகளை உடைக்கக்கூடும்.</string>
     <string name="queued">வரிசையில்</string>
@@ -201,8 +199,6 @@
     <string name="backup_date_">காப்பு தேதி: %s</string>
     <string name="default_tab">இயல்புநிலை தாவல்</string>
     <string name="tracker_debug_info_summary">புதிய அத்தியாயங்களுக்கான பின்னணி காசோலைகள் பற்றிய தகவல்களை பிழைத்திருத்தவும்</string>
-    <string name="_new">புதிய</string>
-    <string name="image_server">விருப்பமான பட சேவையகம்</string>
     <string name="scrobbler_auth_required">தொடர %s இல் உள்நுழைக</string>
     <string name="popular_today">இன்று பிரபலமானது</string>
     <string name="popular_in_week">இந்த வாரம் பிரபலமானது</string>
@@ -242,9 +238,6 @@
     <string name="track_sources">புதுப்பிப்புகளைப் பாருங்கள்</string>
     <string name="enter_password">கடவுச்சொல்லை உள்ளிடவும்</string>
     <string name="wrong_password">தவறான கடவுச்சொல்</string>
-    <string name="protect_application">பயன்பாட்டைப் பாதுகாக்கவும்</string>
-    <string name="repeat_password">கடவுச்சொல்லை மீண்டும் செய்யவும்</string>
-    <string name="passwords_mismatch">பொருந்தாத கடவுச்சொற்கள்</string>
     <string name="about">பற்றி</string>
     <string name="app_version">பதிப்பு %s</string>
     <string name="check_for_updates">புதுப்பிப்புகளை சரிபார்க்கவும்</string>
@@ -278,7 +271,6 @@
     <string name="sign_in">விடுபதிகை</string>
     <string name="auth_required">இந்த உள்ளடக்கத்தைக் காண உள்நுழைக</string>
     <string name="next">அடுத்தது</string>
-    <string name="protect_application_subtitle">பயன்பாட்டைத் தொடங்க கடவுச்சொல்லை உள்ளிடவும்</string>
     <string name="confirm">உறுதிப்படுத்தவும்</string>
     <string name="text_clear_search_history_prompt">அனைத்து அண்மைக் கால தேடல் வினவல்களையும் நிரந்தரமாக அகற்றவா?</string>
     <string name="suggestions_info">எல்லா தரவுகளும் இந்த சாதனத்தில் உள்நாட்டில் மட்டுமே பகுப்பாய்வு செய்யப்படுகின்றன, மேலும் எங்கும் அனுப்பப்படவில்லை.</string>
@@ -292,7 +284,6 @@
     <string name="always">எப்போதும்</string>
     <string name="preload_pages">பக்கங்களை முன்னரே ஏற்றவும்</string>
     <string name="logged_in_as">%s ஆக உள்நுழைந்துள்ளது</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">பல்வேறு மொழிகள்</string>
     <string name="search_chapters">அத்தியாயத்தைக் கண்டறியவும்</string>
     <string name="chapters_empty">இந்த மங்காவில் அத்தியாயங்கள் இல்லை</string>
@@ -333,12 +324,10 @@
     <string name="status_on_hold">நிறுத்தி</string>
     <string name="status_dropped">கைவிடப்பட்டது</string>
     <string name="disable_all">அனைத்தையும் முடக்கு</string>
-    <string name="use_fingerprint">கிடைத்தால் பயோமெட்ரிக் பயன்படுத்தவும்</string>
     <string name="show_reading_indicators">வாசிப்பு முன்னேற்ற குறிகாட்டிகளைக் காட்டு</string>
     <string name="import_will_start_soon">இறக்குமதி விரைவில் தொடங்கும்</string>
     <string name="download_option_all_unread">படிக்காத அனைத்து அத்தியாயங்களும்</string>
     <string name="clear_cookies_summary">சில சிக்கல்கள் ஏற்பட்டால் உதவ முடியும். அனைத்து அங்கீகாரங்களும் செல்லாதவை</string>
-    <string name="invalid_domain_message">தவறான டொமைன்</string>
     <string name="clear_all_history">எல்லா வரலாற்றையும் அழிக்கவும்</string>
     <string name="last_2_hours">கடைசி 2 மணி நேரம்</string>
     <string name="history_cleared">வரலாறு அழிக்கப்பட்டது</string>
@@ -385,7 +374,6 @@
     <string name="content_type_other">மற்றொன்று</string>
     <string name="scrobbling_empty_hint">வாசிப்பு முன்னேற்றத்தைக் கண்காணிக்க, மங்கா விவரங்கள் திரையில் பட்டியல் → தடத்தைத் தேர்ந்தெடுக்கவும்.</string>
     <string name="download_started">பதிவிறக்கம் தொடங்கியது</string>
-    <string name="got_it">கிடைத்தது</string>
     <string name="comics_archive_import_description">நீங்கள் ஒன்று அல்லது அதற்கு மேற்பட்ட .CBZ அல்லது .ZIP கோப்புகளைத் தேர்ந்தெடுக்கலாம், ஒவ்வொரு கோப்பும் ஒரு தனி மங்காவாக அங்கீகரிக்கப்படும்.</string>
     <string name="folder_with_images_import_description">காப்பகங்கள் அல்லது படங்களுடன் ஒரு கோப்பகத்தை நீங்கள் தேர்ந்தெடுக்கலாம். ஒவ்வொரு காப்பகமும் (அல்லது துணை அடைவு) ஒரு அத்தியாயமாக அங்கீகரிக்கப்படும்.</string>
     <string name="speed">வேகம்</string>
@@ -573,7 +561,6 @@
     <string name="show_pages_thumbs_summary">விவரங்கள் திரையில் \"பக்கங்கள்\" தாவலை இயக்கவும்</string>
     <string name="error_no_data_received">சேவையகத்திலிருந்து தரவு எதுவும் பெறப்படவில்லை</string>
     <string name="unsupported_backup_message">சரியான கோட்டாட்சு காப்பு கோப்பைத் தேர்ந்தெடுக்கவும்</string>
-    <string name="hours_short">%d h</string>
     <string name="minutes_short">%d மீ</string>
     <string name="seconds_short">%d கள்</string>
     <string name="hours_minutes_short">%1$d h %2$d மீ</string>

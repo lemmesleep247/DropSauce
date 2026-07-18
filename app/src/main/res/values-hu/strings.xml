@@ -73,9 +73,6 @@
     <string name="suggestions_excluded_genres_summary">Határozz meg műfajokat, amiket nem akarsz látni a javaslatokban</string>
     <string name="canceled">Megszakítva</string>
     <string name="clear_pages_cache">Oldal gyorsítótár törlése</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
-    <string name="standard">Standard</string>
-    <string name="webtoon">Webtoon</string>
     <string name="read_mode">Olvasási mód</string>
     <string name="grid_size">Rács mérete</string>
     <string name="search_on_s">Keresés %s-en</string>
@@ -118,7 +115,6 @@
     <string name="track_sources">Frissítések keresése</string>
     <string name="enter_password">Add meg a jelszót</string>
     <string name="wrong_password">Helytelen jelszó</string>
-    <string name="passwords_mismatch">Nem egyező jelszavak</string>
     <string name="about">Névjegy</string>
     <string name="app_version">Verzió %s</string>
     <string name="check_for_updates">Frissítések keresése</string>
@@ -143,7 +139,6 @@
     <string name="reset_filter">Szűrő visszaállítása</string>
     <string name="never">Soha</string>
     <string name="only_using_wifi">Csak Wi-Fi-n</string>
-    <string name="nsfw">18+</string>
     <string name="various_languages">Különböző nyelvek</string>
     <string name="chapters_empty">Nincsenek fejezetek ebben a mangában</string>
     <string name="percent_string_pattern">%1$s%%</string>
@@ -172,8 +167,6 @@
     <string name="status_re_reading">Újraolvasás</string>
     <string name="status_completed">Befejezve</string>
     <string name="status_on_hold">Függőben</string>
-    <string name="use_fingerprint">Ujjlenyomat-azonosítást használata, ha elérhető</string>
-    <string name="invalid_domain_message">Hibás domain</string>
     <string name="select_range">Válaszd ki a tartományt</string>
     <string name="reader_info_bar">Információs sáv megjelenítése az olvasóban</string>
     <string name="folder_with_images">Mappa képekkel</string>
@@ -194,8 +187,6 @@
     <string name="text_history_holder_secondary">Találd meg, mit olvashatsz a «Felfedezés» szekcióban</string>
     <string name="text_local_holder_secondary">Ments el valamit egy online katalógusból, vagy importálj egy fájlból.</string>
     <string name="text_feed_holder">Az általad olvasott mangák új fejezetei itt jelennek meg</string>
-    <string name="protect_application">Alkalmazás védése</string>
-    <string name="repeat_password">Ismételd meg a jelszót</string>
     <string name="reader_mode_hint">A választott beállításokat megjegyezzük ehhez a mangához</string>
     <string name="silent">Néma</string>
     <string name="captcha_required">CAPTCHA szükséges</string>
@@ -208,16 +199,13 @@
     <string name="sign_in">Belépés</string>
     <string name="auth_required">Belépés szükséges a tartalom megtekintéséhez</string>
     <string name="next">Tovább</string>
-    <string name="protect_application_subtitle">Add meg azt a jelszót, amivel az alkalmazást indítani szeretnéd</string>
     <string name="confirm">Megerősít</string>
-    <string name="password_length_hint">A jelszónak legalább 4 karakterből kell állnia</string>
     <string name="text_clear_search_history_prompt">Az összes legutóbbi keresési lekérdezés törlésre kerüljön?</string>
     <string name="welcome">Üdvözlünk</string>
     <string name="backup_saved">Mentés sikeresen elmentve</string>
     <string name="tracker_warning">Néhány készülék rendszere eltérően működik, ami megszakíthatja a háttérfeladatokat.</string>
     <string name="queued">Sorba állítva</string>
     <string name="chapter_is_missing">A fejezet hiányzik</string>
-    <string name="about_app_translation_summary">Fordítsd le ezt az alkalmazást</string>
     <string name="notifications_enable">Értesítések engedélyezése</string>
     <string name="name">Név</string>
     <string name="edit">Szerkesztés</string>
@@ -274,13 +262,6 @@
     <string name="mark_as_current">Aktuálisként jelölés</string>
     <string name="language">Nyelv</string>
     <string name="color_theme">Színséma</string>
-    <string name="theme_name_miku">Miku</string>
-    <string name="theme_name_asuka">Asuka</string>
-    <string name="theme_name_mion">Mion</string>
-    <string name="theme_name_rikka">Rikka</string>
-    <string name="theme_name_sakura">Sakura</string>
-    <string name="theme_name_mamimi">Mamimi</string>
-    <string name="theme_name_kanade">Kanade</string>
     <string name="nothing_here">Itt nincs semmi</string>
     <string name="settings_apply_restart_required">Kérlek indítsd újra az alkalmazást a változtatások érvényesítéséhez</string>
     <string name="ignore_ssl_errors">SSL hibákat mellőzése</string>
@@ -341,7 +322,6 @@
     <string name="scrobbling_empty_hint">Az olvasási előrehaladás követéséhez válaszd a Menü → Követés lehetőséget a manga részletek képernyőn.</string>
     <string name="services">Szolgáltatások</string>
     <string name="download_started">Letöltés elkezdve</string>
-    <string name="got_it">Értettem</string>
     <string name="user_agent">UserAgent fejléc</string>
     <string name="comics_archive_import_description">Választhatsz egy vagy több .cbz vagy .zip fájlt, minden egyes fájlt külön manga-ként fog felismerni.</string>
     <string name="speed">Sebesség</string>
@@ -371,8 +351,6 @@
     <string name="clear_network_cache">Hálózati gyorsítótár törlése</string>
     <string name="type">Típus</string>
     <string name="address">Cím</string>
-    <string name="port">Port</string>
-    <string name="proxy">Proxy</string>
     <string name="invalid_value_message">Érvénytelen érték</string>
     <string name="email_password_enter_hint">Add meg az e-mail címed és a jelszavad a folytatáshoz</string>
     <string name="downloaded">Letöltött</string>
@@ -438,10 +416,7 @@
     <string name="periodic_backups_enable">Időszakos biztonsági mentések engedélyezése</string>
     <string name="backups_output_directory">Biztonsági mentések kimeneti mappája</string>
     <string name="last_successful_backup">Utolsó sikeres mentés: %s</string>
-    <string name="speed_value">x%.1f</string>
     <string name="lock_screen_rotation">Képernyő forgatásának zárolása</string>
-    <string name="content_type_manga">Manga</string>
-    <string name="content_type_hentai">Hentai</string>
     <string name="content_type_comics">Képregények</string>
     <string name="content_type_other">Egyéb</string>
     <string name="sources_catalog">Források katalógusa</string>
@@ -542,7 +517,6 @@
     <string name="all_languages">Összes nyelv</string>
     <string name="screenshots_block_incognito">Blokkold inkognitó módban</string>
     <string name="crop_pages">Lap kivágása</string>
-    <string name="image_server">Előnyben részesített kiszolgáló</string>
     <string name="last_used">Legutóbb használt</string>
     <string name="more_frequently">Gyakrabban</string>
     <string name="frequency_of_check">Az ellenőrzés gyakorisága</string>

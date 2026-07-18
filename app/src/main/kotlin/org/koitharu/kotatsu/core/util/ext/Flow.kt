@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -151,9 +150,4 @@ fun <T> SuspendLazy<T>.asFlow() = flow { emit(runCatchingCancellable { get() }) 
 
 fun <T> MutableStateFlow<List<T>>.append(item: T) {
 	update { list -> list + item }
-}
-
-fun <T> Flow<T>.concat(other: Flow<T>) = flow {
-	emitAll(this@concat)
-	emitAll(other)
 }

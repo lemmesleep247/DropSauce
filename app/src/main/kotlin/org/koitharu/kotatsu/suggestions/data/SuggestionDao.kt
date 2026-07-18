@@ -37,15 +37,6 @@ abstract class SuggestionDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT manga.* FROM suggestions LEFT JOIN manga ON manga.manga_id = suggestions.manga_id ORDER BY relevance DESC LIMIT :limit")
 	abstract suspend fun getTopManga(limit: Int): List<MangaWithTags>
 
-	@Transaction
-	open suspend fun getRandom(limit: Int): List<MangaWithTags> {
-		val ids = getRandomIds(limit)
-		return getByIds(ids)
-	}
-
-	@Query("SELECT COUNT(*) FROM suggestions")
-	abstract suspend fun count(): Int
-
 	@Query("SELECT manga.title FROM suggestions LEFT JOIN manga ON suggestions.manga_id = manga.manga_id WHERE manga.title LIKE :query")
 	abstract suspend fun getTitles(query: String): List<String>
 
@@ -70,13 +61,6 @@ abstract class SuggestionDao : MangaQueryBuilder.ConditionCallback {
 			insert(entity)
 		}
 	}
-
-	@Transaction
-	@Query("SELECT * FROM manga WHERE manga_id IN (:ids)")
-	protected abstract suspend fun getByIds(ids: LongArray): List<MangaWithTags>
-
-	@Query("SELECT manga_id FROM suggestions ORDER BY RANDOM() LIMIT :limit")
-	protected abstract suspend fun getRandomIds(limit: Int): LongArray
 
 	@Transaction
 	@RawQuery(observedEntities = [SuggestionEntity::class])

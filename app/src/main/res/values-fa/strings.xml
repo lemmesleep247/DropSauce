@@ -6,7 +6,6 @@
     <string name="error_occurred">خطایی رخ داده است</string>
     <string name="network_error">خطای اتصال به شبکه</string>
     <string name="text_delete_local_manga">آیا \"%s\" بطور دائم از دستگاه حذف شود؟</string>
-    <string name="about_app_translation_summary">این برنامه را ترجمه کنید</string>
     <string name="history_is_empty">هنوز تاریخچه ای وجود ندارد</string>
     <string name="list_mode">نوع لیستی</string>
     <string name="internal_storage">حافظه ی درونی</string>
@@ -16,7 +15,6 @@
     <string name="pages">صفحات</string>
     <string name="clear">پاکسازی</string>
     <string name="preparing_">در حال آماده سازی…</string>
-    <string name="repeat_password">گذرواژه را تکرار کنید</string>
     <string name="grid">دریچه</string>
     <string name="settings">تنظیمات</string>
     <string name="chapter_d_of_d">چپتر %1$d از %2$d</string>
@@ -52,9 +50,7 @@
     <string name="notification_sound">صدای اعلان</string>
     <string name="vibration">لرزاندن</string>
     <string name="silent">سکوت</string>
-    <string name="protect_application_subtitle">یک گذرواژه برای شروع برنامه وارد کنید</string>
     <string name="confirm">تایید</string>
-    <string name="password_length_hint">گذرواژه باید 4 کاراکتر یا بیشتر باشد</string>
     <string name="auth_not_supported_by">ورود به اکانت در %s پشتیبانی نمی شود</string>
     <string name="preload_pages">از قبل صفحات را بارگذاری کنید</string>
     <string name="favourites_categories">دسته بندی های مورد علاقه</string>
@@ -67,8 +63,6 @@
     <string name="read_later">بعدا خواندن</string>
     <string name="text_feed_holder">چپترهای جدیدی که شما درحال خواندن هستید در اینجا نمایش داده می شوند</string>
     <string name="updates_feed_cleared">پاکسازی شد</string>
-    <string name="protect_application">محافظت از برنامه</string>
-    <string name="passwords_mismatch">گذرواژه ها تطابق ندارند</string>
     <string name="yesterday">دیروز</string>
     <string name="long_ago">خیلی وقت پیش</string>
     <string name="group">گروه</string>
@@ -189,7 +183,6 @@
     <string name="never">هیچوقت</string>
     <string name="always">همیشه</string>
     <string name="logged_in_as">به عنوان %s وارد اکانت شدید</string>
-    <string name="nsfw">18+</string>
     <string name="operation_not_supported">این عملیات پشتیبانی نمی شود</string>
     <string name="text_file_not_supported">لطفا یک فایل با فرمت ZIP یا CBZ انتخاب کنید.</string>
     <string name="tracker_warning">بعضی از دستگاه ها دارای رفتار سیستمی متفاوت می باشند، که ممکن است برخی از پروسه های پس زمینه را مختل کنند.</string>
@@ -232,7 +225,6 @@
     <string name="retry">تلاش مجدد</string>
     <string name="scrobbler_auth_required">برای ادامه دادن به %s وارد شوید</string>
     <string name="disable_all">غیرفعال کردن کل</string>
-    <string name="use_fingerprint">استفاده از اثر انگشت در صورت امکان</string>
     <string name="detect_reader_mode_summary">تشخیص خودکار وب‌تون بودن مانگا</string>
     <string name="status_reading">خواندن</string>
     <string name="status_completed">تکمیل شده</string>
@@ -252,7 +244,6 @@
     <string name="status_planned">برنامه‌ریزی شده</string>
     <string name="clear_cookies_summary">می‌تواند در صورت بروز برخی مشکلات کمک کند. همه مجوزها باطل خواهند شد</string>
     <string name="show_all">نمایش همه</string>
-    <string name="invalid_domain_message">دامنه نامعتبر</string>
     <string name="select_range">انتخاب بازه</string>
     <string name="clear_all_history">پاک کردن همه تاریخچه</string>
     <string name="last_2_hours">۲ ساعت گذشته</string>
@@ -322,7 +313,6 @@
     <string name="scrobbling_empty_hint">برای فعال کردن پیگیری پیشرفت خواندن، منو را انتخاب کنید ← پیگیری در صفحه جزئیات مانگا.</string>
     <string name="services">خدمات</string>
     <string name="download_started">بارگیری آغاز شد</string>
-    <string name="got_it">متوجه شدم</string>
     <string name="user_agent">هدر UserAgent</string>
     <string name="settings_apply_restart_required">لطفا برای اعمال این تغییرات، برنامه را مجددا راه اندازی کنید</string>
     <string name="comics_archive_import_description">میتونی یک یا چند فایل .cbz یا .zip رو انتخاب کنی، هر فایل به صورت یک مانگای مجزا شناخته میشه.</string>

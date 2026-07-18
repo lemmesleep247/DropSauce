@@ -29,7 +29,7 @@ fun Snackbar.addCopyErrorAction(error: Throwable): Snackbar {
 	}.getOrNull() ?: return this
 	copyAction.apply {
 		tag = COPY_ERROR_ACTION_TAG
-		text = context.getString(R.string.copy)
+		text = context.getString(androidx.preference.R.string.copy)
 		isAllCaps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) originalAction?.isAllCaps ?: true else true
 		minWidth = 0
 		minHeight = originalAction?.minHeight ?: 0

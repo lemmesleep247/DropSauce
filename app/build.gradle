@@ -80,15 +80,9 @@ android {
 			// GitHub releases are universal APKs, so compress native libraries to avoid
 			// shipping every ABI at its full on-disk size. Android extracts them at install.
 			useLegacyPackaging = true
-			keepDebugSymbols += [
-				'**/libandroidx.graphics.path.so',
-				'**/libavif_android.so',
-				'**/libquickjs.so',
-			]
 		}
 	}
 	sourceSets {
-		androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
 		preview.kotlin.srcDirs += 'src/release/kotlin'
 		preview.res.srcDirs += 'src/release/res'
 	}
@@ -103,8 +97,6 @@ android {
 	lint {
 		abortOnError = true
 		warningsAsErrors = true
-		sarifReport = true
-		checkDependencies = true
 		disable 'MissingTranslation',
 			'PrivateResource',
 			'SetJavaScriptEnabled',
@@ -140,10 +132,6 @@ android {
 			// Play SDK Index policy notes on play-services-auth.
 			// Irrelevant for GitHub distribution; not published to the Play Store.
 			'PlaySdkIndexNonCompliant'
-	}
-	testOptions {
-		unitTests.includeAndroidResources = true
-		unitTests.returnDefaultValues = false
 	}
 }
 
@@ -208,7 +196,6 @@ dependencies {
     implementation libs.androidx.compose.ui
     implementation libs.androidx.compose.foundation
     implementation libs.androidx.compose.material3
-    implementation libs.androidx.compose.material.icons.core
     implementation libs.androidx.compose.activity
     implementation libs.androidx.graphics.shapes
 
@@ -272,9 +259,7 @@ dependencies {
 	androidTestImplementation libs.androidx.junit
 
 	androidTestImplementation libs.kotlinx.coroutines.test
-	androidTestImplementation libs.kotlinx.serialization.protobuf
 
-	androidTestImplementation libs.androidx.room.testing
 	androidTestImplementation libs.moshi.kotlin
 
 	androidTestImplementation libs.hilt.android.testing

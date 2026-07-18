@@ -162,7 +162,6 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Collect Release APKs
-      id: assets
       run: |
         mkdir -p release
         shopt -s nullglob
@@ -172,7 +171,6 @@ jobs:
           exit 1
         fi
 
-        DOWNLOAD_NOTES=""
         for apk in "${APK_FILES[@]}"; do
           if [ ${#APK_FILES[@]} -eq 1 ]; then
             target="release/DropSauce-v${{ inputs.version_name }}.apk"
@@ -181,12 +179,7 @@ jobs:
             target="release/DropSauce-v${{ inputs.version_name }}-${original_apk_name}.apk"
           fi
           cp "$apk" "$target"
-          DOWNLOAD_NOTES="$(printf '%s- `%s`\n' "$DOWNLOAD_NOTES" "$(basename "$target")")"
         done
-
-        echo "download_notes<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$DOWNLOAD_NOTES" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
 
     - name: Create Release
       env:

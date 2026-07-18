@@ -114,9 +114,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			}
 		}
 
-	val onboardingInstallTime: Long
-		get() = runCatching { onboardingInstallIdFile.lastModified() }.getOrDefault(0L)
-
 	var mainNavItems: List<NavItem>
 		get() {
 			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
@@ -442,12 +439,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val trackSources: Set<String>
 		get() = prefs.getStringSet(KEY_TRACK_SOURCES, null) ?: setOf(TRACK_FAVOURITES)
 
-	var appPassword: String?
-		get() = prefs.getString(KEY_APP_PASSWORD, null)
-		set(value) = prefs.edit {
-			if (value != null) putString(KEY_APP_PASSWORD, value) else remove(KEY_APP_PASSWORD)
-		}
-
 	var isAppProtectionEnabled: Boolean
 		get() = prefs.getBoolean(KEY_PROTECT_APP, false)
 		set(value) = prefs.edit { putBoolean(KEY_PROTECT_APP, value) }
@@ -458,10 +449,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	val appProtectionTimeoutMillis: Long
 		get() = appProtectionTimeout.timeoutMillis
-
-	var isAppPasswordNumeric: Boolean
-		get() = prefs.getBoolean(KEY_APP_PASSWORD_NUMERIC, false)
-		set(value) = prefs.edit { putBoolean(KEY_APP_PASSWORD_NUMERIC, value) }
 
 	var pendingExtensionDownloads: Set<Long>
 		get() = prefs.getStringSet(KEY_PENDING_EXTENSION_DOWNLOADS, emptySet())
@@ -496,10 +483,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 				enumValueOf<SearchSuggestionType>(x)
 			}
 		} ?: EnumSet.allOf(SearchSuggestionType::class.java)
-
-	var isBiometricProtectionEnabled: Boolean
-		get() = prefs.getBoolean(KEY_PROTECT_APP_BIOMETRIC, true)
-		set(value) = prefs.edit { putBoolean(KEY_PROTECT_APP_BIOMETRIC, value) }
 
 	val isExitConfirmationEnabled: Boolean
 		get() = prefs.getBoolean(KEY_EXIT_CONFIRM, false)
@@ -565,9 +548,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	fun setMihonActiveLang(pkgName: String, sourceName: String, lang: String) {
 		val suffix = "\n" + mihonSourceKey(pkgName, sourceName)
-		val updated = mihonPerExtActiveLangs.filterNot { it.endsWith(suffix) }.toMutableSet()
-		updated.add(lang + suffix)
-		mihonPerExtActiveLangs = updated
+		mihonPerExtActiveLangs = mihonPerExtActiveLangs.filterNot { it.endsWith(suffix) }.toSet() + (lang + suffix)
 	}
 
 	private fun mihonSourceKey(pkgName: String, sourceName: String): String = "$pkgName\n$sourceName"
@@ -1077,11 +1058,11 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val EPUB_CUSTOM_FONT_FILE = "epub_custom_font"
 		const val KEY_READER_MODE_DETECT = "reader_mode_detect"
 		const val KEY_READER_CROP = "reader_crop"
-		const val KEY_APP_PASSWORD = "app_password"
-		const val KEY_APP_PASSWORD_NUMERIC = "app_password_num"
 		const val KEY_PROTECT_APP = "protect_app"
 		const val KEY_PROTECT_APP_TIMEOUT = "protect_app_timeout"
-		const val KEY_PROTECT_APP_BIOMETRIC = "protect_app_bio"
+		private const val KEY_APP_PASSWORD_OLD = "app_password"
+		private const val KEY_APP_PASSWORD_NUMERIC_OLD = "app_password_num"
+		private const val KEY_PROTECT_APP_BIOMETRIC_OLD = "protect_app_bio"
 		const val KEY_ZOOM_MODE = "zoom_mode"
 		const val KEY_HISTORY_GROUPING = "history_grouping"
 		const val KEY_UPDATED_GROUPING = "updated_grouping"
@@ -1186,11 +1167,11 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		 * Stripped from local backups and cloud sync, both when writing and when applying.
 		 */
 		val SENSITIVE_BACKUP_KEYS = setOf(
-			KEY_APP_PASSWORD,
-			KEY_APP_PASSWORD_NUMERIC,
+			KEY_APP_PASSWORD_OLD,
+			KEY_APP_PASSWORD_NUMERIC_OLD,
 			KEY_PROTECT_APP,
 			KEY_PROTECT_APP_TIMEOUT,
-			KEY_PROTECT_APP_BIOMETRIC,
+			KEY_PROTECT_APP_BIOMETRIC_OLD,
 			KEY_PROXY_PASSWORD,
 			KEY_PROXY_LOGIN,
 			KEY_INCOGNITO_MODE,

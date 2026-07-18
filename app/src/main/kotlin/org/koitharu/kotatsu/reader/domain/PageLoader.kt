@@ -12,7 +12,6 @@ import androidx.core.net.toUri
 import coil3.BitmapImage
 import coil3.Image
 import coil3.ImageLoader
-import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.transformations
 import coil3.toBitmap

@@ -48,7 +48,7 @@
 			android:layout_height="48dp"
 			android:layout_gravity="center"
 			android:contentDescription="@string/next_chapter"
-			app:icon="@drawable/ic_next" />
+			app:icon="@drawable/ic_action_skip" />
 	</FrameLayout>
 
 	<FrameLayout

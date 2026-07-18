@@ -44,7 +44,7 @@ import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
+class CloudFlareActivity : BaseBrowserActivity() {
 
 	private var pendingResult = RESULT_CANCELED
 	private val isHidden: Boolean by lazy { intent?.getBooleanExtra(EXTRA_HIDDEN, false) == true }
@@ -154,13 +154,13 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 
 	override fun onLoadingStateChanged(isLoading: Boolean) = Unit
 
-	override fun onPageLoaded() {
+	fun onPageLoaded() {
 		if (!isHidden) {
 			viewBinding.progressBar.isInvisible = true
 		}
 	}
 
-	override fun onLoopDetected() {
+	fun onLoopDetected() {
 		if (isHidden || isAutoResolve) {
 			restartCheck()
 		} else {
@@ -169,7 +169,7 @@ class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		}
 	}
 
-	override fun onCheckPassed() {
+	fun onCheckPassed() {
 		if (clearanceVerificationJob?.isActive == true) {
 			return
 		}

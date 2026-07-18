@@ -15,7 +15,7 @@ import org.koitharu.kotatsu.core.network.webview.adblock.AdBlock
 import java.io.ByteArrayInputStream
 
 open class BrowserClient(
-	private val callback: BrowserCallback,
+	private val callback: BaseBrowserActivity,
 	private val adBlock: AdBlock?,
 ) : WebViewClient() {
 

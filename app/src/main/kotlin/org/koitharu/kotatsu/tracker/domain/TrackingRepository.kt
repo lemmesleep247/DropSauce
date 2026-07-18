@@ -171,7 +171,6 @@ class TrackingRepository @Inject constructor(
 			db.getTracksDao().upsert(track)
 			if (hasNewChapters) {
 				progressUpdateUseCase(updates.manga)
-				check(updates is MangaUpdates.Success)
 				val logEntity = TrackLogEntity(
 					mangaId = updates.manga.id,
 					chapters = updates.newChapters.joinToString("\n") { x -> x.title.orEmpty() },

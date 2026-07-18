@@ -16,7 +16,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koitharu.kotatsu.SampleData
-import org.koitharu.kotatsu.awaitForIdle
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.history.data.HistoryRepository
 import javax.inject.Inject
@@ -41,6 +40,10 @@ class AppShortcutManagerTest {
 	fun setUp() {
 		hiltRule.inject()
 		database.clearAllTables()
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+			val context = InstrumentationRegistry.getInstrumentation().targetContext
+			context.getSystemService<ShortcutManager>()?.removeAllDynamicShortcuts()
+		}
 	}
 
 	@Test
@@ -48,11 +51,10 @@ class AppShortcutManagerTest {
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
 			return@runTest
 		}
-		database.invalidationTracker.addObserver(appShortcutManager)
 		awaitUpdate()
 		assertTrue(getShortcuts().isEmpty())
 		historyRepository.addOrUpdate(
-			manga = SampleData.manga,
+			manga = SampleData.mangaDetails,
 			chapterId = SampleData.chapter.id,
 			page = 4,
 			scroll = 2,
@@ -72,8 +74,7 @@ class AppShortcutManagerTest {
 	}
 
 	private suspend fun awaitUpdate() {
-		val instrumentation = InstrumentationRegistry.getInstrumentation()
-		instrumentation.awaitForIdle()
+		appShortcutManager.onInvalidated(emptySet())
 		appShortcutManager.await()
 	}
 }

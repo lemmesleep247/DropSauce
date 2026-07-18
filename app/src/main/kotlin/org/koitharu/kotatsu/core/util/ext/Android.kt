@@ -13,11 +13,8 @@ import android.content.Context.ACTIVITY_SERVICE
 import android.content.Context.POWER_SERVICE
 import android.content.ContextWrapper
 import android.content.Intent
-import android.content.OperationApplicationException
-import android.content.SyncResult
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.content.pm.ResolveInfo
-import android.database.SQLException
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.os.Build
@@ -49,9 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import okio.IOException
 import okio.use
-import org.json.JSONException
 import org.jsoup.internal.StringUtil.StringJoiner
-import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.main.ui.MainActivity
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -97,18 +92,6 @@ fun Lifecycle.postDelayed(delay: Long, runnable: Runnable) {
 		delay(delay)
 		runnable.run()
 	}
-}
-
-fun SyncResult.onError(error: Throwable) {
-	when (error) {
-		is IOException -> stats.numIoExceptions++
-		is OperationApplicationException,
-		is SQLException -> databaseError = true
-
-		is JSONException -> stats.numParseExceptions++
-		else -> if (BuildConfig.DEBUG) throw error
-	}
-	error.printStackTraceDebug()
 }
 
 val Context.animatorDurationScale: Float

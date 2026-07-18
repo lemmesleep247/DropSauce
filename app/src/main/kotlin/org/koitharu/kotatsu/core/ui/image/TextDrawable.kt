@@ -9,10 +9,8 @@ import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.Rect
 import android.os.Build
-import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.annotation.RequiresApi
-import androidx.core.graphics.PaintCompat
 import com.google.android.material.resources.TextAppearance
 import org.koitharu.kotatsu.core.util.ext.getThemeResId
 import org.koitharu.kotatsu.core.util.ext.hasFocusStateSpecified

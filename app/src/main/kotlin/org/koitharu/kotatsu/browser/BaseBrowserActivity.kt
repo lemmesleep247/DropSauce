@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.browser
 
 import android.os.Bundle
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -20,7 +21,7 @@ import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import javax.inject.Inject
 
 @AndroidEntryPoint
-abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), BrowserCallback {
+abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>() {
 
 	@Inject
 	lateinit var proxyProvider: ProxyProvider
@@ -31,7 +32,11 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 	@Inject
 	lateinit var adBlock: AdBlock
 
-	private lateinit var onBackPressedCallback: WebViewBackPressedCallback
+	private val onBackPressedCallback = object : OnBackPressedCallback(false) {
+		override fun handleOnBackPressed() {
+			viewBinding.webView.goBack()
+		}
+	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -39,7 +44,7 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 			return
 		}
 		viewBinding.webView.webChromeClient = ProgressChromeClient(viewBinding.progressBar)
-		onBackPressedCallback = WebViewBackPressedCallback(viewBinding.webView)
+		onBackPressedCallback.isEnabled = viewBinding.webView.canGoBack()
 		onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
 		val mangaSource = MangaSource(intent?.getStringExtra(AppRouter.KEY_SOURCE))
@@ -93,16 +98,16 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 		}
 	}
 
-	override fun onLoadingStateChanged(isLoading: Boolean) {
+	open fun onLoadingStateChanged(isLoading: Boolean) {
 		viewBinding.progressBar.isVisible = isLoading
 	}
 
-	override fun onTitleChanged(title: CharSequence, subtitle: CharSequence?) {
+	open fun onTitleChanged(title: CharSequence, subtitle: CharSequence?) {
 		this.title = title
 		supportActionBar?.subtitle = subtitle
 	}
 
-	override fun onHistoryChanged() {
-		onBackPressedCallback.onHistoryChanged()
+	fun onHistoryChanged() {
+		onBackPressedCallback.isEnabled = viewBinding.webView.canGoBack()
 	}
 }

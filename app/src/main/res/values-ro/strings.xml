@@ -8,7 +8,6 @@
     <string name="pages">Pagini</string>
     <string name="_import">Importeaza</string>
     <string name="clear_pages_cache">Goleste cacheul pagini</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="_continue">Continua</string>
     <string name="nothing_found">Nu s-a găsit nimic</string>
     <string name="favourites">Favorite</string>
@@ -29,7 +28,6 @@
     <string name="download_complete">Descarcat</string>
     <string name="downloads">Descarcari</string>
     <string name="by_name">Nume</string>
-    <string name="popular">Popular</string>
     <string name="updated">Actualizat</string>
     <string name="by_rating">Evaluare</string>
     <string name="sort_order">Ordine de sortare</string>
@@ -44,8 +42,6 @@
     <string name="operation_not_supported">Această operațiune nu este acceptată</string>
     <string name="text_file_not_supported">Alege fie un fișier ZIP, fie un fișier CBZ.</string>
     <string name="no_description">Fara descriptie</string>
-    <string name="standard">Standard</string>
-    <string name="webtoon">Webtoon</string>
     <string name="read_mode">Mod citire</string>
     <string name="grid_size">Marime grila</string>
     <string name="search_on_s">Cauta pe %s</string>

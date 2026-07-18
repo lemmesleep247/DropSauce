@@ -1,7 +1,6 @@
 package org.koitharu.kotatsu.filter.ui.mihon
 
 import android.content.Context
-import androidx.lifecycle.viewModelScope
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject

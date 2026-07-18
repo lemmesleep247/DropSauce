@@ -68,7 +68,6 @@ class PeriodicalBackupSettingsFragment :
 				PeriodicalBackupScreen(
 					backupsDirectory = viewModel.backupsDirectory,
 					lastBackupDate = viewModel.lastBackupDate,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onPickDirectory = ::pickDirectory,
 				)
 			}
@@ -95,7 +94,6 @@ class PeriodicalBackupSettingsFragment :
 private fun PeriodicalBackupScreen(
 	backupsDirectory: StateFlow<String?>,
 	lastBackupDate: StateFlow<Date?>,
-	onBack: () -> Unit,
 	onPickDirectory: () -> Unit,
 ) {
 	val ctx = LocalContext.current
@@ -117,7 +115,7 @@ private fun PeriodicalBackupScreen(
 		else -> directory
 	}
 
-	SettingsScaffold(title = stringResource(R.string.periodic_backups), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup {
 				item { pos ->

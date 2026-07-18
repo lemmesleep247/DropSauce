@@ -70,7 +70,6 @@ import org.koitharu.kotatsu.alternatives.domain.MigrateUseCase
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.local.data.MangaIndex
 import org.koitharu.kotatsu.local.data.input.LocalMangaParser
-import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.core.util.ext.toFileNameSafe
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
@@ -142,7 +141,6 @@ class DownloadsSettingsFragment :
 					directoryCount = directoryCount.asStateFlow(),
 					pagesDirSummary = pagesDirSummary.asStateFlow(),
 					dozeAvailable = dozeAvailable.asStateFlow(),
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onPickLocalManga = { router.openDirectoriesSettings() },
 					onPickLocalStorage = { router.showDirectorySelectDialog() },
 					onMeteredChanged = { updateDownloadsConstraints() },
@@ -508,7 +506,6 @@ private fun DownloadsScreen(
 	directoryCount: StateFlow<Int>,
 	pagesDirSummary: StateFlow<String?>,
 	dozeAvailable: StateFlow<Boolean>,
-	onBack: () -> Unit,
 	onPickLocalManga: () -> Unit,
 	onPickLocalStorage: () -> Unit,
 	onMeteredChanged: () -> Unit,
@@ -542,7 +539,7 @@ private fun DownloadsScreen(
 
 	LaunchedEffect(metered) { onMeteredChanged() }
 
-	SettingsScaffold(title = stringResource(R.string.downloads), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup(title = "General") {
 				item { pos ->

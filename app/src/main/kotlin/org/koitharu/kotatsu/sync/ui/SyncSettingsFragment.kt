@@ -93,7 +93,6 @@ class SyncSettingsFragment : BaseComposeSettingsFragment(R.string.google_drive_s
 					state = state,
 					isSyncing = isSyncing,
 					imageLoader = coilImageLoader,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onSignIn = viewModel::signIn,
 					onSignOut = viewModel::signOut,
 					onSyncNow = viewModel::syncNow,
@@ -142,7 +141,6 @@ private fun SyncScreen(
 	state: SyncUiState,
 	isSyncing: Boolean,
 	imageLoader: ImageLoader,
-	onBack: () -> Unit,
 	onSignIn: () -> Unit,
 	onSignOut: () -> Unit,
 	onSyncNow: () -> Unit,
@@ -168,7 +166,7 @@ private fun SyncScreen(
 	val contentValues = SyncContent.entries.map { it.key }
 	val contentEntries = SyncContent.entries.map { stringResource(it.titleRes()) }
 
-	SettingsScaffold(title = stringResource(R.string.google_drive_sync), onBack = onBack) {
+	SettingsScaffold {
 		// Account group
 		item {
 			SettingsGroup {

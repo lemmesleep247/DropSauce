@@ -95,7 +95,6 @@ class TrackerSettingsFragment : BaseComposeSettingsFragment(R.string.check_for_n
 					categoriesCount = categoriesCount,
 					categories = categories,
 					dozeAvailable = dozeAvailable,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onTrackCategories = router::showTrackerCategoriesConfigSheet,
 					onDownloadCategoriesChange = viewModel::setNewChaptersDownloadCategories,
 					onNotificationsSettings = ::openNotificationsSettings,
@@ -178,7 +177,6 @@ private fun TrackerScreen(
 	categoriesCount: IntArray?,
 	categories: List<FavouriteCategory>,
 	dozeAvailable: Boolean,
-	onBack: () -> Unit,
 	onTrackCategories: () -> Unit,
 	onDownloadCategoriesChange: (Set<Long>) -> Unit,
 	onNotificationsSettings: () -> Unit,
@@ -223,7 +221,7 @@ private fun TrackerScreen(
 	}
 	val categoriesEnabled = enabled && AppSettings.TRACK_FAVOURITES in trackSources
 
-	SettingsScaffold(title = stringResource(R.string.check_for_new_chapters), onBack = onBack) {
+	SettingsScaffold {
 		// Master toggle gets its own standalone group at the top, separated from the rest.
 		item {
 			SettingsGroup {

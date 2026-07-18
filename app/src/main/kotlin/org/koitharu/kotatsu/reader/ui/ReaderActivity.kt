@@ -4,6 +4,7 @@ import android.app.assist.AssistContent
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
@@ -609,7 +610,9 @@ class ReaderActivity :
 	}
 
 	private fun showUpscalePreview() {
-		UpscalePreviewDialog.show(supportFragmentManager)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			UpscalePreviewDialog.show(supportFragmentManager)
+		}
 	}
 
     override fun toggleScreenOrientation() {

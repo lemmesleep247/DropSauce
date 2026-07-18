@@ -56,7 +56,6 @@ class DiscordSettingsFragment : BaseComposeSettingsFragment(R.string.discord) {
 			DropSauceTheme {
 				DiscordScreen(
 					tokenState = viewModel.tokenState,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onSignIn = ::openSignIn,
 				)
 			}
@@ -71,7 +70,6 @@ class DiscordSettingsFragment : BaseComposeSettingsFragment(R.string.discord) {
 @Composable
 private fun DiscordScreen(
 	tokenState: StateFlow<Pair<TokenState, String?>>,
-	onBack: () -> Unit,
 	onSignIn: () -> Unit,
 ) {
 	val ctx = LocalContext.current
@@ -93,7 +91,7 @@ private fun DiscordScreen(
 		TokenState.CHECKING -> stringResource(R.string.loading_)
 	}
 
-	SettingsScaffold(title = stringResource(R.string.discord), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup {
 				item { pos ->

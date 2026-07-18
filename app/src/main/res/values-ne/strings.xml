@@ -91,7 +91,6 @@
     <string name="clear_updates_feed">अपडेट फिड खाली गर्नुहोस्</string>
     <string name="rotate_screen">स्क्रिन घुमाउनुहोस्</string>
     <string name="update">अपडेट</string>
-    <string name="passwords_mismatch">पासवर्डहरू म्याच गरेनन्</string>
     <string name="about">बारेमा</string>
     <string name="app_version">संस्करण %s</string>
     <string name="operation_not_supported">यो अपरेशन समर्थित छैन</string>
@@ -101,11 +100,8 @@
     <string name="text_local_holder_primary">पहिले केही सेभ गर्नुहोस्</string>
     <string name="text_local_holder_secondary">अनलाइन क्याटलगबाट केहि सेभ गर्नुहोस् वा फाइलबाट आयात गर्नुहोस्।</string>
     <string name="updates_feed_cleared">खाली गरियो</string>
-    <string name="protect_application">एप सुरक्षित गर्नुहोस्</string>
-    <string name="repeat_password">पासवर्ड दोहोर्याउनुहोस्</string>
     <string name="delete">हटाउनुहोस्</string>
     <string name="text_file_not_supported">या त ZIP वा CBZ फाइल छान्नुहोस्।</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="notifications">सूचनाहरू</string>
     <string name="enabled_d_of_d" tools:ignore="PluralsCandidate">%2$d को %1$d अन</string>
     <string name="cannot_find_available_storage">भण्डारण उपलब्ध छैन</string>
@@ -149,9 +145,7 @@
     <string name="clear_cookies">कुकीहरू खाली गर्नुहोस्</string>
     <string name="cookies_cleared">सबै कुकीहरू हटाइयो</string>
     <string name="clear_feed">फिड खाली गर्नुहोस्</string>
-    <string name="protect_application_subtitle">एप सुरु गर्न पासवर्ड प्रविष्ट गर्नुहोस्</string>
     <string name="confirm">पुष्टि गर्नुहोस्</string>
-    <string name="password_length_hint">पासवर्ड ४ वर्ण वा सोभन्दा बढी हुनुपर्छ</string>
     <string name="text_clear_search_history_prompt">हालका सबै खोज प्रश्नहरू स्थायी रूपमा हटाउने हो\?</string>
     <string name="text_clear_updates_feed_prompt">सबै अद्यावधिक इतिहास स्थायी रूपमा खाली गर्ने हो\?</string>
     <string name="auth_required">यो सामग्री हेर्न साइन इन गर्नुहोस्</string>
@@ -159,7 +153,6 @@
     <string name="backup_saved">ब्याकअप सुरक्षित गरियो छ</string>
     <string name="tracker_warning">केही यन्त्रहरूमा फरक प्रणाली व्यवहार हुन्छ, जसले पृष्ठभूमि कार्यहरू तोड्न सक्छ।</string>
     <string name="queued">लामबद्ध</string>
-    <string name="about_app_translation_summary">यो एप अनुवाद गर्नुहोस्</string>
     <string name="auth_not_supported_by">%s मा लग इन गर्न समर्थित छैन</string>
     <string name="text_clear_cookies_prompt">मा लग इन गर्न समर्थित छैन</string>
     <string name="state_finished">समाप्त भयो</string>

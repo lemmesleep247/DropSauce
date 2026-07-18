@@ -59,7 +59,6 @@ class DataCleanupSettingsFragment : BaseComposeSettingsFragment(R.string.data_re
 					pagesCacheSize = checkNotNull(viewModel.cacheSizes[CacheDir.PAGES]),
 					loadingKeys = viewModel.loadingKeys,
 					isBrowserCleanupEnabled = viewModel.isBrowserDataCleanupEnabled,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onAction = ::onAction,
 				)
 			}
@@ -138,7 +137,6 @@ private fun DataCleanupScreen(
 	pagesCacheSize: StateFlow<Long>,
 	loadingKeys: StateFlow<Set<String>>,
 	isBrowserCleanupEnabled: Boolean,
-	onBack: () -> Unit,
 	onAction: (String) -> Unit,
 ) {
 	val ctx = LocalContext.current
@@ -159,7 +157,7 @@ private fun DataCleanupScreen(
 		ctx.resources.getQuantityStringSafe(R.plurals.items, count, count)
 	}
 
-	SettingsScaffold(title = stringResource(R.string.data_removal), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup {
 				item { pos ->

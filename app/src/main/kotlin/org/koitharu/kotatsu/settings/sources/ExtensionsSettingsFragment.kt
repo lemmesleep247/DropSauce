@@ -77,7 +77,6 @@ class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensio
 				val linksEnabled by viewModel.isLinksEnabled.collectAsState(false)
 				ExtensionsScreen(
 					linksEnabled = linksEnabled,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onOpenCatalog = { router.openSourcesCatalog(isExternalOnly = true) },
 					onOpenBrokenSourcesMigration = {
 						(requireActivity() as SettingsActivity).openFragment(
@@ -155,7 +154,6 @@ class ExtensionsSettingsFragment : BaseComposeSettingsFragment(R.string.extensio
 @Composable
 private fun ExtensionsScreen(
 	linksEnabled: Boolean,
-	onBack: () -> Unit,
 	onOpenCatalog: () -> Unit,
 	onOpenBrokenSourcesMigration: () -> Unit,
 	onLinksChanged: (Boolean) -> Unit,
@@ -183,7 +181,7 @@ private fun ExtensionsScreen(
 	var autoUpdateExtensions by rememberBooleanPref(AppSettings.KEY_AUTO_UPDATE_EXTENSIONS, false)
 	var updateNotifications by rememberBooleanPref(AppSettings.KEY_EXTENSION_UPDATE_NOTIFICATIONS, true)
 
-	SettingsScaffold(title = stringResource(R.string.extensions), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup(title = "Catalog") {
 				item { pos ->

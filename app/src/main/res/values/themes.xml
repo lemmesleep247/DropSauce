@@ -162,7 +162,6 @@
 		<!-- Custom views -->
 		<item name="fastScrollerStyle">@style/Widget.Kotatsu.FastScroller</item>
 		<item name="listItemTextViewStyle">@style/Widget.Kotatsu.ListItemTextView</item>
-		<item name="dotIndicatorStyle">@style/Widget.Kotatsu.DotIndicator</item>
 		<item name="badgeViewStyle">@style/Widget.Kotatsu.BadgeView</item>
 		<item name="coverImageViewStyle">@style/Widget.Kotatsu.ImageView.Cover</item>
 	</style>

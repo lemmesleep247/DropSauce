@@ -37,7 +37,6 @@
     <string name="internal_storage">Унутрашња меморија</string>
     <string name="external_storage">Спољна меморија</string>
     <string name="language">Језик</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">Стандардни</string>
     <string name="webtoon">Манхва</string>
     <string name="read_mode">Режим читања</string>
@@ -82,7 +81,6 @@
     <string name="new_chapters">Нова поглавља</string>
     <string name="notifications_settings">Подешавања обавештења</string>
     <string name="new_version_s">Нова верзија: %s</string>
-    <string name="about_app_translation_summary">Преведи ову апликацију</string>
     <string name="screenshots_policy">Политика снимања екрана</string>
     <string name="clear_network_cache">Избриши мрежну кеш меморију</string>
     <string name="password">Лозинка</string>
@@ -182,7 +180,6 @@
     <string name="next">Следеће</string>
     <string name="restore_backup">Обнови из резервне копије</string>
     <string name="reader_info_bar">Прикажи траку са информацијама у читачу</string>
-    <string name="password_length_hint">Лозинка мора имати 4 знака или више</string>
     <string name="periodic_backups_enable">Омогући повремене резервне копије</string>
     <string name="content_type_comics">Стрипови</string>
     <string name="text_feed_holder">Нова поглавља онога што читаш су приказана овде</string>
@@ -192,7 +189,6 @@
     <string name="storage_usage">Коришћење складиштења</string>
     <string name="data_not_restored_text">Увери се да си изабрао исправну датотеку резервне копије</string>
     <string name="favourites_category_empty">Празна категорија</string>
-    <string name="protect_application_subtitle">Унеси лозинку да би покренуо апликацију</string>
     <string name="theme_name_sakura">Сакура</string>
     <string name="unknown">Непознато</string>
     <string name="in_progress">У току</string>
@@ -234,7 +230,6 @@
     <string name="web_view_unavailable">WebView није доступан: провери да ли је WebView добављач инсталиран</string>
     <string name="port">Прикључак</string>
     <string name="not_found_404">Садржај није пронађен или је уклоњен</string>
-    <string name="got_it">Разумем</string>
     <string name="type">Тип</string>
     <string name="bookmark_remove">Уклони обележивач</string>
     <string name="search_hint">Унеси наслов манге, жанр или назив извора</string>
@@ -332,7 +327,6 @@
     <string name="address">Адреса</string>
     <string name="import_will_start_soon">Увоз ће ускоро почети</string>
     <string name="compact">Сажето</string>
-    <string name="protect_application">Закључај апликацију</string>
     <string name="enhanced_colors">32-битни режим боја</string>
     <string name="folder_with_images_import_description">Можеш изабрати директоријум са архивама или сликама. Свака архива (или поддиректоријум) биће препозната као поглавље.</string>
     <string name="reorder">Распореди</string>
@@ -340,16 +334,13 @@
     <string name="suggestions_excluded_genres">Изостави жанрове</string>
     <string name="canceled">Отказано</string>
     <string name="disable_nsfw_summary">Онемогућите изворе садржаја за одрасле и сакријте мангу за одрасле са листе ако је могуће</string>
-    <string name="speed_value">x%.1f</string>
     <string name="hide">Сакриј</string>
-    <string name="passwords_mismatch">Лозинке се не подударају</string>
     <string name="downloads_removed">Преузимања су уклоњена</string>
     <string name="yesterday">Јуче</string>
     <string name="no_access_to_file">Немаш приступ овој датотеци или директоријуму</string>
     <string name="mark_as_current">Означи као тренутно</string>
     <string name="right_to_left">Са десна на лево</string>
     <string name="random">Насумично</string>
-    <string name="use_fingerprint">Користи биометријско откључавање ако је доступно</string>
     <string name="restore_summary">Врати претходно направљену резервну копију</string>
     <string name="zoom_out">Умањи</string>
     <string name="reader_mode_hint">Изабрана конфигурација ће бити запамћена за ову мангу</string>
@@ -378,7 +369,6 @@
     <string name="zoom_mode_fit_width">Уклопи по ширини</string>
     <string name="reset_filter">Ресетујте филтер</string>
     <string name="status_dropped">Отказан пројекат</string>
-    <string name="nsfw">18+</string>
     <string name="disable_nsfw">Онемогући садржај за одрасле</string>
     <string name="last_successful_backup">Последња успешна резервна копија: %s</string>
     <string name="available">Доступно</string>
@@ -413,7 +403,6 @@
     <string name="bookmarks_removed">Обележивачи су уклоњени</string>
     <string name="screenshots_block_nsfw">Блокирај садржај за одрасле</string>
     <string name="enter_password">Унеси лозинку</string>
-    <string name="repeat_password">Поновите лозинку</string>
     <string name="data_restored_success">Сви подаци су обновљени</string>
     <string name="theme_name_mion">Мион</string>
     <string name="no_bookmarks_yet">Нема обележивача за сада</string>
@@ -432,7 +421,6 @@
     <string name="this_month">Овог месеца</string>
     <string name="today">Од данас</string>
     <string name="empty_favourite_categories">Нема омиљених категорија</string>
-    <string name="invalid_domain_message">Неважећи домен</string>
     <string name="system_default">Подразумевано</string>
     <string name="proxy">Заступник</string>
     <string name="done">Готово</string>
@@ -564,7 +552,6 @@
     <string name="disable_connectivity_check_summary">Прескочи проверу повезивања у случају да имаш проблема са њом (нпр. прелазак у режим ван мреже иако је мрежа повезана)</string>
     <string name="tracker_debug_info">Провера дневника нових поглавља</string>
     <string name="tracker_debug_info_summary">Информације о отклањању грешака о позадинским проверама за нова поглавља</string>
-    <string name="_new">Нови</string>
     <string name="all_languages">Сви језици</string>
     <string name="screenshots_block_incognito">Блокирај у режиму без архивирања</string>
     <string name="pin">Закачи</string>
@@ -574,7 +561,6 @@
     <string name="sources_unpinned">Извори су откачени</string>
     <string name="sources_pinned">Извори су закачени</string>
     <string name="recent_sources">Недавни извори</string>
-    <string name="image_server">Жељени послуживач слика</string>
     <string name="crop_pages">Изрежи странице</string>
     <string name="external_source">Спољни/додатак</string>
     <string name="text_empty_holder_secondary_filtered">Нема Манге која одговара филтерима које си изабрао</string>

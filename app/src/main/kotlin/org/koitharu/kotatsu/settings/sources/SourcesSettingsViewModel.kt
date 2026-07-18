@@ -6,21 +6,14 @@ import android.content.pm.PackageManager
 import android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
 import android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
 import android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.ui.BaseViewModel
-import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class SourcesSettingsViewModel @Inject constructor(
-	sourcesRepository: MangaSourcesRepository,
 	@ApplicationContext private val context: Context,
 ) : BaseViewModel() {
 

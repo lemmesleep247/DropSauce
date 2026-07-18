@@ -1,7 +1,6 @@
 package org.koitharu.kotatsu.kotatsumigration.domain
 
 import androidx.room.withTransaction
-import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.history.data.HistoryEntity

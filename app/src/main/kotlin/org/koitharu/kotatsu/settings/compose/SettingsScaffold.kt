@@ -43,12 +43,10 @@ val LocalSettingsHighlightScroll = compositionLocalOf<(Float) -> Unit> { {} }
  */
 @Composable
 fun SettingsScaffold(
-	@Suppress("UNUSED_PARAMETER") title: String,
-	@Suppress("UNUSED_PARAMETER") onBack: () -> Unit,
 	modifier: Modifier = Modifier,
 	content: SettingsListScope.() -> Unit,
 ) {
-	val scope = SettingsListScopeImpl()
+	val scope = SettingsListScope()
 	scope.content()
 
 	val scrollState = rememberScrollState()
@@ -101,13 +99,9 @@ private tailrec fun Context.findSettingsActivity(): SettingsActivity? = when (th
 }
 
 /** Minimal builder mirroring the old `LazyListScope.item { }` call sites used across screens. */
-interface SettingsListScope {
-	fun item(content: @Composable () -> Unit)
-}
-
-private class SettingsListScopeImpl : SettingsListScope {
-	val items = mutableListOf<@Composable () -> Unit>()
-	override fun item(content: @Composable () -> Unit) {
+class SettingsListScope {
+	internal val items = mutableListOf<@Composable () -> Unit>()
+	fun item(content: @Composable () -> Unit) {
 		items += content
 	}
 }

@@ -111,7 +111,6 @@ class AboutSettingsFragment : BaseComposeSettingsFragment(R.string.about) {
 					appVersion = BuildConfig.VERSION_NAME,
 					checkUpdatesEnabled = isUpdateSupported && !isLoading,
 					isVerboseLogging = isVerboseLogging,
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onCheckUpdates = viewModel::checkForUpdates,
 					onChangelog = ::openChangelog,
 					onOpenLink = ::openLink,
@@ -163,14 +162,13 @@ private fun AboutScreen(
 	appVersion: String,
 	checkUpdatesEnabled: Boolean,
 	isVerboseLogging: Boolean,
-	onBack: () -> Unit,
 	onCheckUpdates: () -> Unit,
 	onChangelog: () -> Unit,
 	onOpenLink: (urlRes: Int, titleRes: Int) -> Unit,
 	onVerboseLoggingToggle: (Boolean) -> Unit,
 ) {
 	val ctx = LocalContext.current
-	SettingsScaffold(title = stringResource(R.string.about), onBack = onBack) {
+	SettingsScaffold {
 		// Hero header: app icon + name + version chip — gives the About screen a sense of place
 		// instead of being just another list of links.
 		item { AboutHero(appVersion = appVersion) }

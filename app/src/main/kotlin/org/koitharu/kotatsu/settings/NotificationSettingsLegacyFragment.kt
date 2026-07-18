@@ -62,7 +62,6 @@ class NotificationSettingsLegacyFragment :
 			DropSauceTheme {
 				NotificationsScreen(
 					soundSummary = soundSummary.asStateFlow(),
-					onBack = { requireActivity().onBackPressedDispatcher.onBackPressed() },
 					onPickSound = { ringtonePickContract.launch(settings.notificationSound) },
 				)
 			}
@@ -80,7 +79,6 @@ class NotificationSettingsLegacyFragment :
 @Composable
 private fun NotificationsScreen(
 	soundSummary: StateFlow<String?>,
-	onBack: () -> Unit,
 	onPickSound: () -> Unit,
 ) {
 	val sound by soundSummary.collectAsState()
@@ -88,7 +86,7 @@ private fun NotificationsScreen(
 	var vibrate by rememberBooleanPref(AppSettings.KEY_NOTIFICATIONS_VIBRATE, false)
 	var light by rememberBooleanPref(AppSettings.KEY_NOTIFICATIONS_LIGHT, true)
 
-	SettingsScaffold(title = stringResource(R.string.notifications), onBack = onBack) {
+	SettingsScaffold {
 		item {
 			SettingsGroup {
 				item { pos ->

@@ -50,7 +50,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -104,9 +103,7 @@ import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior
 import org.koitharu.kotatsu.core.ui.sheet.BaseAdaptiveSheet
 import org.koitharu.kotatsu.core.util.ext.findParentCallback
-import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.databinding.SheetReaderConfigBinding
-import org.koitharu.kotatsu.reader.domain.PageLoader
 import org.koitharu.kotatsu.reader.ui.ReaderViewModel
 import org.koitharu.kotatsu.reader.ui.ScreenOrientationHelper
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
@@ -131,14 +128,9 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     lateinit var mangaRepositoryFactory: MangaRepository.Factory
 
     @Inject
-    lateinit var pageLoader: PageLoader
-
-    @Inject
     lateinit var coil: ImageLoader
 
     private lateinit var mode: ReaderMode
-    private lateinit var imageServerDelegate: ImageServerDelegate
-
 	@Inject
 	lateinit var settings: AppSettings
 
@@ -152,7 +144,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 		mode = arguments?.getInt(AppRouter.KEY_READER_MODE)
 			?.let { ReaderMode.valueOf(it) }
 			?: ReaderMode.STANDARD
-		imageServerDelegate = ImageServerDelegate()
 	}
 
 	override fun onStart() {
@@ -294,15 +285,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         var isDoubleOnFoldable by remember { mutableStateOf(settings.isReaderDoubleOnFoldable) }
         var sensitivity by remember { mutableFloatStateOf(settings.readerDoublePagesSensitivity * 100f) }
 
-        // Image Server states
-        var isImageServerAvailable by remember { mutableStateOf(false) }
-        var imageServerValue by remember { mutableStateOf<String?>(null) }
-
-        LaunchedEffect(Unit) {
-            isImageServerAvailable = imageServerDelegate.isAvailable()
-            imageServerValue = imageServerDelegate.getValue()
-        }
-
         // StateFlow observations from ViewModel and OrientationHelper flow
         val isBookmarkAdded by viewModel.isBookmarkAdded.collectAsState()
         val isAutoRotationEnabled by orientationHelper.observeAutoOrientation().collectAsState(initial = false)
@@ -404,25 +386,9 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                                         .padding(horizontal = 16.dp),
                                     verticalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    if (isImageServerAvailable) {
-                                        ImageServerItem(
-                                            value = imageServerValue,
-                                            onClick = {
-                                                viewLifecycleScope.launch {
-                                                    if (imageServerDelegate.showDialog(context)) {
-                                                        imageServerValue = imageServerDelegate.getValue()
-                                                        pageLoader.invalidate(clearCache = true)
-                                                        viewModel.switchChapterBy(0)
-                                                    }
-                                                }
-                                            },
-                                        )
-                                    }
-
                                     ToolsGridSection(
                                         showPageTools = true,
                                         isAutoRotationEnabled = isAutoRotationEnabled,
-                                        isOrientationLocked = orientationHelper.isLocked,
                                         isBookmarkAdded = isBookmarkAdded,
                                         onSaveClick = {
                                             callback?.onSavePageClick()
@@ -565,53 +531,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    @Composable
-    private fun ImageServerItem(
-        value: String?,
-        onClick: () -> Unit,
-    ) {
-        Surface(
-            onClick = onClick,
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_images),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.image_server),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = value ?: stringResource(R.string.automatic),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Icon(
-                    painter = painterResource(R.drawable.ic_expand_more),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
             }
         }
     }
@@ -1482,7 +1401,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
     private fun ToolsGridSection(
         showPageTools: Boolean,
         isAutoRotationEnabled: Boolean,
-        isOrientationLocked: Boolean,
         isBookmarkAdded: Boolean,
         onSaveClick: () -> Unit,
         onOrientationClick: () -> Unit,
@@ -1503,7 +1421,6 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
         } else {
             R.drawable.ic_screen_rotation
         }
-        val isRotationChecked = isAutoRotationEnabled && isOrientationLocked
         // Rows share the page height equally so this page matches the Read Mode page exactly.
         Column(
             modifier = modifier.fillMaxWidth(),

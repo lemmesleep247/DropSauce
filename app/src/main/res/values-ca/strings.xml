@@ -33,7 +33,6 @@
     <string name="download_complete">Descarregat</string>
     <string name="downloads">Descàrregues</string>
     <string name="by_name">Nom</string>
-    <string name="popular">Popular</string>
     <string name="updated">Actualitzat</string>
     <string name="newest">Més recent</string>
     <string name="by_rating">Qualificació</string>
@@ -53,16 +52,13 @@
     <string name="delete">Suprimir</string>
     <string name="operation_not_supported">Aquesta operació no està suportada</string>
     <string name="text_file_not_supported">Trieu un fitxer ZIP o bé un CBZ.</string>
-    <string name="webtoon">Webtoon</string>
     <string name="read_mode">Mode de lectura</string>
     <string name="grid_size">Mida de la quadrícula</string>
     <string name="search_on_s">Cerca a %s</string>
     <string name="text_delete_local_manga">Esborrar permanentment \"%s\" del dispositiu?</string>
     <string name="switch_pages">Canviar pàgines</string>
     <string name="_continue">Continua</string>
-    <string name="error">Error</string>
     <string name="clear_thumbs_cache">Esborrar memòria cau de miniatures</string>
-    <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">Estàndard</string>
     <string name="settings">Configuració</string>
     <string name="computing_">Computant…</string>

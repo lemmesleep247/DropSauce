@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.remotelist.ui
 
+import android.app.Activity
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -12,10 +13,12 @@ import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
 import org.koitharu.kotatsu.list.ui.MangaListViewModel
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
+import org.koitharu.kotatsu.search.ui.MangaListActivity
 
 class MangaSearchMenuProvider(
 	private val filter: FilterCoordinator,
 	private val viewModel: MangaListViewModel,
+	private val activity: Activity? = null,
 ) : MenuProvider, MenuItem.OnActionExpandListener, SearchView.OnQueryTextListener {
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -50,13 +53,17 @@ class MangaSearchMenuProvider(
 	override fun onQueryTextChange(newText: String?): Boolean = false
 
 	override fun onMenuItemActionExpand(item: MenuItem): Boolean {
+		(activity as? MangaListActivity)?.setSearchExpanded(true)
 		(item.actionView as? SearchView)?.run {
 			post { adjustSearchView() }
 		}
 		return true
 	}
 
-	override fun onMenuItemActionCollapse(item: MenuItem): Boolean = true
+	override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+		(activity as? MangaListActivity)?.setSearchExpanded(false)
+		return true
+	}
 
 	private fun SearchView.adjustSearchView() {
 		imeOptions = if (viewModel.isIncognitoModeEnabled) {

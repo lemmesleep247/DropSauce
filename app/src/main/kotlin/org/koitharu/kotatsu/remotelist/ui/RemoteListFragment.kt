@@ -39,7 +39,7 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner {
     override fun onViewBindingCreated(binding: FragmentListBinding, savedInstanceState: Bundle?) {
         super.onViewBindingCreated(binding, savedInstanceState)
         addMenuProvider(RemoteListMenuProvider())
-        addMenuProvider(MangaSearchMenuProvider(filterCoordinator, viewModel))
+        addMenuProvider(MangaSearchMenuProvider(filterCoordinator, viewModel, activity))
         viewModel.isRandomLoading.observe(viewLifecycleOwner, MenuInvalidator(requireActivity()))
         viewModel.onOpenManga.observeEvent(viewLifecycleOwner) { router.openDetails(it) }
         viewModel.onBrokenSortFallback.observeEvent(viewLifecycleOwner) { showBrokenSortWarning() }

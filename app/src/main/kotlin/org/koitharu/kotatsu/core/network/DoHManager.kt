@@ -138,10 +138,14 @@ class DoHManager(
 			"185.51.200.2",
 		)
 
-		DoHProvider.ZERO_MS -> DnsOverHttps.Builder().client(bootstrapClient)
-			.url("https://v.recipes/dns-query".toHttpUrl())
-			.resolvePublicAddresses(true)
-			.build()
+		// Bootstrap via its Cloudflare anycast IPs — without them this provider only worked when
+		// the system DNS could already resolve v.recipes.
+		DoHProvider.ZERO_MS -> doh(
+			url = "https://v.recipes/dns-query",
+			"104.26.0.241",
+			"104.26.1.241",
+			"172.67.69.243",
+		)
 	}
 
 	private fun doh(

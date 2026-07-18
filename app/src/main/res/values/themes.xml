@@ -155,6 +155,10 @@
 		<item name="collapsingToolbarLayoutMediumStyle">@style/Widget.Kotatsu.CollapsingToolbar.Medium</item>
 		<item name="collapsingToolbarLayoutLargeStyle">@style/Widget.Kotatsu.CollapsingToolbar.Large</item>
 
+		<!-- Theme-tinted native scrollbars (matches FastScroller thumb) -->
+		<item name="android:scrollbarThumbVertical">@drawable/scrollbar_thumb</item>
+		<item name="android:scrollbarThumbHorizontal">@drawable/scrollbar_thumb</item>
+
 		<!-- Custom views -->
 		<item name="fastScrollerStyle">@style/Widget.Kotatsu.FastScroller</item>
 		<item name="listItemTextViewStyle">@style/Widget.Kotatsu.ListItemTextView</item>

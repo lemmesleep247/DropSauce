@@ -7,6 +7,7 @@ import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.children
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -38,6 +39,7 @@ import org.koitharu.kotatsu.core.util.ext.buildBundle
 import org.koitharu.kotatsu.core.util.ext.consumeSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.end
 import org.koitharu.kotatsu.core.util.ext.getParcelableExtraCompat
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getSerializableExtraCompat
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
@@ -58,6 +60,7 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.remotelist.ui.RemoteListFragment
 import kotlin.math.roundToInt
+import com.google.android.material.R as materialR
 
 private const val SORT_BUTTON_MAX_WIDTH_FRACTION = 0.45f
 
@@ -183,6 +186,29 @@ class MangaListActivity :
 	private fun applyExpandedHeight(ctl: CollapsingToolbarLayout, extra: Int) {
 		ctl.updateLayoutParams { height = expandedBaseHeight + extra }
 		(viewBinding.buttonOrder?.parent as? View)?.updateLayoutParams { height = expandedBaseHeight + extra }
+	}
+
+	/**
+	 * While a search action view is expanded, Toolbar hides all its other children — including the
+	 * CollapsingToolbarLayout's internal anchor view — which stops the CTL from drawing the title
+	 * even in the expanded (below-the-toolbar) position. Re-show the anchor so the expanded title
+	 * stays visible, and make the collapsed title transparent so it fades out on collapse instead
+	 * of overlapping the search field.
+	 */
+	fun setSearchExpanded(expanded: Boolean) {
+		val ctl = viewBinding.collapsingToolbarLayout ?: return
+		if (expanded) {
+			ctl.setCollapsedTitleTextColor(Color.TRANSPARENT)
+			viewBinding.toolbar.post {
+				viewBinding.toolbar.children.forEach { child ->
+					if (child.javaClass == View::class.java) {
+						child.isVisible = true
+					}
+				}
+			}
+		} else {
+			ctl.setCollapsedTitleTextColor(getThemeColor(materialR.attr.colorOnSurface))
+		}
 	}
 
 	private fun configureSortButton() {

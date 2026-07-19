@@ -133,7 +133,7 @@ internal object ExtensionFilterPopup {
 				context.resources.getDimensionPixelSize(R.dimen.menu_popup_item_padding_horizontal),
 				0,
 			)
-			background = ContextCompat.getDrawable(context, R.drawable.m3_popup_menu_row_selector)
+			background = ContextCompat.getDrawable(context, R.drawable.extension_filter_row_selector)
 		}
 		val icon = FaviconView(context).apply {
 			applyExternalSourceStyle(option.mangaSource.isExternalSource())

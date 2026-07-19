@@ -187,7 +187,9 @@ class MihonMangaRepository(
 			throw translateExtensionException(e)
 		}
 		val details = update.manga
-		val rawChapters = update.chapters
+		val rawChapters = update.chapters.onEach { chapter ->
+			chapter.url = normalizeChapterUrl(chapter.url, sManga.url, details.url)
+		}
 
 		// Deduplicate by URL — some sources accidentally return the same chapter twice.
 		val uniqueChapters = rawChapters.distinctBy { it.url }
@@ -535,3 +537,13 @@ class MihonMangaRepository(
  * scanlator variants commonly share the same recognized chapter number.
  */
 internal fun <T> normalizeMihonChapterOrder(chapters: List<T>): List<T> = chapters.asReversed()
+
+internal fun normalizeChapterUrl(chapterUrl: String, oldMangaUrl: String, newMangaUrl: String): String {
+	if (oldMangaUrl.isBlank() || newMangaUrl.isBlank() || oldMangaUrl == newMangaUrl) return chapterUrl
+	val oldPrefix = oldMangaUrl.trimEnd('/')
+	return if (chapterUrl.startsWith("$oldPrefix/")) {
+		newMangaUrl.trimEnd('/') + chapterUrl.removePrefix(oldPrefix)
+	} else {
+		chapterUrl
+	}
+}

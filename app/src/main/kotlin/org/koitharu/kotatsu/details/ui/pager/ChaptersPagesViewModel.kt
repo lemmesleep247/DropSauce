@@ -24,6 +24,7 @@ import okio.FileNotFoundException
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.core.model.toChipModel
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
+import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsStateFlow
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -63,6 +64,7 @@ abstract class ChaptersPagesViewModel(
 	private val deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
 	private val localStorageChanges: SharedFlow<LocalManga?>,
 	private val mangaDataRepository: MangaDataRepository,
+	private val mangaRepositoryFactory: MangaRepository.Factory,
 ) : BaseViewModel() {
 
 	val mangaDetails = MutableStateFlow<MangaDetails?>(null)
@@ -71,6 +73,7 @@ abstract class ChaptersPagesViewModel(
 	val onActionDone = MutableEventFlow<ReversibleAction>()
 	val onDownloadStarted = MutableEventFlow<Unit>()
 	val onMangaRemoved = MutableEventFlow<Manga>()
+	val onOpenChapterInBrowser = MutableEventFlow<String>()
 
 	val chaptersQuery = MutableStateFlow("")
 	val selectedBranch = MutableStateFlow<String?>(null)
@@ -255,6 +258,16 @@ abstract class ChaptersPagesViewModel(
 				percent = percent,
 				force = true,
 			)
+		}
+	}
+
+	fun openChapterInBrowser(chapterId: Long) {
+		val chapter = chapters.value.firstOrNull { it.chapter.id == chapterId }?.chapter ?: return
+		launchJob(Dispatchers.Default) {
+			val url = mangaRepositoryFactory.create(chapter.source).getChapterUrl(chapter)
+			if (!url.isNullOrEmpty()) {
+				onOpenChapterInBrowser.call(url)
+			}
 		}
 	}
 

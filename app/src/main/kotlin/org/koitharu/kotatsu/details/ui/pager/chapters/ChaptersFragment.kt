@@ -32,6 +32,7 @@ import org.koitharu.kotatsu.core.util.ext.findAppCompatDelegate
 import org.koitharu.kotatsu.core.util.ext.findParentCallback
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
+import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
 import org.koitharu.kotatsu.databinding.FragmentChaptersBinding
 import org.koitharu.kotatsu.details.ui.DetailsViewModel
@@ -122,6 +123,10 @@ class ChaptersFragment :
 		viewModel.quickFilter.observe(viewLifecycleOwner, this::onFilterChanged)
 		viewModel.emptyReason.observe(viewLifecycleOwner) {
 			binding.textViewHolder.setTextAndVisible(it?.msgResId ?: 0)
+		}
+		viewModel.onOpenChapterInBrowser.observeEvent(viewLifecycleOwner) { url ->
+			val manga = viewModel.getMangaOrNull()
+			router.openBrowser(url = url, source = manga?.source, title = manga?.title)
 		}
 	}
 

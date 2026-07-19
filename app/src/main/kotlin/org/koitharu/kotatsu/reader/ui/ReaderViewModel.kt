@@ -35,6 +35,7 @@ import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
+import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.prefs.TriStateOption
@@ -98,6 +99,7 @@ class ReaderViewModel @Inject constructor(
     deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
     downloadScheduler: DownloadWorker.Scheduler,
     readerSettingsProducerFactory: ReaderSettings.Producer.Factory,
+    mangaRepositoryFactory: MangaRepository.Factory,
 ) : ChaptersPagesViewModel(
     settings = settings,
     interactor = interactor,
@@ -107,6 +109,7 @@ class ReaderViewModel @Inject constructor(
     deleteLocalMangaUseCase = deleteLocalMangaUseCase,
     localStorageChanges = localStorageChanges,
     mangaDataRepository = dataRepository,
+    mangaRepositoryFactory = mangaRepositoryFactory,
 ) {
     private val intent = MangaIntent(savedStateHandle)
 

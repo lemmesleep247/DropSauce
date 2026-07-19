@@ -25,6 +25,7 @@ import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
+import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
 import org.koitharu.kotatsu.core.prefs.TriStateOption
@@ -77,6 +78,7 @@ class DetailsViewModel @Inject constructor(
 	statsRepository: StatsRepository,
 	private val database: MangaDatabase,
 	private val mangaDataRepository: MangaDataRepository,
+	mangaRepositoryFactory: MangaRepository.Factory,
 ) : ChaptersPagesViewModel(
 	settings = settings,
 	interactor = interactor,
@@ -86,6 +88,7 @@ class DetailsViewModel @Inject constructor(
 	deleteLocalMangaUseCase = deleteLocalMangaUseCase,
 	localStorageChanges = localStorageChanges,
 	mangaDataRepository = mangaDataRepository,
+	mangaRepositoryFactory = mangaRepositoryFactory,
 ) {
 
 	private val intent = MangaIntent(savedStateHandle)

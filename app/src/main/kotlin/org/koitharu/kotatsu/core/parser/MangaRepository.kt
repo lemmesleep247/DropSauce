@@ -47,6 +47,9 @@ interface MangaRepository {
 
 	suspend fun getPageUrl(page: MangaPage): String
 
+	/** Public web URL for a single [chapter], or null for sources without a browsable chapter page. */
+	suspend fun getChapterUrl(chapter: MangaChapter): String? = null
+
 	/** Returns extension-specific HTTP headers for the image at [imageUrl], or null for non-extension sources. */
 	suspend fun getImageRequestHeaders(imageUrl: String, page: MangaPage): Headers? = null
 

@@ -307,6 +307,11 @@ class MihonMangaRepository(
 		}
 	}
 
+	override suspend fun getChapterUrl(chapter: MangaChapter): String? = withContext(Dispatchers.IO) {
+		val httpSource = mihonSource as? HttpSource ?: return@withContext null
+		runCatching { httpSource.getChapterUrl(chapter.toSourceChapter()) }.getOrNull()?.takeIf { it.isNotBlank() }
+	}
+
 	override suspend fun getImageRequestHeaders(imageUrl: String, page: MangaPage): Headers? {
 		val httpSource = (mihonSource as? HttpSource) ?: return null
 		return runCatching { httpSource.getImageHeaders(page.toMihonPage(imageUrl)) }.getOrNull()

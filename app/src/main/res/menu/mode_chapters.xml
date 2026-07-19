@@ -22,6 +22,12 @@
 		app:showAsAction="ifRoom|withText" />
 
 	<item
+		android:id="@+id/action_browser"
+		android:icon="@drawable/ic_open_external"
+		android:title="@string/open_in_browser"
+		app:showAsAction="ifRoom|withText" />
+
+	<item
 		android:id="@+id/action_select_range"
 		android:icon="@drawable/ic_select_range"
 		android:title="@string/select_range"

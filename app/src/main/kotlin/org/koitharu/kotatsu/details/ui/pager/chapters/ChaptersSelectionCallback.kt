@@ -47,6 +47,8 @@ class ChaptersSelectionCallback(
 		menu.findItem(R.id.action_delete).isVisible = canDelete
 		menu.findItem(R.id.action_select_all).isVisible = items.size < allItems.size
 		menu.findItem(R.id.action_mark_current).isVisible = items.size == 1
+		menu.findItem(R.id.action_browser).isVisible = items.size == 1 &&
+			!items[0].value.isDownloaded && items[0].value.chapter.source != LocalMangaSource
 		mode?.title = items.size.toString()
 		var hasGap = false
 		for (i in 0 until items.size - 1) {
@@ -126,6 +128,17 @@ class ChaptersSelectionCallback(
 				}
 				controller.addAll(ids)
 				true
+			}
+
+			R.id.action_browser -> {
+				val ids = controller.peekCheckedIds()
+				if (ids.size == 1) {
+					viewModel.openChapterInBrowser(ids.first())
+					mode?.finish()
+					true
+				} else {
+					false
+				}
 			}
 
 			R.id.action_mark_current -> {

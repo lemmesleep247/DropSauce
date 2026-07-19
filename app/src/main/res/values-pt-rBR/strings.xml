@@ -405,7 +405,7 @@
     <string name="content_type_manga">Obra</string>
     <string name="error_multiple_states_not_supported">A filtragem por múltiplas situações não é suportada por esta fonte</string>
     <string name="content_type_comics">Quadrinhos</string>
-    <string name="reader_optimize">Reduzir o consumo de memória (beta)</string>
+    <string name="reader_optimize">Reduzir o consumo de memória</string>
     <string name="no_manga_sources_found">Nenhuma fonte foi encontrada por sua pesquisa</string>
     <string name="error_multiple_genres_not_supported">A filtragem por múltiplos gêneros não é suportada por esta fonte</string>
     <string name="lock_screen_rotation">Travar rotação de tela</string>

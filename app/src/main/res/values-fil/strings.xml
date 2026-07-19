@@ -395,7 +395,7 @@
     <string name="disable_nsfw_summary">Di paganahin ang mga source na NSFW at itago ang manga na pang-matanda mula sa listahan kung maaari</string>
     <string name="content_type_other">Iba pa</string>
     <string name="error_multiple_states_not_supported">Ang pag-filter ayon sa maraming estado ay hindi sinusuportahan ng manga source na ito</string>
-    <string name="reader_optimize">Bawasan ang pagkonsumo ng memory (beta)</string>
+    <string name="reader_optimize">Bawasan ang pagkonsumo ng memory</string>
     <string name="error_multiple_genres_not_supported">Ang pag-filter ayon sa maramihang genre ay hindi sinusuportahan ng manga source na ito</string>
     <string name="error_search_not_supported">Ang paghahanap ay hindi suportado ng manga source na ito</string>
     <string name="reader_optimize_summary">Bawasan ang kalidad ng mga offscreen na pahina upang gumamit ng mas kaunting memory</string>

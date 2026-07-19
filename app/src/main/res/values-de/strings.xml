@@ -374,7 +374,7 @@
     <string name="state_paused">Pausiert</string>
     <string name="zoom_in">Hereinzoomen</string>
     <string name="reader_zoom_buttons_summary">Ob die Zoom - Schaltflächen in der unteren rechten Ecke angezeigt werden sollen</string>
-    <string name="reader_optimize">Speicherverbrauch reduzieren (beta)</string>
+    <string name="reader_optimize">Speicherverbrauch reduzieren</string>
     <string name="reader_optimize_summary">Qualität von nicht sichtbaren Seiten verringern, um den Speicherverbrauch zu reduzieren</string>
     <string name="state">Zustand</string>
     <string name="error_multiple_states_not_supported">Filtern nach mehreren Zuständen wird von dieser Manga-Quelle nicht unterstützt</string>

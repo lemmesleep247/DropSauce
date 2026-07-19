@@ -400,7 +400,7 @@
     <string name="periodic_backups_enable">Ativar backups periódicos</string>
     <string name="content_type_comics">Quadrinhos</string>
     <string name="frequency_every_2_days">A cada 2 dias</string>
-    <string name="reader_optimize">Reduzir o consumo de memória (beta)</string>
+    <string name="reader_optimize">Reduzir o consumo de memória</string>
     <string name="apply">Aplicar</string>
     <string name="no_manga_sources_found">Nenhuma fonte de mangá disponível encontrada da sua pesquisa</string>
     <string name="genres_search_hint">Comece a digitar o nome do gênero</string>

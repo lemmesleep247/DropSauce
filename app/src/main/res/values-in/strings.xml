@@ -409,7 +409,7 @@
     <string name="error_filter_locale_genre_not_supported">Filter bedasarkan genre dan lokal tidak didukung oleh sumber ini</string>
     <string name="content_type_comics">Komik</string>
     <string name="genres_exclude">Kecualikan genre</string>
-    <string name="reader_optimize">Kurangi konsumsi memori (beta)</string>
+    <string name="reader_optimize">Kurangi konsumsi memori</string>
     <string name="apply">Terapkan</string>
     <string name="no_manga_sources_found">Tidak ditemukan sumber manga berdasarkan kueri Anda</string>
     <string name="genres_search_hint">Ketik nama genre</string>

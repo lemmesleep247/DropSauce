@@ -397,7 +397,7 @@
     <string name="backup_frequency">Częstotliwość tworzenia kopii zapasowej</string>
     <string name="content_type_comics">Komiks</string>
     <string name="content_type_other">Inne</string>
-    <string name="reader_optimize">Zmniejsz użycie pamięci (beta)</string>
+    <string name="reader_optimize">Zmniejsz użycie pamięci</string>
     <string name="sources_catalog">Katalog źródeł</string>
     <string name="skip">Pomiń</string>
     <string name="grayscale">Odcienie szarości</string>

@@ -625,7 +625,7 @@
     <string name="manual">Manual</string>
     <string name="disable_nsfw_summary">Disable NSFW sources and hide adult manga from list if possible</string>
     <string name="state_paused">Paused</string>
-    <string name="reader_upscale">AI upscaling (beta)</string>
+    <string name="reader_upscale">AI upscaling</string>
     <string name="reader_upscale_summary">Sharpen low-resolution pages on the GPU using an Anime4K-based shader. Android 13+</string>
     <string name="upscale_preview">AI upscaling preview</string>
     <string name="upscale_preview_original">Original</string>
@@ -633,7 +633,7 @@
     <string name="upscale_not_applied">This page is already high resolution, upscaling is not applied</string>
     <string name="upscale_preview_description">Only pages whose native resolution is well below your screen get sharpened on the GPU while you read. Everything runs on-device and works offline, and upscaling pauses automatically while battery saver is on.</string>
     <string name="upscale_open_settings">Upscaling settings</string>
-    <string name="reader_optimize">Reduce memory consumption (beta)</string>
+    <string name="reader_optimize">Reduce memory consumption</string>
     <string name="reader_optimize_summary">Reduce offscreen pages quality to use less memory</string>
     <string name="state">State</string>
     <string name="error_multiple_genres_not_supported">Filtering by multiple genres is not supported by this manga source</string>
@@ -943,7 +943,7 @@
     <string name="shizuku_permission_denied">Shizuku permission was denied. Allow DropSauce in Shizuku and try again.</string>
     <string name="shizuku_install_failed">Silent installation failed. %1$s</string>
     <string name="shizuku_invalid_package">The downloaded extension APK is invalid or has an unexpected package name.</string>
-    <string name="ext_auto_update_title">Auto-update extensions (Beta)</string>
+    <string name="ext_auto_update_title">Auto-update extensions</string>
     <string name="ext_auto_update_summary">Install extension updates silently as soon as they are detected, with a daily background check.</string>
     <string name="ext_update_notifications_title">Notify about extension updates</string>
     <string name="ext_update_notifications_summary">Show a notification when installed extensions have updates available.</string>

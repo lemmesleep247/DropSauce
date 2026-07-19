@@ -378,7 +378,7 @@
     <string name="categories">Thể loại</string>
     <string name="lock_screen_rotation">Khoá hướng màn hình</string>
     <string name="disable_nsfw_summary">Tắt các nguồn NSFW và ẩn các manga người lớn từ danh sách (nếu khả thi)</string>
-    <string name="reader_optimize">Giảm tiêu tốn bộ nhớ (beta)</string>
+    <string name="reader_optimize">Giảm tiêu tốn bộ nhớ</string>
     <string name="reader_optimize_summary">Giảm chất lượng các trang chưa hiển thị để dùng ít bộ nhớ hơn</string>
     <string name="genres_search_hint">Nhập tên thể loại</string>
     <string name="backup_date_">Ngày sao lưu: %s</string>

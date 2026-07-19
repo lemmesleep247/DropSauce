@@ -416,7 +416,7 @@
     <string name="keep_screen_on_summary">Nevypínat obrazovku během čtení mangy</string>
     <string name="list_options">Seznam možností</string>
     <string name="state_paused">Pozastavený</string>
-    <string name="reader_optimize">Snížit spotřebu paměti (beta)</string>
+    <string name="reader_optimize">Snížit spotřebu paměti</string>
     <string name="reader_optimize_summary">Snížit kvalitu stránek mimo obrazovku pro snížení spotřeby paměti</string>
     <string name="state">Stav</string>
     <string name="globally">Globálně</string>

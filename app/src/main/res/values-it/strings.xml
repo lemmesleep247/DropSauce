@@ -335,7 +335,7 @@
     <string name="suggestions_notifications_summary">A volte mostra le notifiche sui manga suggeriti</string>
     <string name="invalid_value_message">Valore non valido</string>
     <string name="downloads_cancelled">I download sono stati annullati</string>
-    <string name="reader_optimize">Riduci consumo di memoria (beta)</string>
+    <string name="reader_optimize">Riduci consumo di memoria</string>
     <string name="apply">Applica</string>
     <string name="data_not_restored">Dati non ripristinati</string>
     <string name="directories">Cartelle</string>

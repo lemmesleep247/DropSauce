@@ -328,7 +328,7 @@
     <string name="manual">Manuell</string>
     <string name="disable_nsfw_summary">Inaktivera vuxenkällor och visa om möjligt inte manga för vuxna i listan</string>
     <string name="state_paused">Pausad</string>
-    <string name="reader_optimize">Minska minnesanvändning (beta)</string>
+    <string name="reader_optimize">Minska minnesanvändning</string>
     <string name="reader_optimize_summary">Minska kvalitén på sidor som inte visas för att använda mindre minne</string>
     <string name="error_multiple_genres_not_supported">Filtrering efter flera genrer stöds inte av denna mangakälla</string>
     <string name="downloads_settings_info">Du kan aktivera långsam nedladdning för varje mangakälla individuellt i källans inställningar om du har problem med att servern blockerar dig</string>

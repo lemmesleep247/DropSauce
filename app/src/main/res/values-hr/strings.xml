@@ -286,7 +286,7 @@
     <string name="no_manga_sources_found">Vašim upitom nisu pronađeni dostupni izvori mangi</string>
     <string name="disable_nsfw_summary">Onemogućite NSFW izvore i sakrijte mangu za odrasle s popisa ako je moguće</string>
     <string name="state_paused">Pauzirano</string>
-    <string name="reader_optimize">Smanjite potrošnju memorije (beta)</string>
+    <string name="reader_optimize">Smanjite potrošnju memorije</string>
     <string name="reader_optimize_summary">Smanjite kvalitetu stranica izvan zaslona kako biste koristili manje memorije</string>
     <string name="state">Stanje</string>
     <string name="error_multiple_genres_not_supported">Ovaj izvor mange ne podržava filtriranje prema više žanrova</string>

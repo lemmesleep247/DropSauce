@@ -58,6 +58,8 @@ import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.widgets.ZoomControl
 import org.koitharu.kotatsu.core.util.IdlingDetector
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
 import org.koitharu.kotatsu.core.util.ext.hasGlobalPoint
@@ -590,6 +592,10 @@ class ReaderActivity :
     }
 
     override fun onBookmarkClick() {
+        // Only buzz when adding a bookmark (not when removing one).
+        if (viewModel.isBookmarkAdded.value != true) {
+            viewBinding.actionsView.hapticFeedback(HapticEffect.CONFIRM)
+        }
         viewModel.toggleBookmark()
     }
 

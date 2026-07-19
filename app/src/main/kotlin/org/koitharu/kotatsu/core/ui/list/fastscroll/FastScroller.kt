@@ -348,6 +348,11 @@ class FastScroller @JvmOverloads constructor(
 		if (this.recyclerView != null) {
 			detachRecyclerView()
 		}
+		// FastScroller anchors its layout params against the RecyclerView's id; a root
+		// RecyclerView in a layout may have none (NO_ID). Assign one instead of crashing.
+		if (recyclerView.id == NO_ID) {
+			recyclerView.id = generateViewId()
+		}
 		this.recyclerView = recyclerView
 
 		if (parent is ViewGroup) {

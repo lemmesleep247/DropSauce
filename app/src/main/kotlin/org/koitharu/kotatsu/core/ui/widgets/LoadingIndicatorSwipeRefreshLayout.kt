@@ -10,6 +10,8 @@ import androidx.annotation.ColorInt
 import androidx.core.view.isVisible
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.loadingindicator.LoadingIndicator
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 
 /**
  * A [SwipeRefreshLayout] that hides the legacy spinner and follows the pull gesture with a
@@ -57,6 +59,17 @@ class LoadingIndicatorSwipeRefreshLayout @JvmOverloads constructor(
 	override fun onFinishInflate() {
 		super.onFinishInflate()
 		addView(indicator, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+	}
+
+	override fun setOnRefreshListener(listener: OnRefreshListener?) {
+		// Wrap so a user-triggered refresh gives a committed-gesture haptic. The listener only fires
+		// on the pull gesture, never on programmatic setRefreshing(), so this won't buzz on its own.
+		super.setOnRefreshListener(
+			if (listener == null) null else OnRefreshListener {
+				hapticFeedback(HapticEffect.GESTURE_END)
+				listener.onRefresh()
+			},
+		)
 	}
 
 	/** Tints the Material 3 loading indicator (the native circle is hidden, so [setColorSchemeColors] is a no-op here). */

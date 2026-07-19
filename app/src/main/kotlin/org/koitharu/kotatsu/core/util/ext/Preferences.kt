@@ -53,6 +53,7 @@ fun SharedPreferences.Editor.putAll(values: Map<String, *>) {
 			is Float -> putFloat(e.key, v)
 			is String -> putString(e.key, v)
 			is JSONArray -> putStringSet(e.key, v.toStringSet())
+			is Set<*> -> putStringSet(e.key, v.filterIsInstance<String>().toSet())
 		}
 	}
 }

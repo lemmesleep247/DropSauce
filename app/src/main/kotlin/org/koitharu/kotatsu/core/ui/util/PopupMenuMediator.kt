@@ -4,7 +4,9 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.MenuProvider
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.adjustPopupMenuIcons
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 
 class PopupMenuMediator(
@@ -23,6 +25,7 @@ class PopupMenuMediator(
 			return false
 		}
 		menu.menu.adjustPopupMenuIcons(v.resources)
+		v.hapticFeedback(HapticEffect.LONG_PRESS)
 		menu.setForceShowIcon(true)
 		menu.setOnMenuItemClickListener(this)
 		menu.setOnDismissListener(this)

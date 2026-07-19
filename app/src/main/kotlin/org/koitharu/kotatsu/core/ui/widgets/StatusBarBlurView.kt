@@ -52,16 +52,20 @@ class StatusBarBlurView @JvmOverloads constructor(
 		null
 	}
 
-	// Fallback for API < 31: the pre-existing multi-stop surface gradient.
-	private val fallbackDrawable = if (blurNode == null) {
+	// Surface gradient used both as the API < 31 fallback and as the safety net when a blur draw
+	// fails on API 31+ (e.g. after a GPU context loss) — always built so onDraw can never end up
+	// with nothing to paint (which is what left a persistent black status-bar strip / black screen).
+	private val fallbackDrawable = run {
 		val alphas = floatArrayOf(0.85f, 0.62f, 0.4f, 0.22f, 0.1f, 0f)
 		GradientDrawable(
 			GradientDrawable.Orientation.TOP_BOTTOM,
 			IntArray(alphas.size) { i -> ColorUtils.setAlphaComponent(surfaceColor, (alphas[i] * 255f).toInt()) },
 		)
-	} else {
-		null
 	}
+
+	// Latched when a blur record/composite throws so we stop hammering a dead GPU context every
+	// frame and paint the gradient instead. Reset on re-attach, when the render context is fresh.
+	private var blurFailed = false
 
 	private val fadePaint = Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
 	private val tintPaint = Paint()
@@ -85,7 +89,11 @@ class StatusBarBlurView @JvmOverloads constructor(
 
 	override fun onAttachedToWindow() {
 		super.onAttachedToWindow()
+		// Fresh render context after (re)attach — allow blur again and force a fresh recording.
+		blurFailed = false
+		lastTargetTop = Int.MIN_VALUE
 		viewTreeObserver.addOnPreDrawListener(preDrawListener)
+		invalidate()
 	}
 
 	override fun onDetachedFromWindow() {
@@ -139,15 +147,25 @@ class StatusBarBlurView @JvmOverloads constructor(
 			return
 		}
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-			blurNode == null || target == null || !target.isLaidOut || !canvas.isHardwareAccelerated
+			blurNode == null || target == null || !target.isLaidOut || !canvas.isHardwareAccelerated ||
+			blurFailed
 		) {
-			fallbackDrawable?.run {
-				setBounds(0, 0, width, height)
-				draw(canvas)
-			}
+			drawFallback(canvas)
 			return
 		}
-		drawBlur(canvas, blurNode, target)
+		try {
+			drawBlur(canvas, blurNode, target)
+		} catch (e: Throwable) {
+			// A blur record/composite can fail after a GPU context loss (long time backgrounded).
+			// Latch it and paint the gradient instead of leaving a black frame until app restart.
+			blurFailed = true
+			drawFallback(canvas)
+		}
+	}
+
+	private fun drawFallback(canvas: Canvas) {
+		fallbackDrawable.setBounds(0, 0, width, height)
+		fallbackDrawable.draw(canvas)
 	}
 
 	@RequiresApi(Build.VERSION_CODES.S)

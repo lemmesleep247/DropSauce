@@ -74,6 +74,14 @@ class MihonMangaRepository(
 
 	private val paginationStates = java.util.concurrent.ConcurrentHashMap<String, PaginationState>()
 
+	// True when the source exposes its own "Order by"/"Sort" control (e.g. Asura Scans) instead of
+	// distinct Popular/Latest listings. Structural per-source property, so compute it once. When set,
+	// an unfiltered browse must go through getSearchManga so the source's own (default) order-by is
+	// honored — otherwise it silently falls back to getPopularManga and "Latest" shows popular content.
+	private val hasSourceSortControl: Boolean by lazy {
+		runCatching { MihonFilterMapper.findSortFilter(mihonSource.getFilterList()) != null }.getOrDefault(false)
+	}
+
 	private fun paginationKey(order: SortOrder?, filter: MangaListFilter?): String =
 		"$order|${filter?.query}|${filter?.tags}|${filter?.tagsExclude}"
 
@@ -123,6 +131,7 @@ class MihonMangaRepository(
 			when {
 				hasFilters -> mihonSource.getSearchManga(page, query, filter.toMihonFilterList())
 				order == SortOrder.UPDATED && source.supportsLatest -> mihonSource.getLatestUpdates(page)
+				hasSourceSortControl -> mihonSource.getSearchManga(page, "", (filter ?: MangaListFilter.EMPTY).toMihonFilterList())
 				else -> mihonSource.getPopularManga(page)
 			}
 		} catch (e: Exception) {

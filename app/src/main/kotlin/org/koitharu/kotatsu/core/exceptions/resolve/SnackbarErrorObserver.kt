@@ -5,7 +5,9 @@ import androidx.core.util.Consumer
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.isSerializable
 import org.koitharu.kotatsu.main.ui.owners.BottomNavOwner
 import org.koitharu.kotatsu.parsers.exception.ParseException
@@ -40,6 +42,7 @@ class SnackbarErrorObserver(
 		if (value.isSerializable()) {
 			snackbar.addCopyErrorAction(value)
 		}
+		host.hapticFeedback(HapticEffect.REJECT)
 		snackbar.show()
 	}
 }

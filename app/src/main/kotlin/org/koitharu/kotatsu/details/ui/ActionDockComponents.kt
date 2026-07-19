@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -113,6 +115,7 @@ internal fun ReadFab(
 	val canForget = historyInfo.history != null
 	val hasMenu = enabled && (canIncognito || canForget)
 
+	val haptic = rememberHapticEffect()
 	var expanded by rememberSaveable { mutableStateOf(false) }
 	if (!hasMenu && expanded) {
 		expanded = false
@@ -145,6 +148,7 @@ internal fun ReadFab(
 				Row(
 					modifier = Modifier
 						.clickable(enabled = enabled) {
+							haptic(HapticEffect.CLICK)
 							expanded = false
 							actions.onReadClick()
 						}

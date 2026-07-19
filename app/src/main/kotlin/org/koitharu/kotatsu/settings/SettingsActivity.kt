@@ -12,8 +12,8 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePaddingRelative
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentFactory
-import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
+import androidx.fragment.app.commitNow
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -178,35 +178,17 @@ class SettingsActivity :
 
 	private fun toggleSearchMode(isEnabled: Boolean) {
 		applySearchTitleOverlay(isEnabled)
-		viewBinding.containerSearch.isVisible = isEnabled
-		val searchFragment = supportFragmentManager.findFragmentById(R.id.container_search)
-		if (searchFragment != null) {
-			if (!isEnabled) {
-				invalidateOptionsMenu()
-				supportFragmentManager.commit {
-					setReorderingAllowed(true)
-					setCustomAnimations(
-						R.anim.m3_fade_through_enter,
-						R.anim.m3_fade_through_exit,
-						R.anim.m3_fade_through_pop_enter,
-						R.anim.m3_fade_through_pop_exit,
-					)
-					remove(searchFragment)
-					setTransition(FragmentTransaction.TRANSIT_FRAGMENT_CLOSE)
-				}
-			}
-		} else if (isEnabled) {
-			supportFragmentManager.commit {
+		if (isEnabled &&
+			supportFragmentManager.findFragmentById(R.id.container_search) == null
+		) {
+			supportFragmentManager.commitNow {
 				setReorderingAllowed(true)
-				setCustomAnimations(
-					R.anim.m3_fade_through_enter,
-					R.anim.m3_fade_through_exit,
-					R.anim.m3_fade_through_pop_enter,
-					R.anim.m3_fade_through_pop_exit,
-				)
 				add(R.id.container_search, SettingsSearchFragment::class.java, null)
-				setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
 			}
+		}
+		viewBinding.containerSearch.isVisible = isEnabled
+		if (!isEnabled) {
+			invalidateOptionsMenu()
 		}
 	}
 

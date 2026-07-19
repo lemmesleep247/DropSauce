@@ -72,7 +72,7 @@
 		app:layout_constraintStart_toEndOf="@id/container_master"
 		app:layout_constraintTop_toTopOf="parent" />
 
-	<androidx.fragment.app.FragmentContainerView
+	<FrameLayout
 		android:id="@+id/container_search"
 		android:layout_width="0dp"
 		android:layout_height="0dp"

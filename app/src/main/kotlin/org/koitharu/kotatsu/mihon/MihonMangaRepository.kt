@@ -143,6 +143,9 @@ class MihonMangaRepository(
 
 		val httpSource = mihonSource as? HttpSource
 		mangasPage.mangas.map { sManga ->
+			// New-API extensions stash the manga id in memo and require it back in getMangaUpdate.
+			// Kotatsu's Manga model can't carry it, so sidecar it now — details restores it.
+			sourceMetadata.saveMemo(source.sourceId, sManga.url, sManga)
 			sManga.toManga(
 				source = source,
 				publicUrl = httpSource?.getMangaUrl(sManga).orEmpty(),
@@ -486,6 +489,7 @@ class MihonMangaRepository(
 				return@withContext extensionRelated
 					.distinctBy { it.url }
 					.map { item ->
+						sourceMetadata.saveMemo(source.sourceId, item.url, item)
 						item.toManga(
 							source = source,
 							publicUrl = httpSource?.getMangaUrl(item).orEmpty(),
@@ -513,6 +517,7 @@ class MihonMangaRepository(
 		page.mangas
 			.filter { it.url != seed.url }
 			.map { sManga ->
+				sourceMetadata.saveMemo(source.sourceId, sManga.url, sManga)
 				sManga.toManga(
 					source = source,
 					publicUrl = httpSource?.getMangaUrl(sManga).orEmpty(),

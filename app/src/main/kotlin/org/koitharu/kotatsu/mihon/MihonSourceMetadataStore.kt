@@ -34,6 +34,18 @@ internal class MihonSourceMetadataStore(context: Context) {
 		}
 	}
 
+	/**
+	 * Persist only the memo (used at browse/search time). New-API extensions carry the manga id in
+	 * SManga.memo and need it back inside getMangaUpdate; a full [save] here would also overwrite
+	 * update_strategy/initialized with pre-details defaults.
+	 */
+	fun saveMemo(sourceId: Long, mangaUrl: String, manga: SManga) {
+		if (manga.memo.isEmpty()) return
+		preferences.edit {
+			putString(keyPrefix(sourceId, mangaUrl) + KEY_MEMO, manga.memo.toString())
+		}
+	}
+
 	fun save(sourceId: Long, mangaUrl: String, manga: SManga) {
 		val prefix = keyPrefix(sourceId, mangaUrl)
 		preferences.edit {

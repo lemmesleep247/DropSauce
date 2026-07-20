@@ -80,6 +80,7 @@ open class BaseApp : Application(), Configuration.Provider {
 			return
 		}
 		AppCompatDelegate.setDefaultNightMode(settings.theme)
+		appLogger.rollSession() // preserve last run's log before a fresh session overwrites it
 		appLogger.setEnabled(settings.isVerboseLoggingEnabled)
 		// Keep default platform security provider.
 		setupActivityLifecycleCallbacks()

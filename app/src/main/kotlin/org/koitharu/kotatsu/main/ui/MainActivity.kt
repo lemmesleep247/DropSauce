@@ -1,8 +1,10 @@
 package org.koitharu.kotatsu.main.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.LinearLayout
@@ -50,8 +52,10 @@ import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.browser.AdListUpdateService
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
+import org.koitharu.kotatsu.core.logs.AppLogger
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.util.FadingAppbarMediator
@@ -94,6 +98,23 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 	@Inject
 	lateinit var settings: AppSettings
+
+	@Inject
+	lateinit var appLogger: AppLogger
+
+	private var pendingLogContent: String? = null
+
+	private val saveLogLauncher = registerForActivityResult(
+		ActivityResultContracts.CreateDocument("text/plain"),
+	) { uri: Uri? ->
+		val content = pendingLogContent ?: return@registerForActivityResult
+		pendingLogContent = null
+		if (uri == null) return@registerForActivityResult
+		runCatching {
+			contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
+		}
+		appLogger.clearPreviousSessionLog()
+	}
 
 	private val viewModel by viewModels<MainViewModel>()
 	private val searchSuggestionViewModel by viewModels<SearchSuggestionViewModel>()
@@ -387,6 +408,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			withContext(Dispatchers.Default) {
 				LocalStorageCleanupWorker.enqueue(applicationContext)
 			}
+			maybePromptSavePreviousLog()
 			withResumed {
 				MangaPrefetchService.prefetchLast(this@MainActivity)
 				startService(Intent(this@MainActivity, LocalIndexUpdateService::class.java))
@@ -397,6 +419,26 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		}
 	} catch (e: IllegalStateException) {
 		e.printStackTraceDebug()
+	}
+
+	// Offer to save the previous session's verbose log (retained across a crash/close). Dismissable;
+	// either choice clears it so the prompt does not reappear next launch.
+	private suspend fun maybePromptSavePreviousLog() {
+		val hasLog = withContext(Dispatchers.Default) { appLogger.hasPreviousSessionLog() }
+		if (!hasLog) return
+		buildAlertDialog(this, isCentered = true) {
+			setTitle("Save previous logs?")
+			setMessage("Verbose logs from before the app last closed are available. Save them?")
+			setPositiveButton(R.string.save) { _, _ ->
+				lifecycleScope.launch {
+					pendingLogContent = withContext(Dispatchers.Default) { appLogger.readPreviousSessionLog() }
+					saveLogLauncher.launch("dropsauce_log_${System.currentTimeMillis()}.txt")
+				}
+			}
+			setNegativeButton(R.string.close) { _, _ -> appLogger.clearPreviousSessionLog() }
+			setOnCancelListener { appLogger.clearPreviousSessionLog() }
+			setCancelable(true)
+		}.show()
 	}
 
 	// The appbar keeps fitsSystemWindows=false on every tab: the WindowInsetHolder child provides the

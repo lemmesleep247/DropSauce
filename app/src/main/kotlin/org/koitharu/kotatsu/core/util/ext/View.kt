@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.Point
 import android.graphics.Rect
 import android.os.Build
+import android.util.TypedValue
 import android.view.View
 import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Checkable
+import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.widget.ActionMenuView
 import androidx.appcompat.widget.Toolbar
@@ -16,12 +18,14 @@ import androidx.appcompat.widget.TooltipCompat
 import androidx.core.view.children
 import androidx.core.view.descendants
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.loadingindicator.LoadingIndicator
@@ -30,6 +34,7 @@ import com.google.android.material.slider.RangeSlider
 import com.google.android.material.slider.Slider
 import com.google.android.material.tabs.TabLayout
 import kotlin.math.roundToInt
+import com.google.android.material.R as materialR
 
 fun View.hasGlobalPoint(x: Int, y: Int): Boolean {
 	if (visibility != View.VISIBLE) {
@@ -42,6 +47,34 @@ fun View.hasGlobalPoint(x: Int, y: Int): Boolean {
 
 val ViewGroup.hasVisibleChildren: Boolean
 	get() = children.any { it.isVisible }
+
+/**
+ * Shows/hides a stand-in for a [CollapsingToolbarLayout]'s expanded title while a search action
+ * view is open. The Toolbar hides the CTL's internal title anchor during search, so the CTL stops
+ * drawing the title even in the expanded (below-the-toolbar) position; this TextView takes its place
+ * at the exact same spot. Must live in the CTL's parallax layer so it collapses away like the title.
+ */
+fun TextView.bindExpandedSearchTitle(
+	ctl: CollapsingToolbarLayout,
+	title: CharSequence?,
+	expanded: Boolean,
+) {
+	if (expanded) {
+		typeface = ctl.expandedTitleTypeface
+		setTextSize(TypedValue.COMPLEX_UNIT_PX, ctl.expandedTitleTextSize)
+		setTextColor(context.getThemeColor(materialR.attr.colorOnSurface))
+		text = title
+		updateLayoutParams<ViewGroup.MarginLayoutParams> {
+			marginStart = ctl.expandedTitleMarginStart
+			marginEnd = ctl.expandedTitleMarginEnd
+			// The CTL aligns the expanded title's baseline expandedTitleMarginBottom above the layout
+			// bottom; subtract the descent so this view's baseline lands on that same line.
+			bottomMargin = (ctl.expandedTitleMarginBottom - paint.fontMetrics.descent)
+				.roundToInt().coerceAtLeast(0)
+		}
+	}
+	isVisible = expanded
+}
 
 fun View.measureHeight(): Int {
 	val vh = height

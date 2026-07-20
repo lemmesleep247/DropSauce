@@ -2,7 +2,6 @@ package org.koitharu.kotatsu.settings
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.viewModels
@@ -30,11 +29,12 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.util.ext.buildBundle
 import org.koitharu.kotatsu.core.util.ext.end
-import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.start
+import org.koitharu.kotatsu.core.util.ext.bindExpandedSearchTitle
 import org.koitharu.kotatsu.core.util.ext.textAndVisible
+import android.widget.TextView
 import org.koitharu.kotatsu.databinding.ActivitySettingsBinding
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.settings.about.AboutSettingsFragment
@@ -46,8 +46,6 @@ import org.koitharu.kotatsu.settings.sources.ExtensionsSettingsFragment
 import org.koitharu.kotatsu.settings.sources.SourceSettingsFragment
 import org.koitharu.kotatsu.settings.tracker.TrackerSettingsFragment
 import org.koitharu.kotatsu.sync.ui.SyncSettingsFragment
-import kotlin.math.roundToInt
-import com.google.android.material.R as materialR
 
 @AndroidEntryPoint
 class SettingsActivity :
@@ -114,22 +112,7 @@ class SettingsActivity :
 	 */
 	private fun applySearchTitleOverlay(isSearchActive: Boolean) {
 		val ctl = findViewById<CollapsingToolbarLayout>(R.id.collapsingToolbarLayout) ?: return
-		val textView = findViewById<android.widget.TextView>(R.id.text_title_search) ?: return
-		if (isSearchActive) {
-			textView.typeface = ctl.expandedTitleTypeface
-			textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, ctl.expandedTitleTextSize)
-			textView.setTextColor(getThemeColor(materialR.attr.colorOnSurface))
-			textView.text = ctl.title
-			textView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-				marginStart = ctl.expandedTitleMarginStart
-				marginEnd = ctl.expandedTitleMarginEnd
-				// CTL aligns the expanded title's baseline expandedTitleMarginBottom above the
-				// layout bottom; subtract the descent so this view's baseline lands on that line.
-				bottomMargin = (ctl.expandedTitleMarginBottom - textView.paint.fontMetrics.descent)
-					.roundToInt().coerceAtLeast(0)
-			}
-		}
-		textView.isVisible = isSearchActive
+		findViewById<TextView>(R.id.text_title_search)?.bindExpandedSearchTitle(ctl, ctl.title, isSearchActive)
 	}
 
 	override fun onPreferenceStartFragment(

@@ -6,7 +6,6 @@ import android.text.TextPaint
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
-import android.util.TypedValue
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
@@ -35,11 +34,11 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.model.titleRes
 import org.koitharu.kotatsu.core.util.ViewBadge
+import org.koitharu.kotatsu.core.util.ext.bindExpandedSearchTitle
 import org.koitharu.kotatsu.core.util.ext.buildBundle
 import org.koitharu.kotatsu.core.util.ext.consumeSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.end
 import org.koitharu.kotatsu.core.util.ext.getParcelableExtraCompat
-import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getSerializableExtraCompat
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.setTextAndVisible
@@ -60,7 +59,6 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.remotelist.ui.RemoteListFragment
 import kotlin.math.roundToInt
-import com.google.android.material.R as materialR
 
 private const val SORT_BUTTON_MAX_WIDTH_FRACTION = 0.45f
 
@@ -196,22 +194,7 @@ class MangaListActivity :
 	 */
 	fun setSearchExpanded(expanded: Boolean) {
 		val ctl = viewBinding.collapsingToolbarLayout ?: return
-		val textView = viewBinding.textTitleSearch ?: return
-		if (expanded) {
-			textView.typeface = ctl.expandedTitleTypeface
-			textView.setTextSize(TypedValue.COMPLEX_UNIT_PX, ctl.expandedTitleTextSize)
-			textView.setTextColor(getThemeColor(materialR.attr.colorOnSurface))
-			textView.text = ctl.title
-			textView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-				marginStart = ctl.expandedTitleMarginStart
-				marginEnd = ctl.expandedTitleMarginEnd
-				// The CTL aligns the expanded title's baseline expandedTitleMarginBottom above the
-				// layout bottom; subtract the descent so this view's baseline lands on that line.
-				bottomMargin = (ctl.expandedTitleMarginBottom - textView.paint.fontMetrics.descent)
-					.roundToInt().coerceAtLeast(0)
-			}
-		}
-		textView.isVisible = expanded
+		viewBinding.textTitleSearch?.bindExpandedSearchTitle(ctl, ctl.title, expanded)
 	}
 
 	private fun configureSortButton() {

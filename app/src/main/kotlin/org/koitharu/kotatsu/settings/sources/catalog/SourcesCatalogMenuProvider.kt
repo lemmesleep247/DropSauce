@@ -8,7 +8,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuProvider
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 
 class SourcesCatalogMenuProvider(
 	private val activity: Activity,
@@ -50,7 +49,8 @@ class SourcesCatalogMenuProvider(
 	}
 
 	override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-		(activity as? AppBarOwner)?.appBar?.setExpanded(true, true)
+		// Don't force-expand the appbar: the toolbar is pinned so the search field is already
+		// visible when collapsed, and expanding would drag the title back down under the search bar.
 		return expandListener.onMenuItemActionExpand(item)
 	}
 

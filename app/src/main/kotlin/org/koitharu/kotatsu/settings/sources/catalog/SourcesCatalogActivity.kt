@@ -49,6 +49,7 @@ import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView.ChipModel
 import org.koitharu.kotatsu.core.util.LocaleComparator
+import org.koitharu.kotatsu.core.util.ext.bindExpandedSearchTitle
 import org.koitharu.kotatsu.core.util.ext.getDisplayName
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.observe
@@ -288,14 +289,21 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 	}
 
 	override fun onMenuItemActionExpand(item: MenuItem): Boolean {
+		setSearchTitleExpanded(true)
 		val sq = (item.actionView as? SearchView)?.query?.trim()?.toString().orEmpty()
 		viewModel.performSearch(sq)
 		return true
 	}
 
 	override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+		setSearchTitleExpanded(false)
 		viewModel.performSearch(null)
 		return true
+	}
+
+	private fun setSearchTitleExpanded(expanded: Boolean) {
+		val ctl = viewBinding.collapsingToolbarLayout
+		viewBinding.textTitleSearch.bindExpandedSearchTitle(ctl, ctl.title ?: title, expanded)
 	}
 
 	private fun updateFilers(

@@ -458,6 +458,7 @@ class ReaderActivity :
                             viewModel.setPeekMode(false)
                             viewModel.switchChapter(chapterId, page, scroll)
                         },
+                        onDisable = { viewModel.disableChapterJumpDialog() },
                     )
                 }
             }

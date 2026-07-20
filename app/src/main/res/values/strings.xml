@@ -1020,6 +1020,12 @@
     <string name="chapter_jump_message">You left off somewhere else. Take a peek without losing your place, or move your reading progress here.</string>
     <string name="chapter_jump_peek">Just peek</string>
     <string name="chapter_jump_move">Move progress here</string>
+    <string name="chapter_jump_dont_show_again">Don\'t show this again</string>
+    <string name="chapter_jump_disable_title">Turn off this popup?</string>
+    <string name="chapter_jump_disable_message">Any chapter you open will be marked as your reading progress. You can turn this back on in reader settings.</string>
+    <string name="chapter_jump_disable_confirm">Turn off</string>
+    <string name="chapter_jump_setting_title">Chapter jump popup</string>
+    <string name="chapter_jump_setting_summary">Ask whether to peek or move progress when opening a chapter away from where you left off</string>
     <string name="peek_mode">Peeking</string>
     <string name="peek_mode_hint">Peeking — your progress won\'t change</string>
     <string name="additional_action_required">Additional action is required</string>

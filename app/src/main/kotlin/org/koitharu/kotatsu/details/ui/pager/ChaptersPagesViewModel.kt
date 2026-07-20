@@ -221,6 +221,9 @@ abstract class ChaptersPagesViewModel(
 	 * [ChapterOpenMode.ASK] — the user is jumping away from their progress, ask peek vs move.
 	 */
 	open suspend fun getChapterOpenMode(chapterId: Long): ChapterOpenMode {
+		if (!settings.isChapterJumpDialogEnabled) {
+			return ChapterOpenMode.NORMAL // user opted out — every open moves progress
+		}
 		val details = mangaDetails.value ?: return ChapterOpenMode.NORMAL
 		val manga = details.toManga()
 		val history = runCatchingCancellable {
@@ -241,6 +244,10 @@ abstract class ChaptersPagesViewModel(
 		} else {
 			ChapterOpenMode.ASK
 		}
+	}
+
+	fun disableChapterJumpDialog() {
+		settings.isChapterJumpDialogEnabled = false
 	}
 
 	fun markChapterAsCurrent(chapterId: Long) {

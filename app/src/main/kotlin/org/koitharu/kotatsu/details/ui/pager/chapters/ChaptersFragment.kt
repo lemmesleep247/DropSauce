@@ -180,6 +180,7 @@ class ChaptersFragment :
 						activity = requireActivity(),
 						onPeek = { openReader(true) },
 						onMoveProgress = { openReader(false) },
+						onDisable = { viewModel.disableChapterJumpDialog() },
 					)
 				}
 			}

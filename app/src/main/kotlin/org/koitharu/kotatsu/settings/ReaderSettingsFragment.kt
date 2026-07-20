@@ -137,6 +137,7 @@ private fun ReaderScreen(
 	var readerBar by rememberBooleanPref(AppSettings.KEY_READER_BAR, true)
 	var readerBarTransparent by rememberBooleanPref(AppSettings.KEY_READER_BAR_TRANSPARENT, true)
 	var readerChapterToast by rememberBooleanPref(AppSettings.KEY_READER_CHAPTER_TOAST, true)
+	var chapterJumpDialog by rememberBooleanPref(AppSettings.KEY_CHAPTER_JUMP_DIALOG, true)
 	var readerBackground by rememberStringPref(
 		AppSettings.KEY_READER_BACKGROUND,
 		ReaderBackground.DEFAULT.name,
@@ -472,7 +473,18 @@ private fun ReaderScreen(
 						checked = readerChapterToast,
 						onCheckedChange = { readerChapterToast = it },
 						icon = R.drawable.ic_notification,
-						
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.chapter_jump_setting_title),
+						subtitle = stringResource(R.string.chapter_jump_setting_summary),
+						checked = chapterJumpDialog,
+						onCheckedChange = { chapterJumpDialog = it },
+						icon = R.drawable.ic_eye,
+
 						shape = pos.shape,
 					)
 				}

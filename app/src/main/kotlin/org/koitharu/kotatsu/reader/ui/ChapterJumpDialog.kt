@@ -16,12 +16,19 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -43,6 +50,7 @@ fun showChapterJumpDialog(
 	activity: FragmentActivity,
 	onPeek: () -> Unit,
 	onMoveProgress: () -> Unit,
+	onDisable: () -> Unit,
 ) {
 	val dialog = ComponentDialog(activity)
 	dialog.setContentView(
@@ -56,6 +64,11 @@ fun showChapterJumpDialog(
 						},
 						onMoveProgress = {
 							dialog.dismiss()
+							onMoveProgress()
+						},
+						onDisable = {
+							dialog.dismiss()
+							onDisable()
 							onMoveProgress()
 						},
 					)
@@ -80,7 +93,10 @@ fun showChapterJumpDialog(
 private fun ChapterJumpContent(
 	onPeek: () -> Unit,
 	onMoveProgress: () -> Unit,
+	onDisable: () -> Unit,
 ) {
+	var menuExpanded by remember { mutableStateOf(false) }
+	var showDisableConfirm by remember { mutableStateOf(false) }
 	Box(
 		modifier = Modifier
 			.fillMaxWidth()
@@ -94,6 +110,35 @@ private fun ChapterJumpContent(
 				.fillMaxWidth()
 				.widthIn(max = 400.dp),
 		) {
+			if (showDisableConfirm) {
+				DisableConfirmContent(
+					onConfirm = onDisable,
+					onCancel = { showDisableConfirm = false },
+				)
+				return@Surface
+			}
+			Box {
+				Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+					IconButton(onClick = { menuExpanded = true }) {
+						Icon(
+							painter = painterResource(R.drawable.ic_more_vert),
+							contentDescription = null,
+							tint = MaterialTheme.colorScheme.onSurfaceVariant,
+						)
+					}
+					DropdownMenu(
+						expanded = menuExpanded,
+						onDismissRequest = { menuExpanded = false },
+					) {
+						DropdownMenuItem(
+							text = { Text(stringResource(R.string.chapter_jump_dont_show_again)) },
+							onClick = {
+								menuExpanded = false
+								showDisableConfirm = true
+							},
+						)
+					}
+				}
 			Column(
 				modifier = Modifier.padding(24.dp),
 				horizontalAlignment = Alignment.CenterHorizontally,
@@ -164,6 +209,58 @@ private fun ChapterJumpContent(
 					)
 				}
 			}
+			}
+		}
+	}
+}
+
+@Composable
+private fun DisableConfirmContent(
+	onConfirm: () -> Unit,
+	onCancel: () -> Unit,
+) {
+	Column(
+		modifier = Modifier.padding(24.dp),
+		horizontalAlignment = Alignment.CenterHorizontally,
+	) {
+		Text(
+			text = stringResource(R.string.chapter_jump_disable_title),
+			style = MaterialTheme.typography.headlineSmall,
+			color = MaterialTheme.colorScheme.onSurface,
+			textAlign = TextAlign.Center,
+		)
+		Spacer(Modifier.height(8.dp))
+		Text(
+			text = stringResource(R.string.chapter_jump_disable_message),
+			style = MaterialTheme.typography.bodyMedium,
+			color = MaterialTheme.colorScheme.onSurfaceVariant,
+			textAlign = TextAlign.Center,
+		)
+		Spacer(Modifier.height(24.dp))
+		Button(
+			onClick = onConfirm,
+			shape = RoundedCornerShape(28.dp),
+			modifier = Modifier
+				.fillMaxWidth()
+				.height(56.dp),
+		) {
+			Text(
+				text = stringResource(R.string.chapter_jump_disable_confirm),
+				style = MaterialTheme.typography.labelLarge,
+			)
+		}
+		Spacer(Modifier.height(8.dp))
+		FilledTonalButton(
+			onClick = onCancel,
+			shape = RoundedCornerShape(28.dp),
+			modifier = Modifier
+				.fillMaxWidth()
+				.height(56.dp),
+		) {
+			Text(
+				text = stringResource(android.R.string.cancel),
+				style = MaterialTheme.typography.labelLarge,
+			)
 		}
 	}
 }

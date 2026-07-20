@@ -318,6 +318,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val isReaderUpscaleEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_UPSCALE, false)
 
+	var isChapterJumpDialogEnabled: Boolean
+		get() = prefs.getBoolean(KEY_CHAPTER_JUMP_DIALOG, true)
+		set(value) = prefs.edit { putBoolean(KEY_CHAPTER_JUMP_DIALOG, value) }
+
 	val readerControls: Set<ReaderControl>
 		get() = prefs.getStringSet(KEY_READER_CONTROLS, null)?.mapNotNullTo(EnumSet.noneOf(ReaderControl::class.java)) {
 			ReaderControl.entries.find(it)
@@ -1090,6 +1094,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_READER_BAR = "reader_bar"
 		const val KEY_READER_BAR_TRANSPARENT = "reader_bar_transparent"
 		const val KEY_READER_CHAPTER_TOAST = "reader_chapter_toast"
+		const val KEY_CHAPTER_JUMP_DIALOG = "chapter_jump_dialog"
 		const val KEY_READER_BACKGROUND = "reader_background"
 		const val KEY_READER_SCREEN_ON = "reader_screen_on"
 		const val KEY_SHORTCUTS = "dynamic_shortcuts"

@@ -187,8 +187,11 @@ class MihonMangaRepository(
 			throw translateExtensionException(e)
 		}
 		val details = update.manga
+		// Many extensions never set url on the details SManga (Mihon's copyFrom skips it),
+		// so reading the lateinit property directly would crash the whole details load.
+		val detailsUrl = try { details.url } catch (_: UninitializedPropertyAccessException) { sManga.url }
 		val rawChapters = update.chapters.onEach { chapter ->
-			chapter.url = normalizeChapterUrl(chapter.url, sManga.url, details.url)
+			chapter.url = normalizeChapterUrl(chapter.url, sManga.url, detailsUrl)
 		}
 
 		// Deduplicate by URL — some sources accidentally return the same chapter twice.

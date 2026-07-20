@@ -203,6 +203,7 @@ class PagesFragment :
 						activity = requireActivity(),
 						onPeek = { openReader(true) },
 						onMoveProgress = { openReader(false) },
+						onDisable = { parentViewModel.disableChapterJumpDialog() },
 					)
 				}
 			}

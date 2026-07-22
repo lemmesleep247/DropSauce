@@ -57,6 +57,10 @@ class NavConfigFragment : BaseFragment<FragmentSettingsSourcesBinding>(), Recycl
 			.addDelegate(ListItemType.NAV_ITEM, navConfigAD(this))
 			.addDelegate(ListItemType.FOOTER_LOADING, navAddAD(this))
 		with(binding.recyclerView) {
+			// This list is a bare FastScrollRecyclerView fragment-root; its floating scroller would be
+			// hoisted onto SettingsActivity's shared CoordinatorLayout and blank the right edge of every
+			// settings screen. The list never exceeds a handful of items, so it needs no fast scroller.
+			isFastScrollerEnabled = false
 			setHasFixedSize(true)
 			adapter = navConfigAdapter
 			reorderHelper = ItemTouchHelper(ReorderCallback()).also {

@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,8 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.prefs.AppProtectionTimeout
@@ -66,6 +63,7 @@ import org.koitharu.kotatsu.settings.compose.rememberReadingIndicatorPref
 import org.koitharu.kotatsu.settings.compose.rememberStringPref
 import org.koitharu.kotatsu.settings.compose.rememberStringSetPref
 import org.koitharu.kotatsu.settings.nav.NavConfigFragment
+import org.koitharu.kotatsu.settings.protect.showProtectMethodDialog
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -80,7 +78,6 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 	@Inject
 	lateinit var appShortcutManager: AppShortcutManager
 
-	private val authSupported = MutableStateFlow(false)
 	private var pendingProtectState: Boolean? = null
 
 	// Mirror the legacy fragment behavior: theme / AMOLED toggles must trigger an activity
@@ -109,9 +106,7 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
 		setContent {
 			DropSauceTheme {
-				val authOk by authSupported.asStateFlow().collectAsState()
 				AppearanceScreen(
-					authSupported = authOk,
 					dynamicShortcutsAvailable = appShortcutManager.isDynamicShortcutsAvailable(),
 					onOpenLocaleSettings = ::openSystemLocaleSettings,
 					onOpenDetailsAppearance = {
@@ -128,7 +123,7 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 							isFromRoot = false,
 						)
 					},
-					onRequestProtectAuth = ::startProtectionAuthentication,
+					onProtectToggle = ::onProtectToggle,
 				)
 			}
 		}
@@ -136,7 +131,6 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		authSupported.value = isAuthenticationSupported()
 		settings.subscribe(prefListener)
 	}
 
@@ -164,6 +158,27 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 		return manager.canAuthenticate(BIOMETRIC_WEAK or DEVICE_CREDENTIAL) == BIOMETRIC_SUCCESS
 	}
 
+	/**
+	 * Entry point for the "Require unlock" switch. Turning it off clears any PIN and disables the
+	 * lock; turning it on opens the M3E method chooser (device auth vs. custom PIN).
+	 */
+	private fun onProtectToggle(enable: Boolean) {
+		if (!enable) {
+			settings.isAppProtectionEnabled = false
+			settings.clearAppPassword()
+			return
+		}
+		showProtectMethodDialog(
+			activity = requireActivity(),
+			deviceAuthSupported = isAuthenticationSupported(),
+			onSelectDevice = { startProtectionAuthentication(true) },
+			onPinConfirmed = { pin ->
+				settings.setAppPassword(pin)
+				settings.isAppProtectionEnabled = true
+			},
+		)
+	}
+
 	private fun startProtectionAuthentication(requestedState: Boolean): Boolean {
 		if (!isAuthenticationSupported() || !isAdded) return false
 		val executor = context?.let { ContextCompat.getMainExecutor(it) } ?: return false
@@ -171,6 +186,8 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 		val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
 			override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
 				val state = pendingProtectState ?: return
+				// Device/biometric mode — make sure no stale PIN keeps this in PIN mode.
+				settings.clearAppPassword()
 				settings.isAppProtectionEnabled = state
 				pendingProtectState = null
 			}
@@ -194,12 +211,11 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 
 @Composable
 private fun AppearanceScreen(
-	authSupported: Boolean,
 	dynamicShortcutsAvailable: Boolean,
 	onOpenLocaleSettings: () -> Unit,
 	onOpenDetailsAppearance: () -> Unit,
 	onOpenNavConfig: () -> Unit,
-	onRequestProtectAuth: (Boolean) -> Boolean,
+	onProtectToggle: (Boolean) -> Unit,
 ) {
 	val ctx = LocalContext.current
 
@@ -273,11 +289,9 @@ private fun AppearanceScreen(
 		ScreenshotsPolicy.ALLOW.name,
 	)
 
-	val protectAppSummary = if (authSupported) {
-		stringResource(R.string.require_unlock_summary)
-	} else {
-		stringResource(R.string.require_unlock_unavailable)
-	}
+	// PIN works without a device screen lock, so the option is always available; the method
+	// chooser greys out the device-auth choice when biometric/credential auth is unsupported.
+	val protectAppSummary = stringResource(R.string.require_unlock_summary)
 
 	SettingsScaffold {
 		// The color scheme picker is its own inline widget (horizontal cards), rendered
@@ -599,20 +613,15 @@ private fun AppearanceScreen(
 					SwitchSettingsItem(
 						title = stringResource(R.string.require_unlock),
 						subtitle = protectAppSummary,
-						checked = protectApp && authSupported,
+						checked = protectApp,
 						onCheckedChange = { requested ->
-							if (!authSupported) {
-								protectApp = false
-							} else {
-								// Route through biometric prompt — actual write happens in the
-								// fragment's callback.
-								onRequestProtectAuth(requested)
-							}
+							// The actual pref write happens in the fragment's callback after the
+							// user picks a lock method (or confirms a PIN).
+							onProtectToggle(requested)
 						},
 						icon = R.drawable.ic_lock,
-						
+
 						shape = pos.shape,
-						enabled = authSupported,
 					)
 				}
 				item { pos ->
@@ -623,9 +632,9 @@ private fun AppearanceScreen(
 						selectedValue = protectAppTimeout,
 						onValueChange = { protectAppTimeout = it },
 						icon = R.drawable.ic_timer,
-						
+
 						shape = pos.shape,
-						enabled = authSupported && protectApp,
+						enabled = protectApp,
 					)
 				}
 				item { pos ->

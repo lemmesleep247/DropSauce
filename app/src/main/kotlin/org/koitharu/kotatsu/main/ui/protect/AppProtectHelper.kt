@@ -159,6 +159,10 @@ class AppProtectHelper @Inject constructor(
 		if (!settings.isAppProtectionEnabled) {
 			return true
 		}
+		// A custom PIN does not depend on biometric/credential hardware being set up.
+		if (settings.isAppPasswordSet) {
+			return true
+		}
 		val canAuthenticate = BiometricManager.from(activity)
 			.canAuthenticate(BIOMETRIC_WEAK or DEVICE_CREDENTIAL) == BIOMETRIC_SUCCESS
 		if (canAuthenticate) {

@@ -16,70 +16,67 @@ import androidx.core.view.WindowInsetsCompat
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.databinding.ActivityProtectBinding
+import org.koitharu.kotatsu.settings.compose.DropSauceTheme
 
 @AndroidEntryPoint
 class ProtectActivity :
 	BaseActivity<ActivityProtectBinding>(),
-	View.OnClickListener,
 	AuthenticationResultCallback {
 
 	@Inject
 	lateinit var protectHelper: AppProtectHelper
 
+	@Inject
+	lateinit var settings: AppSettings
+
 	private val biometricPrompt = registerForAuthenticationResult(resultCallback = this)
 	private var isAutoPromptPending = true
+	private val isPinMode get() = settings.isAppPasswordSet
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 		setContentView(ActivityProtectBinding.inflate(layoutInflater))
-		viewBinding.buttonCancel.setOnClickListener(this)
-		viewBinding.buttonNext.apply {
-			isEnabled = true
-			setText(R.string.unlock_app)
-			setOnClickListener(this@ProtectActivity)
+		viewBinding.composeView.setContent {
+			DropSauceTheme {
+				ProtectScreen(
+					isPinMode = isPinMode,
+					onVerifyPin = { pin ->
+						settings.verifyAppPassword(pin).also { if (it) unlockAndFinish() }
+					},
+					onBiometric = { startUnlockFlow() },
+					onCancel = { finishAffinity() },
+				)
+			}
 		}
-		viewBinding.layoutPassword.visibility = View.GONE
-		viewBinding.textViewSubtitle.setText(R.string.require_unlock)
-
 	}
 
 	override fun onStart() {
 		super.onStart()
-		if (isAutoPromptPending) {
+		// Biometric mode auto-prompts once; PIN mode waits for input instead.
+		if (!isPinMode && isAutoPromptPending) {
 			isAutoPromptPending = false
 			viewBinding.root.post { startUnlockFlow() }
 		}
 	}
 
-	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
-		val barsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-		val basePadding = resources.getDimensionPixelOffset(R.dimen.screen_padding)
-		viewBinding.root.setPadding(
-			barsInsets.left + basePadding,
-			barsInsets.top + basePadding,
-			barsInsets.right + basePadding,
-			barsInsets.bottom + basePadding,
-		)
-		return WindowInsetsCompat.CONSUMED
-	}
-
-	override fun onClick(v: View) {
-		when (v.id) {
-			R.id.button_next -> startUnlockFlow()
-			R.id.button_cancel -> finishAffinity()
-		}
-	}
+	// Let Compose handle the insets itself (systemBarsPadding); don't consume them here.
+	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat = insets
 
 	override fun onAuthResult(result: AuthenticationResult) {
 		if (result.isSuccess()) {
-			protectHelper.unlock()
-			@Suppress("DEPRECATION")
-			overridePendingTransition(0, 0)
-			finish()
+			unlockAndFinish()
 		}
+	}
+
+	private fun unlockAndFinish() {
+		protectHelper.unlock()
+		@Suppress("DEPRECATION")
+		overridePendingTransition(0, 0)
+		finish()
 	}
 
 	private fun startUnlockFlow(): Boolean {

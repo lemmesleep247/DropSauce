@@ -15,6 +15,7 @@ import org.koitharu.kotatsu.core.ui.DefaultActivityLifecycleCallbacks
 import org.koitharu.kotatsu.core.ui.util.ActivityRecreationHandle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.lang.ref.WeakReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +38,8 @@ class AppProtectHelper @Inject constructor(
 	private var lastBackgroundAt = 0L
 	/** True while a [ProtectActivity] is already in the foreground to prevent stacking. */
 	private var isProtectScreenShowing = false
+	/** The last resumed non-protect activity, used to re-assert the lock after a recreation. */
+	private var resumedActivity: WeakReference<Activity>? = null
 
 	override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
 		if (!ensureProtectionAvailability(activity)) {
@@ -83,6 +86,9 @@ class AppProtectHelper @Inject constructor(
 		if (!ensureProtectionAvailability(activity)) {
 			return
 		}
+		if (activity !is ProtectActivity && activity !is CrashReportDialog) {
+			resumedActivity = WeakReference(activity)
+		}
 		updateActivityVisibility(activity)
 	}
 
@@ -111,6 +117,17 @@ class AppProtectHelper @Inject constructor(
 		if (activity is ProtectActivity) {
 			// The protect screen was dismissed (unlock or cancel) — allow it to be shown again.
 			isProtectScreenShowing = false
+			// A recreation of the underlying activity (theme/edge-to-edge on cold start) can tear
+			// down this overlay while the app is still locked and a normal activity is already back
+			// in the foreground — the stale "showing" guard had suppressed the re-lock. Re-assert it
+			// now so content is never left exposed. Skips itself if that activity is finishing
+			// (e.g. Cancel → finishAffinity), so there is no relaunch loop.
+			if (settings.isAppProtectionEnabled && !isUnlocked) {
+				resumedActivity?.get()?.let { top ->
+					updateActivityVisibility(top)
+					showProtectScreen(top)
+				}
+			}
 			return
 		}
 		if (activity.isFinishing && activity.isTaskRoot && settings.isAppProtectionEnabled) {

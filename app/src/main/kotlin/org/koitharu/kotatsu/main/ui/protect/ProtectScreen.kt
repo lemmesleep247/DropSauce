@@ -54,21 +54,32 @@ fun ProtectScreen(
 	onBiometric: () -> Unit,
 	onCancel: () -> Unit,
 ) {
-	Box(
+	var pin by remember { mutableStateOf("") }
+	var isError by remember { mutableStateOf(false) }
+
+	fun submit() {
+		if (pin.length < MIN_PIN_LENGTH) return
+		if (!onVerifyPin(pin)) {
+			isError = true
+		}
+	}
+
+	Column(
 		modifier = Modifier
 			.fillMaxSize()
 			.background(MaterialTheme.colorScheme.background)
 			.systemBarsPadding()
 			.imePadding()
 			.padding(horizontal = 24.dp, vertical = 48.dp),
-		contentAlignment = Alignment.TopCenter,
+		horizontalAlignment = Alignment.CenterHorizontally,
+		verticalArrangement = Arrangement.SpaceBetween,
 	) {
+		// Top: identity + PIN entry.
 		Column(
 			modifier = Modifier
 				.fillMaxWidth()
 				.widthIn(max = 400.dp),
 			horizontalAlignment = Alignment.CenterHorizontally,
-			verticalArrangement = Arrangement.Top,
 		) {
 			Box(
 				modifier = Modifier
@@ -97,22 +108,51 @@ fun ProtectScreen(
 				color = MaterialTheme.colorScheme.onSurfaceVariant,
 				textAlign = TextAlign.Center,
 			)
-			Spacer(Modifier.height(32.dp))
 			if (isPinMode) {
-				PinField(onVerifyPin = onVerifyPin)
-			} else {
-				Button(
-					onClick = onBiometric,
-					shape = RoundedCornerShape(28.dp),
-					modifier = Modifier
-						.fillMaxWidth()
-						.height(56.dp),
-				) {
-					Text(
-						text = stringResource(R.string.unlock_app),
-						style = MaterialTheme.typography.labelLarge,
-					)
-				}
+				Spacer(Modifier.height(32.dp))
+				OutlinedTextField(
+					value = pin,
+					onValueChange = { new ->
+						isError = false
+						pin = new.filter(Char::isDigit).take(MAX_PIN_LENGTH)
+					},
+					singleLine = true,
+					isError = isError,
+					supportingText = if (isError) {
+						{ Text(stringResource(R.string.wrong_pin)) }
+					} else {
+						null
+					},
+					visualTransformation = PasswordVisualTransformation(),
+					keyboardOptions = KeyboardOptions(
+						keyboardType = KeyboardType.NumberPassword,
+						imeAction = ImeAction.Done,
+					),
+					keyboardActions = KeyboardActions(onDone = { submit() }),
+					shape = RoundedCornerShape(16.dp),
+					modifier = Modifier.fillMaxWidth(),
+				)
+			}
+		}
+		// Bottom: actions.
+		Column(
+			modifier = Modifier
+				.fillMaxWidth()
+				.widthIn(max = 400.dp),
+			horizontalAlignment = Alignment.CenterHorizontally,
+		) {
+			Button(
+				onClick = { if (isPinMode) submit() else onBiometric() },
+				enabled = !isPinMode || pin.length >= MIN_PIN_LENGTH,
+				shape = RoundedCornerShape(28.dp),
+				modifier = Modifier
+					.fillMaxWidth()
+					.height(56.dp),
+			) {
+				Text(
+					text = stringResource(R.string.unlock_app),
+					style = MaterialTheme.typography.labelLarge,
+				)
 			}
 			Spacer(Modifier.height(8.dp))
 			TextButton(
@@ -122,55 +162,5 @@ fun ProtectScreen(
 				Text(text = stringResource(android.R.string.cancel))
 			}
 		}
-	}
-}
-
-@Composable
-private fun PinField(onVerifyPin: (String) -> Boolean) {
-	var pin by remember { mutableStateOf("") }
-	var isError by remember { mutableStateOf(false) }
-
-	fun submit() {
-		if (pin.length < MIN_PIN_LENGTH) return
-		if (!onVerifyPin(pin)) {
-			isError = true
-		}
-	}
-
-	OutlinedTextField(
-		value = pin,
-		onValueChange = { new ->
-			isError = false
-			pin = new.filter(Char::isDigit).take(MAX_PIN_LENGTH)
-		},
-		singleLine = true,
-		isError = isError,
-		supportingText = if (isError) {
-			{ Text(stringResource(R.string.wrong_pin)) }
-		} else {
-			null
-		},
-		visualTransformation = PasswordVisualTransformation(),
-		keyboardOptions = KeyboardOptions(
-			keyboardType = KeyboardType.NumberPassword,
-			imeAction = ImeAction.Done,
-		),
-		keyboardActions = KeyboardActions(onDone = { submit() }),
-		shape = RoundedCornerShape(16.dp),
-		modifier = Modifier.fillMaxWidth(),
-	)
-	Spacer(Modifier.height(24.dp))
-	Button(
-		onClick = ::submit,
-		enabled = pin.length >= MIN_PIN_LENGTH,
-		shape = RoundedCornerShape(28.dp),
-		modifier = Modifier
-			.fillMaxWidth()
-			.height(56.dp),
-	) {
-		Text(
-			text = stringResource(R.string.unlock_app),
-			style = MaterialTheme.typography.labelLarge,
-		)
 	}
 }

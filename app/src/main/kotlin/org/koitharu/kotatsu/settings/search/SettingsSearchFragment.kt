@@ -33,6 +33,9 @@ class SettingsSearchFragment : BaseFragment<FragmentSearchSuggestionBinding>(),
 		val adapter = BaseListAdapter<SettingsItem>()
 			.addDelegate(ListItemType.NAV_ITEM, settingsItemAD(this))
 		adapter.addListListener(this)
+		// Bare FastScrollRecyclerView root: its floating scroller would be added to the settings
+		// search container on the shared CoordinatorLayout, drawing a stray track line on the right.
+		binding.root.isFastScrollerEnabled = false
 		binding.root.adapter = adapter
 		binding.root.setHasFixedSize(true)
 		viewModel.content.observe(viewLifecycleOwner, adapter)

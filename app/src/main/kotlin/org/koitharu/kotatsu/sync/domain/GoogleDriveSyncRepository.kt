@@ -219,6 +219,9 @@ class GoogleDriveSyncRepository @Inject constructor(
 			// Re-hash the ACTUAL local config after applying, so the next sync's change-detection has a
 			// truthful baseline (a freshly-adopted remote config must not look "locally changed").
 			syncSettings.configHash = configContentHash(dumpLocalConfig(enabled))
+			// Record the feed we just converged on as the baseline; next sync diffs against it to tell
+			// which feed items were deleted locally. Set only on success so retries keep detecting them.
+			syncSettings.lastSyncedFeedIds = merged.feed.mapTo(HashSet(merged.feed.size)) { SyncMerger.feedIdentity(it) }
 			return
 		}
 	}
@@ -400,7 +403,12 @@ class GoogleDriveSyncRepository @Inject constructor(
 			remote?.tracks.orEmpty()
 		}
 		val feed = if (SyncContent.FEED in enabled) {
-			SyncMerger.mergeFeed(localFeed(), remote?.feed.orEmpty())
+			val localFeedList = localFeed()
+			// Entries present at last sync but gone now were deleted on this device (feed has no
+			// tombstones); honour those deletions instead of letting the remote copy resurrect them.
+			val localFeedIds = localFeedList.mapTo(HashSet(localFeedList.size)) { SyncMerger.feedIdentity(it) }
+			val deletedHere = syncSettings.lastSyncedFeedIds - localFeedIds
+			SyncMerger.mergeFeed(localFeedList, remote?.feed.orEmpty(), deletedHere, propagateDeletions)
 		} else {
 			remote?.feed.orEmpty()
 		}

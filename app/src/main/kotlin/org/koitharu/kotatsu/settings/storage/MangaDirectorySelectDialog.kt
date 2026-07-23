@@ -4,28 +4,46 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.hannesdorfmann.adapterdelegates4.AsyncListDifferDelegationAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.core.exceptions.resolve.ToastErrorObserver
 import org.koitharu.kotatsu.core.os.OpenDocumentTreeHelper
-import org.koitharu.kotatsu.core.ui.AlertDialogFragment
-import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
-import org.koitharu.kotatsu.core.util.ext.observe
+import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogTextButton
+import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
-import org.koitharu.kotatsu.databinding.DialogDirectorySelectBinding
 
 @AndroidEntryPoint
-class MangaDirectorySelectDialog : AlertDialogFragment<DialogDirectorySelectBinding>(),
-	OnListItemClickListener<DirectoryModel> {
+class MangaDirectorySelectDialog : ComposeAlertDialogFragment() {
 
 	private val viewModel: MangaDirectorySelectViewModel by viewModels()
 	private val pickFileTreeLauncher = OpenDocumentTreeHelper(
@@ -55,29 +73,71 @@ class MangaDirectorySelectDialog : AlertDialogFragment<DialogDirectorySelectBind
 		}
 	}
 
-	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): DialogDirectorySelectBinding {
-		return DialogDirectorySelectBinding.inflate(inflater, container, false)
-	}
-
-	override fun onViewBindingCreated(binding: DialogDirectorySelectBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
-		val adapter = AsyncListDifferDelegationAdapter(DirectoryDiffCallback(), directoryAD(this))
-		binding.root.adapter = adapter
-		viewModel.items.observe(viewLifecycleOwner) { adapter.items = it }
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
 		viewModel.onDismissDialog.observeEvent(viewLifecycleOwner) { dismiss() }
 		viewModel.onPickDirectory.observeEvent(viewLifecycleOwner) { pickCustomDirectory() }
-		viewModel.onError.observeEvent(viewLifecycleOwner, ToastErrorObserver(binding.root, this))
+		viewModel.onError.observeEvent(viewLifecycleOwner) { e ->
+			Toast.makeText(context ?: return@observeEvent, e.getDisplayMessage(resources), Toast.LENGTH_SHORT).show()
+		}
 	}
 
-	override fun onBuildDialog(builder: MaterialAlertDialogBuilder): MaterialAlertDialogBuilder {
-		return super.onBuildDialog(builder)
-			.setCancelable(true)
-			.setTitle(R.string.manga_save_location)
-			.setNegativeButton(android.R.string.cancel, null)
-	}
-
-	override fun onItemClick(item: DirectoryModel, view: View) {
-		viewModel.onItemClick(item)
+	@Composable
+	override fun Content() {
+		val items by viewModel.items.collectAsState()
+		ExpressiveDialogCard(
+			icon = painterResource(R.drawable.ic_storage),
+			title = stringResource(R.string.manga_save_location),
+		) {
+			Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+				items.forEach { item ->
+					Row(
+						modifier = Modifier
+							.fillMaxWidth()
+							.heightIn(min = 52.dp)
+							.clip(RoundedCornerShape(16.dp))
+							.clickable { viewModel.onItemClick(item) }
+							.padding(horizontal = 8.dp),
+						verticalAlignment = Alignment.CenterVertically,
+					) {
+						if (item.file != null) {
+							RadioButton(selected = item.isChecked, onClick = { viewModel.onItemClick(item) })
+						} else {
+							Icon(
+								painter = painterResource(R.drawable.ic_folder_file),
+								contentDescription = null,
+								tint = MaterialTheme.colorScheme.primary,
+								modifier = Modifier
+									.padding(horizontal = 12.dp)
+									.size(24.dp),
+							)
+						}
+						Spacer(Modifier.size(8.dp))
+						Column(modifier = Modifier.fillMaxWidth()) {
+							Text(
+								text = item.title ?: stringResource(item.titleRes),
+								style = MaterialTheme.typography.bodyLarge,
+								color = if (item.file != null) {
+									MaterialTheme.colorScheme.onSurface
+								} else {
+									MaterialTheme.colorScheme.primary
+								},
+							)
+							val path = item.file?.absolutePath
+							if (path != null) {
+								Text(
+									text = path,
+									style = MaterialTheme.typography.bodySmall,
+									color = MaterialTheme.colorScheme.onSurfaceVariant,
+								)
+							}
+						}
+					}
+				}
+			}
+			Spacer(Modifier.size(8.dp))
+			ExpressiveDialogTextButton(text = stringResource(android.R.string.cancel)) { dismiss() }
+		}
 	}
 
 	private fun pickCustomDirectory() {

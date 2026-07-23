@@ -2,97 +2,138 @@ package org.koitharu.kotatsu.backup.local.ui.restore
 
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.combine
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.backup.local.ui.restore.RestoreService
 import org.koitharu.kotatsu.core.nav.AppRouter
-import org.koitharu.kotatsu.core.ui.AlertDialogFragment
-import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
+import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogTextButton
+import org.koitharu.kotatsu.core.ui.dialog.ExpressivePillButton
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
-import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
-import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.core.util.ext.withArgs
-import org.koitharu.kotatsu.databinding.DialogRestoreBackupBinding
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 
 @AndroidEntryPoint
-class RestoreDialogFragment :
-	AlertDialogFragment<DialogRestoreBackupBinding>(),
-	OnListItemClickListener<BackupSectionModel>,
-	View.OnClickListener {
+class RestoreDialogFragment : ComposeAlertDialogFragment() {
 
 	private val viewModel: RestoreViewModel by viewModels()
 
-	override fun onCreateViewBinding(
-		inflater: LayoutInflater,
-		container: ViewGroup?,
-	) = DialogRestoreBackupBinding.inflate(inflater, container, false)
-
-	override fun onViewBindingCreated(binding: DialogRestoreBackupBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
-		val adapter = BackupSectionsAdapter(this)
-		binding.recyclerView.adapter = adapter
-		binding.buttonCancel.setOnClickListener(this)
-		binding.buttonRestore.setOnClickListener(this)
-		viewModel.availableEntries.observe(viewLifecycleOwner, adapter)
-		viewModel.onError.observeEvent(viewLifecycleOwner, this::onError)
-		combine(
-			viewModel.isLoading,
-			viewModel.availableEntries,
-			viewModel.backupDate,
-			::Triple,
-		).observe(viewLifecycleOwner, this::onLoadingChanged)
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
+		isCancelable = false
 	}
 
-	override fun onBuildDialog(builder: MaterialAlertDialogBuilder): MaterialAlertDialogBuilder {
-		return super.onBuildDialog(builder)
-			.setTitle(R.string.restore_backup)
-			.setCancelable(false)
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
+		viewModel.onError.observeEvent(viewLifecycleOwner, ::onError)
 	}
 
-	override fun onClick(v: View) {
-		when (v.id) {
-			R.id.button_cancel -> dismiss()
-			R.id.button_restore -> {
-				val ctx = v.context
-				val started = startRestoreService()
-				if (started) {
-					Toast.makeText(ctx, R.string.restoring_backup, Toast.LENGTH_SHORT).show()
-				} else {
-					Toast.makeText(ctx, R.string.error_occurred, Toast.LENGTH_SHORT).show()
+	@Composable
+	override fun Content() {
+		val isLoading by viewModel.isLoading.collectAsState()
+		val entries by viewModel.availableEntries.collectAsState()
+		val backupDate by viewModel.backupDate.collectAsState()
+		val subtitle = when {
+			isLoading -> stringResource(R.string.processing_)
+			backupDate != null -> formatBackupDate(backupDate!!)
+			else -> null
+		}
+		ExpressiveDialogCard(
+			icon = painterResource(R.drawable.ic_backup_restore),
+			title = stringResource(R.string.restore_backup),
+			message = subtitle,
+		) {
+			if (isLoading) {
+				Box(
+					modifier = Modifier
+						.fillMaxWidth()
+						.padding(24.dp),
+					contentAlignment = Alignment.Center,
+				) {
+					CircularProgressIndicator()
 				}
+			} else {
+				Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+					entries.forEach { item ->
+						Row(
+							modifier = Modifier
+								.fillMaxWidth()
+								.heightIn(min = 52.dp)
+								.clip(RoundedCornerShape(16.dp))
+								.clickable(enabled = item.isEnabled) { viewModel.onItemClick(item) }
+								.padding(horizontal = 8.dp),
+							verticalAlignment = Alignment.CenterVertically,
+						) {
+							Checkbox(
+								checked = item.isChecked,
+								enabled = item.isEnabled,
+								onCheckedChange = { viewModel.onItemClick(item) },
+							)
+							Spacer(Modifier.size(8.dp))
+							Text(
+								text = stringResource(item.titleResId),
+								style = MaterialTheme.typography.bodyLarge,
+								color = if (item.isEnabled) {
+									MaterialTheme.colorScheme.onSurface
+								} else {
+									MaterialTheme.colorScheme.onSurfaceVariant
+								},
+								modifier = Modifier.fillMaxWidth(),
+							)
+						}
+					}
+				}
+			}
+			Spacer(Modifier.size(16.dp))
+			ExpressivePillButton(
+				text = stringResource(R.string.restore_backup),
+				primary = true,
+				enabled = !isLoading && entries.any { it.isChecked },
+			) {
+				val ctx = context ?: return@ExpressivePillButton
+				val started = startRestoreService()
+				Toast.makeText(
+					ctx,
+					if (started) R.string.restoring_backup else R.string.error_occurred,
+					Toast.LENGTH_SHORT,
+				).show()
 				dismiss()
 			}
-		}
-	}
-
-	override fun onItemClick(item: BackupSectionModel, view: View) {
-		viewModel.onItemClick(item)
-	}
-
-	private fun onLoadingChanged(value: Triple<Boolean, List<BackupSectionModel>, Date?>) {
-		val (isLoading, entries, backupDate) = value
-		with(requireViewBinding()) {
-			progressBar.isVisible = isLoading
-			recyclerView.isGone = isLoading
-			textViewSubtitle.textAndVisible = when {
-				!isLoading -> backupDate?.let(::formatBackupDate)
-				else -> getString(R.string.processing_)
-			}
-			buttonRestore.isEnabled = !isLoading && entries.any { it.isChecked }
+			Spacer(Modifier.size(8.dp))
+			ExpressiveDialogTextButton(text = stringResource(android.R.string.cancel)) { dismiss() }
 		}
 	}
 

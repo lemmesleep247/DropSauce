@@ -44,11 +44,12 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.prefs.TriStateOption
 import org.koitharu.kotatsu.core.ui.dialog.BigButtonsAlertDialog
+import org.koitharu.kotatsu.core.ui.dialog.DialogAction
 import org.koitharu.kotatsu.core.ui.dialog.ErrorDetailsDialog
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
+import org.koitharu.kotatsu.core.ui.dialog.showActionChoiceDialog
 import org.koitharu.kotatsu.core.util.ext.connectivityManager
 import org.koitharu.kotatsu.core.util.ext.findActivity
-import org.koitharu.kotatsu.core.util.ext.getThemeDrawable
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toFileOrNull
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
@@ -106,7 +107,6 @@ import org.koitharu.kotatsu.suggestions.ui.SuggestionsActivity
 import org.koitharu.kotatsu.tracker.ui.debug.TrackerDebugActivity
 import org.koitharu.kotatsu.tracker.ui.updates.UpdatesActivity
 import java.io.File
-import androidx.appcompat.R as appcompatR
 
 class AppRouter private constructor(
     private val activity: FragmentActivity?,
@@ -385,43 +385,33 @@ class AppRouter private constructor(
     }
 
     fun showTagDialog(tag: MangaTag) {
-        buildAlertDialog(contextOrNull() ?: return) {
-            setIcon(R.drawable.ic_tag)
-            setTitle(tag.title)
-            setItems(
-                arrayOf(
-                    context.getString(R.string.search_on_s, tag.source.getTitle(context)),
-                    context.getString(R.string.search_everywhere),
-                ),
-            ) { _, which ->
-                when (which) {
-                    0 -> openList(tag)
-                    1 -> openSearch(tag.title, SearchKind.TAG)
-                }
-            }
-            setNegativeButton(R.string.close, null)
-            setCancelable(true)
-        }.show()
+        val context = contextOrNull() ?: return
+        showActionChoiceDialog(
+            context = context,
+            icon = R.drawable.ic_tag,
+            title = tag.title,
+            actions = listOf(
+                DialogAction(context.getString(R.string.search_on_s, tag.source.getTitle(context))) { openList(tag) },
+                DialogAction(context.getString(R.string.search_everywhere)) { openSearch(tag.title, SearchKind.TAG) },
+            ),
+            dismissLabel = context.getString(R.string.close),
+        )
     }
 
     fun showAuthorDialog(author: String, source: MangaSource) {
-        buildAlertDialog(contextOrNull() ?: return) {
-            setIcon(R.drawable.ic_user)
-            setTitle(author)
-            setItems(
-                arrayOf(
-                    context.getString(R.string.search_on_s, source.getTitle(context)),
-                    context.getString(R.string.search_everywhere),
-                ),
-            ) { _, which ->
-                when (which) {
-                    0 -> openList(source, MangaListFilter(author = author), null)
-                    1 -> openSearch(author, SearchKind.AUTHOR)
-                }
-            }
-            setNegativeButton(R.string.close, null)
-            setCancelable(true)
-        }.show()
+        val context = contextOrNull() ?: return
+        showActionChoiceDialog(
+            context = context,
+            icon = R.drawable.ic_user,
+            title = author,
+            actions = listOf(
+                DialogAction(context.getString(R.string.search_on_s, source.getTitle(context))) {
+                    openList(source, MangaListFilter(author = author), null)
+                },
+                DialogAction(context.getString(R.string.search_everywhere)) { openSearch(author, SearchKind.AUTHOR) },
+            ),
+            dismissLabel = context.getString(R.string.close),
+        )
     }
 
     fun showShareDialog(manga: Manga) {
@@ -434,25 +424,21 @@ class AppRouter private constructor(
             }
             return
         }
-        buildAlertDialog(contextOrNull() ?: return) {
-            setIcon(context.getThemeDrawable(appcompatR.attr.actionModeShareDrawable))
-            setTitle(R.string.share)
-            setItems(
-                arrayOf(
-                    context.getString(R.string.link_to_manga_in_app),
-                    context.getString(R.string.link_to_manga_on_s, manga.source.getTitle(context)),
-                ),
-            ) { _, which ->
-                val link = when (which) {
-                    0 -> manga.appUrl.toString()
-                    1 -> manga.publicUrl
-                    else -> return@setItems
-                }
-                shareLink(link, manga.title)
-            }
-            setNegativeButton(android.R.string.cancel, null)
-            setCancelable(true)
-        }.show()
+        val context = contextOrNull() ?: return
+        showActionChoiceDialog(
+            context = context,
+            icon = R.drawable.ic_share,
+            title = context.getString(R.string.share),
+            actions = listOf(
+                DialogAction(context.getString(R.string.link_to_manga_in_app)) {
+                    shareLink(manga.appUrl.toString(), manga.title)
+                },
+                DialogAction(context.getString(R.string.link_to_manga_on_s, manga.source.getTitle(context))) {
+                    shareLink(manga.publicUrl, manga.title)
+                },
+            ),
+            dismissLabel = context.getString(android.R.string.cancel),
+        )
     }
 
     fun showErrorDialog(error: Throwable, url: String? = null) {

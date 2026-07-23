@@ -1,13 +1,45 @@
 package org.koitharu.kotatsu.download.ui.dialog
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.Menu
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Spinner
-import androidx.appcompat.widget.PopupMenu
-import androidx.core.view.isVisible
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentResultListener
 import androidx.fragment.app.setFragmentResult
@@ -20,123 +52,349 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.DownloadFormat
-import org.koitharu.kotatsu.core.ui.AlertDialogFragment
-import org.koitharu.kotatsu.core.ui.widgets.TwoLinesItemView
+import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogTextButton
+import org.koitharu.kotatsu.core.ui.dialog.ExpressivePillButton
 import org.koitharu.kotatsu.core.util.ext.findActivity
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
 import org.koitharu.kotatsu.core.util.ext.joinToStringWithLimit
-import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
-import org.koitharu.kotatsu.core.util.ext.parentView
-import org.koitharu.kotatsu.core.util.ext.showOrHide
-import org.koitharu.kotatsu.databinding.DialogDownloadBinding
 import org.koitharu.kotatsu.main.ui.owners.BottomNavOwner
 import org.koitharu.kotatsu.parsers.util.format
 import org.koitharu.kotatsu.settings.storage.DirectoryModel
 
 @AndroidEntryPoint
-class DownloadDialogFragment : AlertDialogFragment<DialogDownloadBinding>(), View.OnClickListener {
+class DownloadDialogFragment : ComposeAlertDialogFragment() {
 
 	private val viewModel by viewModels<DownloadDialogViewModel>()
-	private var optionViews: Array<out TwoLinesItemView>? = null
 
-	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?) =
-		DialogDownloadBinding.inflate(inflater, container, false)
-
-	override fun onBuildDialog(builder: MaterialAlertDialogBuilder): MaterialAlertDialogBuilder {
-		return super.onBuildDialog(builder)
-			.setTitle(R.string.save_manga)
-			.setCancelable(true)
-	}
-
-	override fun onViewBindingCreated(binding: DialogDownloadBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
-		optionViews = arrayOf(
-			binding.optionWholeManga,
-			binding.optionWholeBranch,
-			binding.optionFirstChapters,
-			binding.optionUnreadChapters,
-		).onEach {
-			it.setOnClickListener(this)
-			it.setOnButtonClickListener(this)
-		}
-		binding.buttonCancel.setOnClickListener(this)
-		binding.buttonConfirm.setOnClickListener(this)
-		binding.textViewMore.setOnClickListener(this)
-
-		binding.textViewTip.isVisible = viewModel.manga.size == 1
-		binding.textViewSummary.text = viewModel.manga.joinToStringWithLimit(binding.root.context, 120) { it.title }
-
-		viewModel.isLoading.observe(viewLifecycleOwner, this::onLoadingStateChanged)
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
 		viewModel.onScheduled.observeEvent(viewLifecycleOwner, this::onDownloadScheduled)
 		viewModel.onError.observeEvent(viewLifecycleOwner, this::onError)
-		viewModel.defaultFormat.observe(viewLifecycleOwner, this::onDefaultFormatChanged)
-		viewModel.availableDestinations.observe(viewLifecycleOwner, this::onDestinationsChanged)
-		viewModel.chaptersSelectOptions.observe(viewLifecycleOwner, this::onChapterSelectOptionsChanged)
-		viewModel.isOptionsLoading.observe(viewLifecycleOwner, binding.progressBar::showOrHide)
 	}
 
-	override fun onViewStateRestored(savedInstanceState: Bundle?) {
-		super.onViewStateRestored(savedInstanceState)
-		showMoreOptions(requireViewBinding().textViewMore.isChecked)
-		setCheckedOption(
-			savedInstanceState?.getInt(KEY_CHECKED_OPTION, R.id.option_whole_manga) ?: R.id.option_whole_manga,
-		)
-	}
+	@Composable
+	override fun Content() {
+		val context = LocalContext.current
+		val options by viewModel.chaptersSelectOptions.collectAsState()
+		val destinations by viewModel.availableDestinations.collectAsState()
+		val defaultFormat by viewModel.defaultFormat.collectAsState()
+		val isLoading by viewModel.isLoading.collectAsState()
+		val isOptionsLoading by viewModel.isOptionsLoading.collectAsState()
 
-	override fun onSaveInstanceState(outState: Bundle) {
-		super.onSaveInstanceState(outState)
-		optionViews?.find { it.isChecked }?.let {
-			outState.putInt(KEY_CHECKED_OPTION, it.id)
+		var selectedOption by rememberSaveable { mutableIntStateOf(OPTION_WHOLE_MANGA) }
+		var moreExpanded by rememberSaveable { mutableStateOf(false) }
+		var startNow by rememberSaveable { mutableStateOf(true) }
+		var formatIndex by rememberSaveable { mutableIntStateOf(-1) }
+		var destinationIndex by rememberSaveable { mutableIntStateOf(0) }
+
+		LaunchedEffect(defaultFormat) { defaultFormat?.let { formatIndex = it.ordinal } }
+		LaunchedEffect(destinations) {
+			val i = destinations.indexOfFirst { it.isChecked }
+			if (i >= 0) destinationIndex = i
+		}
+		val summary = remember { viewModel.manga.joinToStringWithLimit(context, 120) { it.title } }
+		val formatLabels = stringArrayResource(R.array.download_formats)
+
+		ExpressiveDialogCard(
+			icon = painterResource(R.drawable.ic_download),
+			title = stringResource(R.string.save_manga),
+			message = summary,
+		) {
+			Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+				// Whole manga
+				OptionRow(
+					selected = selectedOption == OPTION_WHOLE_MANGA,
+					title = stringResource(R.string.download_option_whole_manga),
+					subtitle = options.wholeManga.chaptersCount
+						.takeIf { it > 0 }
+						?.let { context.resources.getQuantityStringSafe(R.plurals.chapters, it, it) },
+					onSelect = { selectedOption = OPTION_WHOLE_MANGA },
+				)
+				// All chapters for the selected branch
+				options.wholeBranch?.let { branch ->
+					val keys = branch.branches.keys.toList()
+					OptionRow(
+						selected = selectedOption == OPTION_WHOLE_BRANCH,
+						title = stringResource(R.string.download_option_all_chapters, branch.selectedBranch ?: ""),
+						subtitle = branch.chaptersCount
+							.takeIf { it > 0 }
+							?.let { context.resources.getQuantityStringSafe(R.plurals.chapters, it, it) },
+						selectorLabel = branch.selectedBranch ?: stringResource(R.string.unknown),
+						selectorItems = keys.map { it ?: stringResource(R.string.unknown) },
+						onSelectItem = { viewModel.setSelectedBranch(keys.getOrNull(it)) },
+						onSelect = { selectedOption = OPTION_WHOLE_BRANCH },
+					)
+				}
+				// First N chapters
+				options.firstChapters?.let { first ->
+					val values = chaptersCount(first.maxAvailableCount).toList()
+					OptionRow(
+						selected = selectedOption == OPTION_FIRST_CHAPTERS,
+						title = stringResource(
+							R.string.download_option_first_n_chapters,
+							context.resources.getQuantityStringSafe(
+								R.plurals.chapters,
+								first.chaptersCount,
+								first.chaptersCount,
+							),
+						),
+						subtitle = first.branch,
+						selectorLabel = first.chaptersCount.format(),
+						selectorItems = values.map { it.format() },
+						onSelectItem = { values.getOrNull(it)?.let(viewModel::setFirstChaptersCount) },
+						onSelect = { selectedOption = OPTION_FIRST_CHAPTERS },
+					)
+				}
+				// Next N unread chapters
+				options.unreadChapters?.let { unread ->
+					val values = chaptersCount(unread.maxAvailableCount).toList()
+					OptionRow(
+						selected = selectedOption == OPTION_UNREAD_CHAPTERS,
+						title = if (unread.chaptersCount == Int.MAX_VALUE) {
+							stringResource(R.string.download_option_all_unread)
+						} else {
+							stringResource(
+								R.string.download_option_next_unread_n_chapters,
+								context.resources.getQuantityStringSafe(
+									R.plurals.chapters,
+									unread.chaptersCount,
+									unread.chaptersCount,
+								),
+							)
+						},
+						subtitle = null,
+						selectorLabel = if (unread.chaptersCount == Int.MAX_VALUE) {
+							stringResource(R.string.chapters_all)
+						} else {
+							unread.chaptersCount.format()
+						},
+						selectorItems = values.map { it.format() } + stringResource(R.string.chapters_all),
+						onSelectItem = {
+							viewModel.setUnreadChaptersCount(values.getOrNull(it) ?: Int.MAX_VALUE)
+						},
+						onSelect = { selectedOption = OPTION_UNREAD_CHAPTERS },
+					)
+				}
+
+				if (isOptionsLoading) {
+					LinearProgressIndicator(
+						modifier = Modifier
+							.fillMaxWidth()
+							.padding(vertical = 8.dp),
+					)
+				}
+				if (viewModel.manga.size == 1) {
+					Row(
+						modifier = Modifier
+							.fillMaxWidth()
+							.padding(vertical = 8.dp),
+						verticalAlignment = Alignment.CenterVertically,
+					) {
+						Icon(
+							painter = painterResource(R.drawable.ic_tap),
+							contentDescription = null,
+							tint = MaterialTheme.colorScheme.onSurfaceVariant,
+							modifier = Modifier.size(18.dp),
+						)
+						Spacer(Modifier.size(8.dp))
+						Text(
+							text = stringResource(R.string.chapter_selection_hint),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.onSurfaceVariant,
+						)
+					}
+				}
+
+				// Start download now
+				Row(
+					modifier = Modifier
+						.fillMaxWidth()
+						.heightIn(min = 48.dp)
+						.clip(RoundedCornerShape(16.dp))
+						.clickable { startNow = !startNow }
+						.padding(horizontal = 8.dp),
+					verticalAlignment = Alignment.CenterVertically,
+				) {
+					Text(
+						text = stringResource(R.string.start_download),
+						style = MaterialTheme.typography.bodyLarge,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = Modifier.weight(1f),
+					)
+					Switch(checked = startNow, onCheckedChange = { startNow = it })
+				}
+
+				// More options toggle
+				Row(
+					modifier = Modifier
+						.fillMaxWidth()
+						.heightIn(min = 48.dp)
+						.clip(RoundedCornerShape(16.dp))
+						.clickable { moreExpanded = !moreExpanded }
+						.padding(horizontal = 8.dp),
+					verticalAlignment = Alignment.CenterVertically,
+				) {
+					Text(
+						text = stringResource(R.string.more_options),
+						style = MaterialTheme.typography.bodyLarge,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+				if (moreExpanded) {
+					SelectorField(
+						label = stringResource(R.string.destination_directory),
+						current = destinations.getOrNull(destinationIndex)
+							?.let { it.title ?: stringResource(it.titleRes) } ?: "",
+						items = destinations.map { it.title ?: stringResource(it.titleRes) },
+						onSelect = { destinationIndex = it },
+					)
+					SelectorField(
+						label = stringResource(R.string.preferred_download_format),
+						current = formatLabels.getOrNull(formatIndex) ?: "",
+						items = formatLabels.toList(),
+						onSelect = { formatIndex = it },
+					)
+				}
+			}
+
+			Spacer(Modifier.size(16.dp))
+			ExpressivePillButton(
+				text = stringResource(R.string.save),
+				primary = true,
+				enabled = !isLoading,
+			) {
+				router.askForDownloadOverMeteredNetwork { allowMetered ->
+					schedule(
+						allowMetered = allowMetered,
+						selectedOption = selectedOption,
+						startNow = startNow,
+						formatIndex = formatIndex,
+						destinationIndex = destinationIndex,
+					)
+				}
+			}
+			Spacer(Modifier.size(8.dp))
+			ExpressiveDialogTextButton(text = stringResource(android.R.string.cancel)) { dialog?.cancel() }
 		}
 	}
 
-	override fun onDestroyView() {
-		super.onDestroyView()
-		optionViews = null
-	}
-
-	override fun onClick(v: View) {
-		when (v.id) {
-			R.id.button_cancel -> dialog?.cancel()
-			R.id.button_confirm -> router.askForDownloadOverMeteredNetwork(::schedule)
-
-			R.id.textView_more -> {
-				val binding = viewBinding ?: return
-				binding.textViewMore.toggle()
-				showMoreOptions(binding.textViewMore.isChecked)
+	@Composable
+	private fun OptionRow(
+		selected: Boolean,
+		title: String,
+		subtitle: String?,
+		onSelect: () -> Unit,
+		selectorLabel: String? = null,
+		selectorItems: List<String> = emptyList(),
+		onSelectItem: (Int) -> Unit = {},
+	) {
+		Row(
+			modifier = Modifier
+				.fillMaxWidth()
+				.heightIn(min = 52.dp)
+				.clip(RoundedCornerShape(16.dp))
+				.clickable { onSelect() }
+				.padding(horizontal = 8.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			RadioButton(selected = selected, onClick = onSelect)
+			Spacer(Modifier.size(8.dp))
+			Column(modifier = Modifier.weight(1f)) {
+				Text(
+					text = title,
+					style = MaterialTheme.typography.bodyLarge,
+					color = MaterialTheme.colorScheme.onSurface,
+				)
+				if (!subtitle.isNullOrEmpty()) {
+					Text(
+						text = subtitle,
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
 			}
-
-			R.id.button -> when (v.parentView?.id ?: return) {
-				R.id.option_whole_branch -> showBranchSelection(v)
-				R.id.option_first_chapters -> showFirstChaptersCountSelection(v)
-				R.id.option_unread_chapters -> showUnreadChaptersCountSelection(v)
-			}
-
-			else -> if (v is TwoLinesItemView) {
-				setCheckedOption(v.id)
+			if (selected && selectorLabel != null && selectorItems.isNotEmpty()) {
+				Box {
+					var expanded by remember { mutableStateOf(false) }
+					TextButton(onClick = { expanded = true }) { Text(selectorLabel) }
+					DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+						selectorItems.forEachIndexed { index, label ->
+							DropdownMenuItem(
+								text = { Text(label) },
+								onClick = {
+									expanded = false
+									onSelectItem(index)
+								},
+							)
+						}
+					}
+				}
 			}
 		}
 	}
 
-	private fun schedule(allowMeteredNetwork: Boolean) {
-		viewBinding?.run {
-			val options = viewModel.chaptersSelectOptions.value
-			viewModel.confirm(
-				startNow = switchStart.isChecked,
-				chaptersMacro = when {
-					optionWholeManga.isChecked -> options.wholeManga
-					optionWholeBranch.isChecked -> options.wholeBranch ?: return@run
-					optionFirstChapters.isChecked -> options.firstChapters ?: return@run
-					optionUnreadChapters.isChecked -> options.unreadChapters ?: return@run
-					else -> return@run
-				},
-				format = DownloadFormat.entries.getOrNull(spinnerFormat.selectedItemPosition),
-				destination = viewModel.availableDestinations.value.getOrNull(spinnerDestination.selectedItemPosition),
-				allowMetered = allowMeteredNetwork,
+	@Composable
+	private fun SelectorField(
+		label: String,
+		current: String,
+		items: List<String>,
+		onSelect: (Int) -> Unit,
+	) {
+		Column(modifier = Modifier.padding(top = 8.dp)) {
+			Text(
+				text = label,
+				style = MaterialTheme.typography.titleSmall,
+				color = MaterialTheme.colorScheme.onSurface,
 			)
+			Box {
+				var expanded by remember { mutableStateOf(false) }
+				TextButton(
+					onClick = { expanded = true },
+					modifier = Modifier.fillMaxWidth(),
+				) {
+					Text(text = current, modifier = Modifier.weight(1f))
+				}
+				DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+					items.forEachIndexed { index, item ->
+						DropdownMenuItem(
+							text = { Text(item) },
+							onClick = {
+								expanded = false
+								onSelect(index)
+							},
+						)
+					}
+				}
+			}
 		}
+	}
+
+	private fun schedule(
+		allowMetered: Boolean,
+		selectedOption: Int,
+		startNow: Boolean,
+		formatIndex: Int,
+		destinationIndex: Int,
+	) {
+		val options = viewModel.chaptersSelectOptions.value
+		val macro = when (selectedOption) {
+			OPTION_WHOLE_MANGA -> options.wholeManga
+			OPTION_WHOLE_BRANCH -> options.wholeBranch ?: return
+			OPTION_FIRST_CHAPTERS -> options.firstChapters ?: return
+			OPTION_UNREAD_CHAPTERS -> options.unreadChapters ?: return
+			else -> return
+		}
+		viewModel.confirm(
+			startNow = startNow,
+			chaptersMacro = macro,
+			format = DownloadFormat.entries.getOrNull(formatIndex),
+			destination = viewModel.availableDestinations.value.getOrNull(destinationIndex),
+			allowMetered = allowMetered,
+		)
 	}
 
 	private fun onError(e: Throwable) {
@@ -148,150 +406,11 @@ class DownloadDialogFragment : AlertDialogFragment<DialogDownloadBinding>(), Vie
 		dismiss()
 	}
 
-	private fun onLoadingStateChanged(value: Boolean) {
-		with(requireViewBinding()) {
-			buttonConfirm.isEnabled = !value
-		}
-	}
-
-	private fun onDefaultFormatChanged(format: DownloadFormat?) {
-		val spinner = viewBinding?.spinnerFormat ?: return
-		spinner.setSelection(format?.ordinal ?: Spinner.INVALID_POSITION)
-	}
-
-	private fun onDestinationsChanged(directories: List<DirectoryModel>) {
-		viewBinding?.spinnerDestination?.run {
-			adapter = DestinationsAdapter(context, directories)
-			setSelection(directories.indexOfFirst { it.isChecked })
-		}
-	}
-
-	private fun onChapterSelectOptionsChanged(options: ChapterSelectOptions) {
-		with(viewBinding ?: return) {
-			// Whole manga
-			optionWholeManga.subtitle = if (options.wholeManga.chaptersCount > 0) {
-				resources.getQuantityStringSafe(
-					R.plurals.chapters,
-					options.wholeManga.chaptersCount,
-					options.wholeManga.chaptersCount,
-				)
-			} else {
-				null
-			}
-			// All chapters for branch
-			optionWholeBranch.isVisible = options.wholeBranch != null
-			options.wholeBranch?.let {
-				optionWholeBranch.title = resources.getString(
-					R.string.download_option_all_chapters,
-					it.selectedBranch,
-				)
-				optionWholeBranch.subtitle = if (it.chaptersCount > 0) {
-					resources.getQuantityStringSafe(
-						R.plurals.chapters,
-						it.chaptersCount,
-						it.chaptersCount,
-					)
-				} else {
-					null
-				}
-			}
-			// First N chapters
-			optionFirstChapters.isVisible = options.firstChapters != null
-			options.firstChapters?.let {
-				optionFirstChapters.title = resources.getString(
-					R.string.download_option_first_n_chapters,
-					resources.getQuantityStringSafe(
-						R.plurals.chapters,
-						it.chaptersCount,
-						it.chaptersCount,
-					),
-				)
-				optionFirstChapters.subtitle = it.branch
-			}
-			// Next N unread chapters
-			optionUnreadChapters.isVisible = options.unreadChapters != null
-			options.unreadChapters?.let {
-				optionUnreadChapters.title = if (it.chaptersCount == Int.MAX_VALUE) {
-					resources.getString(R.string.download_option_all_unread)
-				} else {
-					resources.getString(
-						R.string.download_option_next_unread_n_chapters,
-						resources.getQuantityStringSafe(
-							R.plurals.chapters,
-							it.chaptersCount,
-							it.chaptersCount,
-						),
-					)
-				}
-			}
-		}
-	}
-
 	private fun onDownloadScheduled(isStarted: Boolean) {
 		val bundle = Bundle(1)
 		bundle.putBoolean(ARG_STARTED, isStarted)
 		setFragmentResult(RESULT_KEY, bundle)
 		dismiss()
-	}
-
-	private fun showMoreOptions(isVisible: Boolean) = viewBinding?.apply {
-		cardFormat.isVisible = isVisible
-		textViewFormat.isVisible = isVisible
-		cardDestination.isVisible = isVisible
-		textViewDestination.isVisible = isVisible
-	}
-
-	private fun setCheckedOption(id: Int) {
-		for (optionView in optionViews ?: return) {
-			optionView.isChecked = id == optionView.id
-			optionView.isButtonEnabled = optionView.isChecked
-		}
-	}
-
-	private fun showBranchSelection(v: View) {
-		val option = viewModel.chaptersSelectOptions.value.wholeBranch ?: return
-		val branches = option.branches.keys.toList()
-		if (branches.size <= 1) {
-			return
-		}
-		val menu = PopupMenu(v.context, v)
-		for ((i, branch) in branches.withIndex()) {
-			menu.menu.add(Menu.NONE, Menu.NONE, i, branch ?: getString(R.string.unknown))
-		}
-		menu.setOnMenuItemClickListener {
-			viewModel.setSelectedBranch(branches.getOrNull(it.order))
-			true
-		}
-		menu.show()
-	}
-
-	private fun showFirstChaptersCountSelection(v: View) {
-		val option = viewModel.chaptersSelectOptions.value.firstChapters ?: return
-		val menu = PopupMenu(v.context, v)
-		chaptersCount(option.maxAvailableCount).forEach { i ->
-			menu.menu.add(i.format())
-		}
-		menu.setOnMenuItemClickListener {
-			viewModel.setFirstChaptersCount(
-				it.title?.toString()?.toIntOrNull() ?: return@setOnMenuItemClickListener false,
-			)
-			true
-		}
-		menu.show()
-	}
-
-	private fun showUnreadChaptersCountSelection(v: View) {
-		val option = viewModel.chaptersSelectOptions.value.unreadChapters ?: return
-		val menu = PopupMenu(v.context, v)
-		chaptersCount(option.maxAvailableCount).forEach { i ->
-			menu.menu.add(i.format())
-		}
-		menu.menu.add(getString(R.string.chapters_all))
-		menu.setOnMenuItemClickListener {
-			viewModel.setUnreadChaptersCount(it.title?.toString()?.toIntOrNull() ?: Int.MAX_VALUE)
-			true
-		}
-		menu.show()
 	}
 
 	private fun chaptersCount(max: Int) = sequence {
@@ -338,7 +457,11 @@ class DownloadDialogFragment : AlertDialogFragment<DialogDownloadBinding>(), Vie
 
 		private const val RESULT_KEY = "DOWNLOAD_STARTED"
 		private const val ARG_STARTED = "started"
-		private const val KEY_CHECKED_OPTION = "checked_opt"
+
+		private const val OPTION_WHOLE_MANGA = 0
+		private const val OPTION_WHOLE_BRANCH = 1
+		private const val OPTION_FIRST_CHAPTERS = 2
+		private const val OPTION_UNREAD_CHAPTERS = 3
 
 		fun registerCallback(
 			fm: FragmentManager,

@@ -7,8 +7,7 @@ import android.view.MenuItem
 import androidx.core.view.MenuProvider
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
-import org.koitharu.kotatsu.core.ui.dialog.RememberSelectionDialogListener
-import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
+import org.koitharu.kotatsu.core.ui.dialog.showSingleChoiceDialog
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -46,29 +45,26 @@ class HistoryListMenuProvider(
 	}
 
 	private fun showClearHistoryDialog() {
-		val selectionListener = RememberSelectionDialogListener(1)
-		buildAlertDialog(context, isCentered = true) {
-			setTitle(R.string.clear_history)
-			setSingleChoiceItems(
-				arrayOf(
-					context.getString(R.string.last_2_hours),
-					context.getString(R.string.today),
-					context.getString(R.string.not_in_favorites),
-					context.getString(R.string.clear_all_history),
-				),
-				selectionListener.selection,
-				selectionListener,
-			)
-			setIcon(R.drawable.ic_delete_all)
-			setNegativeButton(android.R.string.cancel, null)
-			setPositiveButton(R.string.clear) { _, _ ->
-				when (selectionListener.selection) {
-					0 -> viewModel.clearHistory(Instant.now().minus(2, ChronoUnit.HOURS))
-					1 -> viewModel.clearHistory(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant())
-					2 -> viewModel.removeNotFavorite()
-					3 -> viewModel.clearHistory(null)
-				}
+		showSingleChoiceDialog(
+			context = context,
+			icon = R.drawable.ic_delete_all,
+			title = context.getString(R.string.clear_history),
+			options = listOf(
+				context.getString(R.string.last_2_hours),
+				context.getString(R.string.today),
+				context.getString(R.string.not_in_favorites),
+				context.getString(R.string.clear_all_history),
+			),
+			selectedIndex = 1,
+			confirmLabel = context.getString(R.string.clear),
+			destructive = true,
+		) { selection ->
+			when (selection) {
+				0 -> viewModel.clearHistory(Instant.now().minus(2, ChronoUnit.HOURS))
+				1 -> viewModel.clearHistory(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant())
+				2 -> viewModel.removeNotFavorite()
+				3 -> viewModel.clearHistory(null)
 			}
-		}.show()
+		}
 	}
 }

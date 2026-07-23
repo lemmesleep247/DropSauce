@@ -1,27 +1,44 @@
 package org.koitharu.kotatsu.local.ui
 
 import android.net.Uri
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.OpenDocumentTreeHelper
+import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogTextButton
 import org.koitharu.kotatsu.core.util.ext.resolveName
-import org.koitharu.kotatsu.core.ui.AlertDialogFragment
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
-import org.koitharu.kotatsu.local.data.isSupportedArchive
-import org.koitharu.kotatsu.databinding.DialogImportBinding
 import org.koitharu.kotatsu.local.data.LocalStorageManager
+import org.koitharu.kotatsu.local.data.isSupportedArchive
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ImportDialogFragment : AlertDialogFragment<DialogImportBinding>(), View.OnClickListener {
+class ImportDialogFragment : ComposeAlertDialogFragment() {
 
 	@Inject
 	lateinit var storageManager: LocalStorageManager
@@ -33,33 +50,78 @@ class ImportDialogFragment : AlertDialogFragment<DialogImportBinding>(), View.On
 		startImport(listOfNotNull(it))
 	}
 
-	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): DialogImportBinding {
-		return DialogImportBinding.inflate(inflater, container, false)
-	}
-
-	override fun onBuildDialog(builder: MaterialAlertDialogBuilder): MaterialAlertDialogBuilder {
-		return super.onBuildDialog(builder)
-			.setTitle(R.string._import)
-			.setNegativeButton(android.R.string.cancel, null)
-			.setCancelable(true)
-	}
-
-	override fun onViewBindingCreated(binding: DialogImportBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
-		binding.buttonDir.setOnClickListener(this)
-		binding.buttonFile.setOnClickListener(this)
-	}
-
-	override fun onClick(v: View) {
-		val res = when (v.id) {
-			R.id.button_file -> importFileCall.tryLaunch(
-				arrayOf("application/zip", "application/x-cbz", "application/pdf", "application/epub+zip", "*/*"),
-			)
-			R.id.button_dir -> importDirCall.tryLaunch(null)
-			else -> true
+	@Composable
+	override fun Content() {
+		ExpressiveDialogCard(
+			icon = painterResource(R.drawable.ic_file_zip),
+			title = stringResource(R.string._import),
+		) {
+			ImportChoice(
+				icon = R.drawable.ic_file_zip,
+				title = R.string.comics_archive,
+				subtitle = R.string.comics_archive_import_description,
+			) {
+				launch(
+					importFileCall.tryLaunch(
+						arrayOf("application/zip", "application/x-cbz", "application/pdf", "application/epub+zip", "*/*"),
+					),
+				)
+			}
+			Spacer(Modifier.height(12.dp))
+			ImportChoice(
+				icon = R.drawable.ic_folder_file,
+				title = R.string.folder_with_images,
+				subtitle = R.string.folder_with_images_import_description,
+			) {
+				launch(importDirCall.tryLaunch(null))
+			}
+			Spacer(Modifier.height(8.dp))
+			ExpressiveDialogTextButton(text = stringResource(android.R.string.cancel)) { dismiss() }
 		}
-		if (!res) {
-			Toast.makeText(v.context, R.string.operation_not_supported, Toast.LENGTH_SHORT).show()
+	}
+
+	@Composable
+	private fun ImportChoice(
+		@DrawableRes icon: Int,
+		@StringRes title: Int,
+		@StringRes subtitle: Int,
+		onClick: () -> Unit,
+	) {
+		Surface(
+			onClick = onClick,
+			shape = RoundedCornerShape(20.dp),
+			color = MaterialTheme.colorScheme.secondaryContainer,
+			contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+			modifier = Modifier.fillMaxWidth(),
+		) {
+			Row(
+				modifier = Modifier.padding(16.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				Icon(
+					painter = painterResource(icon),
+					contentDescription = null,
+					modifier = Modifier.size(28.dp),
+				)
+				Spacer(Modifier.width(16.dp))
+				Column {
+					Text(
+						text = stringResource(title),
+						style = MaterialTheme.typography.titleMedium,
+					)
+					Text(
+						text = stringResource(subtitle),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+			}
+		}
+	}
+
+	private fun launch(result: Boolean) {
+		if (!result) {
+			Toast.makeText(requireContext(), R.string.operation_not_supported, Toast.LENGTH_SHORT).show()
 		}
 	}
 

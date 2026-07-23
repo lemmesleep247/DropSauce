@@ -81,6 +81,11 @@
 		<item name="textAppearanceSmallPopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
 		<item name="android:listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
 		<item name="listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
+		<!-- Snap the popup's corner onto the anchor button so it fully covers it. -->
+		<item name="android:overlapAnchor">true</item>
+		<item name="android:dropDownHorizontalOffset">0dp</item>
+		<item name="android:dropDownVerticalOffset">0dp</item>
+		<item name="android:popupAnimationStyle">@style/Animation.Kotatsu.PopupMenu</item>
 	</style>
 
 	<style name="Widget.Kotatsu.PopupMenu.Overflow" parent="Widget.Material3.PopupMenu.Overflow">
@@ -94,6 +99,11 @@
 		<item name="textAppearanceSmallPopupMenu">@style/TextAppearance.Widget.Menu.Popup</item>
 		<item name="android:listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
 		<item name="listPreferredItemHeightSmall">@dimen/menu_popup_item_min_height</item>
+		<!-- Snap the popup's corner onto the anchor button so it fully covers it. -->
+		<item name="android:overlapAnchor">true</item>
+		<item name="android:dropDownHorizontalOffset">0dp</item>
+		<item name="android:dropDownVerticalOffset">0dp</item>
+		<item name="android:popupAnimationStyle">@style/Animation.Kotatsu.PopupMenu</item>
 	</style>
 
 	<style name="Widget.Kotatsu.PopupMenu.ListView" parent="Widget.AppCompat.ListView.DropDown">
@@ -113,9 +123,18 @@
 
 	<style name="Widget.Kotatsu.PopupMenu.ListPopupWindow" parent="Widget.Material3.PopupMenu.ListPopupWindow">
 		<item name="android:popupBackground">@drawable/m3_menu_background</item>
+		<item name="android:popupAnimationStyle">@style/Animation.Kotatsu.PopupMenu</item>
 		<item name="android:listSelector">@drawable/popup_menu_no_selector</item>
 		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
 		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+	</style>
+
+	<!-- Fade (with gentle 0.92->1 scale) instead of the platform grow animation, whose
+	     small-scale frames recompute the elevation-shadow outline as a rectangle and flash
+	     square corners before the rounded background settles. -->
+	<style name="Animation.Kotatsu.PopupMenu" parent="@android:style/Animation">
+		<item name="android:windowEnterAnimation">@anim/m3_fade_through_enter</item>
+		<item name="android:windowExitAnimation">@anim/m3_fade_through_exit</item>
 	</style>
 
 	<style name="Animation.Kotatsu.BottomSheetDialog" parent="Animation.AppCompat.Dialog">

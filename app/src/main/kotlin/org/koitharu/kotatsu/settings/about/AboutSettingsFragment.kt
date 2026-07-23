@@ -261,7 +261,7 @@ private fun AboutScreen(
 					ActionSettingsItem(
 						title = stringResource(R.string.developer_testing_tools),
 						subtitle = stringResource(R.string.developer_testing_tools_summary),
-						icon = R.drawable.ic_script,
+						icon = R.drawable.ic_timer_run,
 						shape = pos.shape,
 						onClick = onOpenDeveloperTools,
 					)

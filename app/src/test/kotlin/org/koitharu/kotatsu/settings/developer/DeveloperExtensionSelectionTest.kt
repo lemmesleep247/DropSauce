@@ -58,4 +58,12 @@ class DeveloperExtensionSelectionTest {
 		assertFalse(isBlockedTestFailure(HttpException(404)))
 		assertFalse(isBlockedTestFailure(IllegalStateException("broken parser")))
 	}
+
+	@Test
+	fun `configured language variant is selected`() {
+		val variants = listOf("en", "fr", "ja")
+
+		assertEquals("fr", selectLanguageVariant(variants, "fr") { it })
+		assertEquals("en", selectLanguageVariant(variants, "de") { it })
+	}
 }

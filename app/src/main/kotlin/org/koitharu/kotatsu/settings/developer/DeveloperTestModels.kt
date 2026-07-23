@@ -8,7 +8,9 @@ enum class DeveloperTestStageStatus {
 }
 
 enum class DeveloperExtensionStatus {
-	NO_ISSUES,
+	PENDING,
+	RUNNING,
+	PASSED,
 	BLOCKED,
 	ERROR,
 }
@@ -27,13 +29,15 @@ data class DeveloperExtensionTestResult(
 	val language: String,
 	val stages: List<DeveloperTestStageResult>,
 	val durationMillis: Long,
+	val state: DeveloperExtensionStatus? = null,
+	val sourceId: String? = null,
 ) {
 	val status: DeveloperExtensionStatus
-		get() = stages.extensionStatus()
+		get() = state ?: stages.extensionStatus()
 }
 
 fun List<DeveloperTestStageResult>.extensionStatus(): DeveloperExtensionStatus = when {
 	any { it.status == DeveloperTestStageStatus.FAILED } -> DeveloperExtensionStatus.ERROR
 	any { it.status == DeveloperTestStageStatus.BLOCKED } -> DeveloperExtensionStatus.BLOCKED
-	else -> DeveloperExtensionStatus.NO_ISSUES
+	else -> DeveloperExtensionStatus.PASSED
 }

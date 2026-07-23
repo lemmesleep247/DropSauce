@@ -1,22 +1,33 @@
 package org.koitharu.kotatsu.settings.developer
 
+import android.content.Context
+import coil3.ImageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.size.Size
+import dagger.hilt.android.qualifiers.ApplicationContext
+import eu.kanade.tachiyomi.network.HttpException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
-import eu.kanade.tachiyomi.network.HttpException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareException
 import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.util.ext.getDrawableOrThrow
+import org.koitharu.kotatsu.core.util.ext.mangaExtra
 import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.mihon.MihonFilterHost
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
+import org.koitharu.kotatsu.mihon.resolveActiveMihonLanguage
 import org.koitharu.kotatsu.parsers.exception.AuthRequiredException
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
@@ -31,6 +42,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 import javax.inject.Inject
+import java.util.Locale
 import kotlin.random.Random
 
 data class ExtensionTestCandidate<T>(
@@ -55,6 +67,12 @@ fun <T> selectOneSourcePerExtension(
 		source = candidate.sources.randomOrNull(random),
 	)
 }
+
+internal fun <T> selectLanguageVariant(
+	variants: List<T>,
+	language: String?,
+	languageOf: (T) -> String,
+): T? = variants.firstOrNull { languageOf(it) == language } ?: variants.firstOrNull()
 
 internal fun extensionDisplayName(name: String): String = name.removePrefix("Tachiyomi: ").trim()
 
@@ -86,12 +104,17 @@ private fun Int.isAvailabilityStatus(): Boolean = this == 401 || this == 403 || 
 private val SEARCH_STOP_WORDS = setOf("the", "and", "for", "official")
 
 class DeveloperExtensionTestRunner @Inject constructor(
+	@ApplicationContext private val context: Context,
 	private val extensionManager: MihonExtensionManager,
 	private val repositoryFactory: MangaRepository.Factory,
+	private val settings: AppSettings,
+	private val imageLoader: ImageLoader,
 ) {
 
 	suspend fun run(
-		onProgress: suspend (completed: Int, total: Int, result: DeveloperExtensionTestResult?) -> Unit,
+		onPrepared: suspend (results: List<DeveloperExtensionTestResult>) -> Unit,
+		onStarted: suspend (packageName: String) -> Unit,
+		onResult: suspend (result: DeveloperExtensionTestResult) -> Unit,
 	): List<DeveloperExtensionTestResult> {
 		extensionManager.ensureReady()
 		val selected = selectOneSourcePerExtension(
@@ -99,31 +122,55 @@ class DeveloperExtensionTestRunner @Inject constructor(
 				ExtensionTestCandidate(
 					packageName = extension.pkgName,
 					extensionName = extensionDisplayName(extension.appName),
-					sources = extension.catalogueSources.mapNotNull { source ->
+					sources = selectActiveLanguageSources(extension.catalogueSources.mapNotNull { source ->
 						extensionManager.getMihonMangaSourceById(source.id)
-					},
+					}),
 				)
 			},
-				random = Random.Default,
-		)
-		onProgress(0, selected.size, null)
+			random = Random.Default,
+		).sortedBy { it.extensionName.lowercase() }
+		onPrepared(selected.map(::pendingResult))
 		val semaphore = Semaphore(MAX_CONCURRENT_EXTENSIONS)
-		val progressMutex = Mutex()
-		var completed = 0
+		val callbackMutex = Mutex()
 		return coroutineScope {
 			selected.map { target ->
 				async {
 					semaphore.withPermit {
+						callbackMutex.withLock { onStarted(target.packageName) }
 						val result = testExtension(target)
-						progressMutex.withLock {
-							completed++
-							onProgress(completed, selected.size, result)
-						}
+						callbackMutex.withLock { onResult(result) }
 						result
 					}
 				}
 			}.awaitAll()
 		}
+	}
+
+	private fun selectActiveLanguageSources(sources: List<MihonMangaSource>): List<MihonMangaSource> {
+		return sources.groupBy { it.catalogueSource.name }.values.mapNotNull { variants ->
+			val first = variants.first()
+			val stored = settings.getMihonActiveLang(first.pkgName, first.catalogueSource.name)
+			val language = resolveActiveMihonLanguage(
+				availableLangs = variants.map { it.language },
+				storedLang = stored,
+				appLang = Locale.getDefault().language,
+			)
+			selectLanguageVariant(variants, language) { it.language }
+		}
+	}
+
+	private fun pendingResult(target: SelectedExtensionTest<MihonMangaSource>): DeveloperExtensionTestResult {
+		val source = target.source
+		return DeveloperExtensionTestResult(
+			packageName = target.packageName,
+			extensionName = target.extensionName,
+			sourceName = source?.displayName ?: "No catalogue source",
+			language = source?.languageDisplayName.orEmpty(),
+			stages = emptyList(),
+			durationMillis = 0,
+			state = DeveloperExtensionStatus.PENDING,
+			sourceId = source?.name,
+		)
 	}
 
 	private suspend fun testExtension(
@@ -143,7 +190,7 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		stages += passedStage(STAGE_LOAD, "${source.displayName} (${source.languageDisplayName})")
 
 		val listing = requiredStage(stages, STAGE_LIST) {
-			repository.getList(0, SortOrder.POPULARITY, null).requireNotEmpty("Popular listing returned no manga")
+			loadPopularListing(repository)
 		} ?: return result(target, source, stages, started)
 		val details = requiredStage(stages, STAGE_DETAILS) {
 			findUsableManga(repository, listing)
@@ -162,7 +209,7 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		} ?: return result(target, source, stages, started)
 
 		requiredStage(stages, STAGE_IMAGE) {
-			validateAnyPageImage(repository, pages)
+			validateAnyPageImage(pages)
 		}
 
 		optionalStage(
@@ -170,10 +217,7 @@ class DeveloperExtensionTestRunner @Inject constructor(
 			STAGE_COVER,
 			listOfNotNull(details.largeCoverUrl, details.coverUrl).firstOrNull { it.isNotBlank() },
 		) { coverUrl ->
-			repository.getCoverStream(coverUrl)?.use { response ->
-				require(response.isSuccessful) { "Cover request returned HTTP ${response.code}" }
-				require(response.body.byteStream().read() != -1) { "Cover response was empty" }
-			} ?: error("Source does not expose a cover request")
+			validateCoverImage(details, coverUrl)
 		}
 
 		optionalStage(stages, STAGE_LATEST, source.takeIf { it.supportsLatest }) {
@@ -194,6 +238,24 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		}
 
 		return result(target, source, stages, started)
+	}
+
+	private suspend fun loadPopularListing(repository: MangaRepository): List<Manga> {
+		var lastFailure: Throwable? = null
+		repeat(MAX_LISTING_ATTEMPTS) { attempt ->
+			try {
+				val listing = repository.getList(0, SortOrder.POPULARITY, null)
+				if (listing.isNotEmpty()) return listing
+				lastFailure = IllegalStateException("Popular listing returned no manga")
+			} catch (e: Throwable) {
+				if (e is CancellationException) throw e
+				lastFailure = e
+			}
+			if (attempt < MAX_LISTING_ATTEMPTS - 1) {
+				delay(LISTING_RETRY_DELAY_MILLIS * (attempt + 1))
+			}
+		}
+		throw lastFailure ?: IllegalStateException("Popular listing failed")
 	}
 
 	private suspend fun findUsableManga(repository: MangaRepository, listing: List<Manga>): Manga {
@@ -229,11 +291,11 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		throw lastFailure ?: IllegalStateException("Manga details returned no chapters")
 	}
 
-	private suspend fun validateAnyPageImage(repository: MangaRepository, pages: List<MangaPage>) {
+	private suspend fun validateAnyPageImage(pages: List<MangaPage>) {
 		var lastFailure: Throwable? = null
 		for (page in pages.shuffled().take(MAX_PAGE_ATTEMPTS)) {
 			try {
-				validatePageImage(repository, page)
+				validatePageImage(page)
 				return
 			} catch (e: Throwable) {
 				if (e is CancellationException || isBlockedTestFailure(e)) throw e
@@ -243,13 +305,27 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		throw lastFailure ?: IllegalStateException("Chapter returned no pages")
 	}
 
-	private suspend fun validatePageImage(repository: MangaRepository, page: MangaPage) {
-		val url = repository.getPageUrl(page)
-		require(url.isNotBlank()) { "Resolved page URL was empty" }
-		repository.getImageStream(url, page)?.use { response ->
-			require(response.isSuccessful) { "Image request returned HTTP ${response.code}" }
-			require(response.body.byteStream().read() != -1) { "Image response was empty" }
-		} ?: error("Source does not expose an image request")
+	private suspend fun validatePageImage(page: MangaPage) {
+		imageLoader.execute(
+			ImageRequest.Builder(context)
+				.data(page)
+				.size(Size(96, 96))
+				.memoryCachePolicy(CachePolicy.DISABLED)
+				.diskCachePolicy(CachePolicy.DISABLED)
+				.build(),
+		).getDrawableOrThrow()
+	}
+
+	private suspend fun validateCoverImage(manga: Manga, coverUrl: String) {
+		imageLoader.execute(
+			ImageRequest.Builder(context)
+				.data(coverUrl)
+				.mangaExtra(manga)
+				.size(Size(96, 144))
+				.memoryCachePolicy(CachePolicy.DISABLED)
+				.diskCachePolicy(CachePolicy.DISABLED)
+				.build(),
+		).getDrawableOrThrow()
 	}
 
 	private suspend fun <T> requiredStage(
@@ -322,6 +398,7 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		language = source.languageDisplayName,
 		stages = stages,
 		durationMillis = elapsedMillis(started),
+		sourceId = source.name,
 	)
 
 	private data class StageOutcome<T>(
@@ -330,10 +407,12 @@ class DeveloperExtensionTestRunner @Inject constructor(
 	)
 
 	private companion object {
-		const val MAX_CONCURRENT_EXTENSIONS = 2
+		const val MAX_CONCURRENT_EXTENSIONS = 3
+		const val MAX_LISTING_ATTEMPTS = 3
 		const val MAX_ENTITY_ATTEMPTS = 3
 		const val MAX_CHAPTER_ATTEMPTS = 3
 		const val MAX_PAGE_ATTEMPTS = 3
+		const val LISTING_RETRY_DELAY_MILLIS = 750L
 		const val STAGE_TIMEOUT_MILLIS = 60_000L
 		const val MAX_ERROR_LENGTH = 240
 		const val STAGE_LOAD = "Extension loading"
@@ -349,8 +428,6 @@ class DeveloperExtensionTestRunner @Inject constructor(
 		const val STAGE_RELATED = "Related manga"
 	}
 }
-
-private fun <T> List<T>.requireNotEmpty(message: String): List<T> = also { require(it.isNotEmpty()) { message } }
 
 private fun elapsedMillis(startedNanos: Long): Long = (System.nanoTime() - startedNanos) / 1_000_000
 

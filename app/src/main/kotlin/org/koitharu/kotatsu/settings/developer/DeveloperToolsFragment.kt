@@ -19,9 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -56,14 +57,18 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.MangaSource
+import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.main.ui.nav.DrawablePainter
 import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
 import org.koitharu.kotatsu.settings.compose.DropSauceTheme
+import org.koitharu.kotatsu.settings.compose.groupItemShape
 
 @AndroidEntryPoint
 class DeveloperToolsFragment : BaseComposeSettingsFragment(R.string.developer_testing_tools) {
 
 	private val viewModel by viewModels<DeveloperToolsViewModel>()
+	private val router by lazy { AppRouter(this) }
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
@@ -78,6 +83,9 @@ class DeveloperToolsFragment : BaseComposeSettingsFragment(R.string.developer_te
 					state = state,
 					onRun = viewModel::runAll,
 					onCancel = viewModel::cancel,
+					onOpenExtension = { sourceId ->
+						router.openList(MangaSource(sourceId), null, null)
+					},
 				)
 			}
 		}
@@ -89,11 +97,13 @@ private fun DeveloperToolsScreen(
 	state: DeveloperToolsUiState,
 	onRun: () -> Unit,
 	onCancel: () -> Unit,
+	onOpenExtension: (String) -> Unit,
 ) {
 	val results = state.results
-	val noIssues = results.count { it.status == DeveloperExtensionStatus.NO_ISSUES }
+	val passed = results.count { it.status == DeveloperExtensionStatus.PASSED }
 	val blocked = results.count { it.status == DeveloperExtensionStatus.BLOCKED }
 	val errors = results.count { it.status == DeveloperExtensionStatus.ERROR }
+	val tested = passed + blocked + errors
 	val listState = rememberLazyListState()
 
 	Surface(
@@ -107,10 +117,13 @@ private fun DeveloperToolsScreen(
 				.fillMaxSize()
 				.nestedScroll(rememberNestedScrollInteropConnection()),
 			contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-			verticalArrangement = Arrangement.spacedBy(8.dp),
+			verticalArrangement = Arrangement.Top,
 		) {
 		item {
-			Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+			Column(
+				modifier = Modifier.padding(bottom = 12.dp),
+				verticalArrangement = Arrangement.spacedBy(12.dp),
+			) {
 				if (state.isRunning) {
 					Text(
 						text = stringResource(R.string.developer_tools_progress, state.completed, state.total),
@@ -126,8 +139,8 @@ private fun DeveloperToolsScreen(
 					Text(
 						text = stringResource(
 							R.string.developer_tools_summary,
-							results.size,
-							noIssues,
+							tested,
+							passed,
 							blocked,
 							errors,
 						),
@@ -142,7 +155,7 @@ private fun DeveloperToolsScreen(
 					modifier = Modifier
 						.fillMaxWidth()
 						.height(52.dp),
-					shape = RoundedCornerShape(16.dp),
+					shape = CircleShape,
 					colors = if (state.isRunning) {
 						ButtonDefaults.buttonColors(
 							containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -188,8 +201,13 @@ private fun DeveloperToolsScreen(
 			}
 		}
 
-		items(results, key = { it.packageName }) { result ->
-			ExtensionResultItem(result)
+		itemsIndexed(results, key = { _, item -> item.packageName }) { index, result ->
+			ExtensionResultItem(
+				result = result,
+				shape = groupItemShape(index, results.size),
+				modifier = Modifier.padding(bottom = if (index == results.lastIndex) 12.dp else 3.dp),
+				onOpenExtension = onOpenExtension,
+			)
 		}
 		}
 	}
@@ -223,21 +241,34 @@ private fun EmptyResults(hasRun: Boolean) {
 }
 
 @Composable
-private fun ExtensionResultItem(result: DeveloperExtensionTestResult) {
+private fun ExtensionResultItem(
+	result: DeveloperExtensionTestResult,
+	shape: androidx.compose.ui.graphics.Shape,
+	modifier: Modifier = Modifier,
+	onOpenExtension: (String) -> Unit,
+) {
 	var expanded by rememberSaveable(result.packageName) { mutableStateOf(false) }
 	val interactionSource = remember { MutableInteractionSource() }
+	val iconInteractionSource = remember { MutableInteractionSource() }
 	val statusColor = result.status.color()
+	val hasDetails = result.stages.isNotEmpty()
 	Surface(
-		shape = RoundedCornerShape(8.dp),
+		shape = shape,
 		color = MaterialTheme.colorScheme.surfaceContainer,
-		modifier = Modifier
+		modifier = modifier
 			.fillMaxWidth()
 			.animateContentSize()
-			.clickable(
-				interactionSource = interactionSource,
-				indication = null,
-				role = Role.Button,
-			) { expanded = !expanded },
+			.let {
+				if (hasDetails) {
+					it.clickable(
+						interactionSource = interactionSource,
+						indication = null,
+						role = Role.Button,
+					) { expanded = !expanded }
+				} else {
+					it
+				}
+			},
 	) {
 		Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
 			Row(verticalAlignment = Alignment.CenterVertically) {
@@ -246,7 +277,16 @@ private fun ExtensionResultItem(result: DeveloperExtensionTestResult) {
 					contentDescription = result.extensionName,
 					modifier = Modifier
 						.size(40.dp)
-						.clip(RoundedCornerShape(8.dp)),
+						.clip(RoundedCornerShape(8.dp))
+						.let { iconModifier ->
+							result.sourceId?.let { sourceId ->
+								iconModifier.clickable(
+									interactionSource = iconInteractionSource,
+									indication = null,
+									role = Role.Button,
+								) { onOpenExtension(sourceId) }
+							} ?: iconModifier
+						},
 				)
 				Spacer(Modifier.width(12.dp))
 				Column(modifier = Modifier.weight(1f)) {
@@ -266,20 +306,33 @@ private fun ExtensionResultItem(result: DeveloperExtensionTestResult) {
 						maxLines = 2,
 						overflow = TextOverflow.Ellipsis,
 					)
-					Text(
-						text = result.status.label(),
-						style = MaterialTheme.typography.labelMedium,
-						color = statusColor,
+					Row(
+						horizontalArrangement = Arrangement.spacedBy(6.dp),
+						verticalAlignment = Alignment.CenterVertically,
+					) {
+						Icon(
+							painter = painterResource(result.status.icon()),
+							contentDescription = null,
+							tint = statusColor,
+							modifier = Modifier.size(if (result.status == DeveloperExtensionStatus.RUNNING) 10.dp else 14.dp),
+						)
+						Text(
+							text = result.status.label(),
+							style = MaterialTheme.typography.labelMedium,
+							color = statusColor,
+						)
+					}
+				}
+				if (hasDetails) {
+					Icon(
+						painter = painterResource(R.drawable.ic_expand_more),
+						contentDescription = null,
+						tint = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = Modifier
+							.size(24.dp)
+							.rotate(if (expanded) 180f else 0f),
 					)
 				}
-				Icon(
-					painter = painterResource(R.drawable.ic_expand_more),
-					contentDescription = null,
-					tint = MaterialTheme.colorScheme.onSurfaceVariant,
-					modifier = Modifier
-						.size(24.dp)
-						.rotate(if (expanded) 180f else 0f),
-				)
 			}
 
 			if (expanded) {
@@ -350,9 +403,19 @@ private fun StageResultRow(stage: DeveloperTestStageResult) {
 
 @Composable
 private fun DeveloperExtensionStatus.color(): Color = when (this) {
-	DeveloperExtensionStatus.NO_ISSUES -> MaterialTheme.colorScheme.primary
+	DeveloperExtensionStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
+	DeveloperExtensionStatus.RUNNING -> MaterialTheme.colorScheme.primary
+	DeveloperExtensionStatus.PASSED -> MaterialTheme.colorScheme.primary
 	DeveloperExtensionStatus.BLOCKED -> MaterialTheme.colorScheme.tertiary
 	DeveloperExtensionStatus.ERROR -> MaterialTheme.colorScheme.error
+}
+
+private fun DeveloperExtensionStatus.icon(): Int = when (this) {
+	DeveloperExtensionStatus.PENDING -> R.drawable.ic_timelapse
+	DeveloperExtensionStatus.RUNNING -> R.drawable.ic_new
+	DeveloperExtensionStatus.PASSED -> R.drawable.ic_check
+	DeveloperExtensionStatus.BLOCKED -> R.drawable.ic_alert_outline
+	DeveloperExtensionStatus.ERROR -> R.drawable.ic_error_small
 }
 
 @Composable
@@ -373,7 +436,9 @@ private fun DeveloperTestStageStatus.icon(): Int = when (this) {
 @Composable
 private fun DeveloperExtensionStatus.label(): String = stringResource(
 	when (this) {
-		DeveloperExtensionStatus.NO_ISSUES -> R.string.developer_status_no_issues
+		DeveloperExtensionStatus.PENDING -> R.string.developer_status_pending
+		DeveloperExtensionStatus.RUNNING -> R.string.developer_status_running
+		DeveloperExtensionStatus.PASSED -> R.string.developer_status_passed
 		DeveloperExtensionStatus.BLOCKED -> R.string.developer_status_blocked
 		DeveloperExtensionStatus.ERROR -> R.string.developer_status_error
 	},

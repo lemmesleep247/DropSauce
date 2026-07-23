@@ -1104,8 +1104,9 @@
 	<string name="developer_tools_empty_title">No test results yet</string>
 	<string name="developer_tools_no_extensions">No installed extensions were found.</string>
 	<string name="developer_tools_progress">%1$d of %2$d extensions tested</string>
-	<string name="developer_tools_summary">%1$d tested · %2$d no issues · %3$d blocked · %4$d errors</string>
-	<string name="developer_status_no_issues">No issues</string>
+	<string name="developer_tools_summary">%1$d tested · %2$d passed · %3$d blocked · %4$d errors</string>
+	<string name="developer_status_pending">Pending</string>
+	<string name="developer_status_running">Testing</string>
 	<string name="developer_status_blocked">Blocked</string>
 	<string name="developer_status_error">Error</string>
 	<string name="developer_status_passed">Passed</string>

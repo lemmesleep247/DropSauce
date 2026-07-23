@@ -26,14 +26,33 @@ class DeveloperTestModelsTest {
 	}
 
 	@Test
-	fun `skipped optional stage still has no issues`() {
+	fun `skipped optional stage still passes`() {
 		val stages = listOf(
 			stage(DeveloperTestStageStatus.PASSED),
 			stage(DeveloperTestStageStatus.SKIPPED),
 		)
 
-		assertEquals(DeveloperExtensionStatus.NO_ISSUES, stages.extensionStatus())
+		assertEquals(DeveloperExtensionStatus.PASSED, stages.extensionStatus())
 	}
+
+	@Test
+	fun `explicit pending and running states override stage aggregation`() {
+		val pending = result(DeveloperExtensionStatus.PENDING)
+		val running = result(DeveloperExtensionStatus.RUNNING)
+
+		assertEquals(DeveloperExtensionStatus.PENDING, pending.status)
+		assertEquals(DeveloperExtensionStatus.RUNNING, running.status)
+	}
+
+	private fun result(state: DeveloperExtensionStatus) = DeveloperExtensionTestResult(
+		packageName = "package",
+		extensionName = "Extension",
+		sourceName = "Source",
+		language = "English",
+		stages = emptyList(),
+		durationMillis = 0,
+		state = state,
+	)
 
 	private fun stage(status: DeveloperTestStageStatus) = DeveloperTestStageResult(
 		name = "stage",

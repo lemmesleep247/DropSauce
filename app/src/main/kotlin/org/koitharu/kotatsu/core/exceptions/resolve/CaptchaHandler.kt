@@ -73,11 +73,15 @@ class CaptchaHandler @Inject constructor(
 	private val mutex = Mutex()
 
 	@CheckResult
-	suspend fun handle(exception: CloudFlareException): Boolean =
+	suspend fun handle(
+		exception: CloudFlareException,
+		tryAutoResolve: Boolean = true,
+	): Boolean =
 		handleException(
 			source = exception.source,
 			exception = exception,
 			notify = true,
+			tryAutoResolve = tryAutoResolve,
 		)
 
 	suspend fun discard(source: MangaSource) {

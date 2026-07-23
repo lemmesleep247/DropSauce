@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.browser
 
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -91,11 +92,12 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>() {
 	}
 
 	override fun onDestroy() {
-		super.onDestroy()
 		if (hasViewBinding()) {
 			viewBinding.webView.stopLoading()
+			(viewBinding.webView.parent as? ViewGroup)?.removeView(viewBinding.webView)
 			viewBinding.webView.destroy()
 		}
+		super.onDestroy()
 	}
 
 	open fun onLoadingStateChanged(isLoading: Boolean) {

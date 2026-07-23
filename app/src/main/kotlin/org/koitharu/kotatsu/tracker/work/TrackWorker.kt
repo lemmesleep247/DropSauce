@@ -161,7 +161,7 @@ class TrackWorker @AssistedInject constructor(
 						failedChecks++
 						val e = it.error
 						if (e is CloudFlareException) {
-							captchaHandler.handle(e)
+							captchaHandler.handle(e, tryAutoResolve = false)
 						}
 					}
 

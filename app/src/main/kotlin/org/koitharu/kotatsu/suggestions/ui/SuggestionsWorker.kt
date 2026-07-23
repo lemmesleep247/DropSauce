@@ -278,7 +278,7 @@ class SuggestionsWorker @AssistedInject constructor(
 	}.onFailure { e ->
 		if (e is CloudFlareException) {
 			// Some implementations may return a value; we only need side-effects.
-			captchaHandler.handle(e).let { Unit }
+			captchaHandler.handle(e, tryAutoResolve = false).let { Unit }
 		}
 		e.printStackTraceDebug()
 	}.getOrDefault(emptyList())

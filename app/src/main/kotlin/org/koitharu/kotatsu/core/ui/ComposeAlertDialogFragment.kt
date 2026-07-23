@@ -42,7 +42,7 @@ abstract class ComposeAlertDialogFragment : DialogFragment() {
 		// is the ComposeView, whose own `Content()` would shadow ours and recurse forever (StackOverflow).
 		view.setContent {
 			DropSauceTheme {
-				Content()
+				this@ComposeAlertDialogFragment.Content()
 			}
 		}
 		return view

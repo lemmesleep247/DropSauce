@@ -191,7 +191,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 					Row(
 						modifier = Modifier
 							.fillMaxWidth()
-							.padding(vertical = 8.dp),
+							.padding(horizontal = 8.dp, vertical = 8.dp),
 						verticalAlignment = Alignment.CenterVertically,
 					) {
 						Icon(

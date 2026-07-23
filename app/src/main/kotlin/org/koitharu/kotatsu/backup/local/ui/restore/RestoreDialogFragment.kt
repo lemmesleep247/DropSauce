@@ -86,7 +86,11 @@ class RestoreDialogFragment : ComposeAlertDialogFragment() {
 					CircularProgressIndicator()
 				}
 			} else {
-				Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+				Column(
+					modifier = Modifier
+						.heightIn(max = 320.dp)
+						.verticalScroll(rememberScrollState()),
+				) {
 					entries.forEach { item ->
 						Row(
 							modifier = Modifier

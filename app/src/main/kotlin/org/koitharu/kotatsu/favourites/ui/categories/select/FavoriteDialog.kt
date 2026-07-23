@@ -39,6 +39,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
 import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogTextButton
 import org.koitharu.kotatsu.core.ui.dialog.ExpressivePillButton
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.joinToStringWithLimit
@@ -94,12 +95,12 @@ class FavoriteDialog : ComposeAlertDialogFragment() {
 				}
 			}
 			Spacer(Modifier.size(16.dp))
-			ExpressivePillButton(text = stringResource(R.string.done), primary = true) { dismiss() }
-			Spacer(Modifier.size(8.dp))
-			ExpressivePillButton(text = stringResource(R.string.manage), primary = false) {
+			ExpressivePillButton(text = stringResource(R.string.manage), primary = true) {
 				dismiss()
 				router.openFavoriteCategories()
 			}
+			Spacer(Modifier.size(8.dp))
+			ExpressiveDialogTextButton(text = stringResource(R.string.done)) { dismiss() }
 		}
 	}
 

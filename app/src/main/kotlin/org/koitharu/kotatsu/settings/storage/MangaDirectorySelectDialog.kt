@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -38,6 +37,7 @@ import org.koitharu.kotatsu.core.os.OpenDocumentTreeHelper
 import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
 import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
 import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogTextButton
+import org.koitharu.kotatsu.core.ui.dialog.ExpressivePillButton
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
@@ -89,8 +89,12 @@ class MangaDirectorySelectDialog : ComposeAlertDialogFragment() {
 			icon = painterResource(R.drawable.ic_storage),
 			title = stringResource(R.string.manga_save_location),
 		) {
-			Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-				items.forEach { item ->
+			Column(
+				modifier = Modifier
+					.heightIn(max = 320.dp)
+					.verticalScroll(rememberScrollState()),
+			) {
+				items.filter { it.file != null }.forEach { item ->
 					Row(
 						modifier = Modifier
 							.fillMaxWidth()
@@ -100,28 +104,13 @@ class MangaDirectorySelectDialog : ComposeAlertDialogFragment() {
 							.padding(horizontal = 8.dp),
 						verticalAlignment = Alignment.CenterVertically,
 					) {
-						if (item.file != null) {
-							RadioButton(selected = item.isChecked, onClick = { viewModel.onItemClick(item) })
-						} else {
-							Icon(
-								painter = painterResource(R.drawable.ic_folder_file),
-								contentDescription = null,
-								tint = MaterialTheme.colorScheme.primary,
-								modifier = Modifier
-									.padding(horizontal = 12.dp)
-									.size(24.dp),
-							)
-						}
+						RadioButton(selected = item.isChecked, onClick = { viewModel.onItemClick(item) })
 						Spacer(Modifier.size(8.dp))
 						Column(modifier = Modifier.fillMaxWidth()) {
 							Text(
 								text = item.title ?: stringResource(item.titleRes),
 								style = MaterialTheme.typography.bodyLarge,
-								color = if (item.file != null) {
-									MaterialTheme.colorScheme.onSurface
-								} else {
-									MaterialTheme.colorScheme.primary
-								},
+								color = MaterialTheme.colorScheme.onSurface,
 							)
 							val path = item.file?.absolutePath
 							if (path != null) {
@@ -134,6 +123,15 @@ class MangaDirectorySelectDialog : ComposeAlertDialogFragment() {
 						}
 					}
 				}
+			}
+			// Custom-directory picker(s) as their own enclosed action button
+			items.filter { it.file == null }.forEach { item ->
+				Spacer(Modifier.size(12.dp))
+				ExpressivePillButton(
+					text = item.title ?: stringResource(item.titleRes),
+					icon = painterResource(R.drawable.ic_folder_file),
+					primary = true,
+				) { viewModel.onItemClick(item) }
 			}
 			Spacer(Modifier.size(8.dp))
 			ExpressiveDialogTextButton(text = stringResource(android.R.string.cancel)) { dismiss() }

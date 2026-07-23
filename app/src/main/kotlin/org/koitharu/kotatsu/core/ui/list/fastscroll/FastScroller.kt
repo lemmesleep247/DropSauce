@@ -79,6 +79,11 @@ class FastScroller @JvmOverloads constructor(
 	private var handleImage: Drawable? = null
 	private var trackImage: Drawable? = null
 	private var recyclerView: RecyclerView? = null
+	// True when we added this scroller to a parent ourselves (RecyclerView is a layout root with no
+	// sibling container). Such a parent is often shared/outlives the RecyclerView (e.g. an Activity's
+	// CoordinatorLayout hosting a FragmentContainerView), so we must remove ourselves on detach or the
+	// scroller lingers over later content. When declared in XML the parent owns us — don't touch it.
+	private var wasAddedToParent = false
 	private val scrollbarAnimator = ScrollbarAnimator(binding.scrollbar, scrollbarPaddingEnd)
 	private val bubbleAnimator = BubbleAnimator(binding.bubble)
 	private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
@@ -290,6 +295,9 @@ class FastScroller @JvmOverloads constructor(
 			is CoordinatorLayout -> {
 				// Anchor to the direct child of CoordinatorLayout that contains the recyclerView,
 				// so the scroller respects AppBarLayout scroll behavior and doesn't overlap the top bar.
+				// When the recyclerView is nested (e.g. it's the root of a fragment inside a
+				// FragmentContainerView), it isn't a direct child of this CoordinatorLayout — anchoring
+				// to its own id crashes resolveAnchorView, so fall back to plain END gravity.
 				val anchorViewId = recyclerView?.let { rv ->
 					if (rv.parent === viewGroup) {
 						rv.id
@@ -299,11 +307,12 @@ class FastScroller @JvmOverloads constructor(
 							.firstOrNull { v -> v.parent === viewGroup }
 							?.id
 					}
-				} ?: recyclerViewId
+				} ?: View.NO_ID
 				updateLayoutParams<CoordinatorLayout.LayoutParams> {
 					height = LayoutParams.MATCH_PARENT
 					anchorGravity = GravityCompat.END
 					anchorId = anchorViewId
+					gravity = if (anchorViewId == View.NO_ID) GravityCompat.END else android.view.Gravity.NO_GRAVITY
 					marginStart = offset
 					marginEnd = offset
 					topMargin = offsetTop
@@ -361,6 +370,7 @@ class FastScroller @JvmOverloads constructor(
 			val viewGroup = findValidParent(recyclerView)
 			if (viewGroup != null) {
 				viewGroup.addView(this)
+				wasAddedToParent = true
 				setLayoutParams(viewGroup)
 			}
 		}
@@ -379,6 +389,15 @@ class FastScroller @JvmOverloads constructor(
 	fun detachRecyclerView() {
 		recyclerView?.removeOnScrollListener(scrollListener)
 		recyclerView = null
+		if (wasAddedToParent) {
+			wasAddedToParent = false
+			// Defer removal: detach often fires mid-window-teardown (dispatchDetachedFromWindow), where
+			// mutating the parent's child list synchronously corrupts the iteration and crashes. Posting
+			// runs it after teardown; the recyclerView==null guard skips removal if we've re-attached.
+			(parent as? ViewGroup)?.let { p ->
+				p.post { if (recyclerView == null && this.parent === p) p.removeView(this) }
+			}
+		}
 	}
 
 	/**

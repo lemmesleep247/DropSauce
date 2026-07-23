@@ -5,9 +5,6 @@ import android.view.View
 import androidx.annotation.CheckResult
 import androidx.collection.scatterSetOf
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
-import com.davemorrissey.labs.subscaleview.decoder.SkiaImageDecoder
-import com.davemorrissey.labs.subscaleview.decoder.SkiaImageRegionDecoder
-import com.davemorrissey.labs.subscaleview.decoder.SkiaPooledImageRegionDecoder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -19,6 +16,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import org.koitharu.kotatsu.core.image.AvifCapableImageDecoder
+import org.koitharu.kotatsu.core.image.AvifCapableRegionDecoder
 import org.koitharu.kotatsu.core.model.ZoomMode
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -76,12 +75,11 @@ data class ReaderSettings(
 	fun applyBitmapConfig(ssiv: SubsamplingScaleImageView): Boolean {
 		val config = bitmapConfig
 		return if (ssiv.regionDecoderFactory.bitmapConfig != config) {
-			ssiv.regionDecoderFactory = if (ssiv.context.isLowRamDevice()) {
-				SkiaImageRegionDecoder.Factory(config)
-			} else {
-				SkiaPooledImageRegionDecoder.Factory(config)
-			}
-			ssiv.bitmapDecoderFactory = SkiaImageDecoder.Factory(config)
+			// AVIF-capable factories: sources like Mangago serve AVIF mislabelled as image/jpeg,
+			// which the stock Skia/platform decoders can't handle. These delegate all other formats
+			// to the same Skia decoders unchanged.
+			ssiv.regionDecoderFactory = AvifCapableRegionDecoder.Factory(config, ssiv.context.isLowRamDevice())
+			ssiv.bitmapDecoderFactory = AvifCapableImageDecoder.Factory(config)
 			true
 		} else {
 			false

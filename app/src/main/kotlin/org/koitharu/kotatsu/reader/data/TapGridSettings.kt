@@ -48,9 +48,16 @@ class TapGridSettings @Inject constructor(@ApplicationContext context: Context) 
 
 	fun getAllValues(): Map<String, *> = prefs.all
 
-	fun upsertAll(m: Map<String, *>) = prefs.edit {
-		clear()
-		putAll(m)
+	fun upsertAll(m: Map<String, *>) {
+		// An empty bundle means the sender (older sync/backup) had no tap-grid data. Clearing here
+		// would wipe the _init marker too, so the next reader open re-seeds defaults — the "tap
+		// actions reset after a while" bug. Keep the local config instead.
+		if (m.isEmpty()) return
+		prefs.edit {
+			clear()
+			putAll(m)
+			putBoolean(KEY_INIT, true)
+		}
 	}
 
 	private fun initPrefs(withDefaultValues: Boolean) {

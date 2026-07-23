@@ -15,6 +15,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.documentfile.provider.DocumentFile
 import androidx.preference.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import eu.kanade.tachiyomi.util.lang.Hash
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -453,6 +454,34 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	val appProtectionTimeoutMillis: Long
 		get() = appProtectionTimeout.timeoutMillis
+
+	/** Salted SHA-256 of the custom unlock PIN; null means the lock uses device/biometric auth. */
+	val appPasswordHash: String?
+		get() = prefs.getString(KEY_APP_PASSWORD, null)
+
+	/** True when the app lock uses a custom PIN rather than device/biometric auth. */
+	val isAppPasswordSet: Boolean
+		get() = !appPasswordHash.isNullOrEmpty()
+
+	/** Store a new unlock PIN as a salted SHA-256 hash. Never backed up (see [SENSITIVE_BACKUP_KEYS]). */
+	fun setAppPassword(pin: String) {
+		val salt = UUID.randomUUID().toString()
+		prefs.edit {
+			putString(KEY_APP_PASSWORD_SALT, salt)
+			putString(KEY_APP_PASSWORD, Hash.sha256(salt + pin))
+		}
+	}
+
+	fun clearAppPassword() = prefs.edit {
+		remove(KEY_APP_PASSWORD)
+		remove(KEY_APP_PASSWORD_SALT)
+	}
+
+	fun verifyAppPassword(pin: String): Boolean {
+		val salt = prefs.getString(KEY_APP_PASSWORD_SALT, null) ?: return false
+		val hash = prefs.getString(KEY_APP_PASSWORD, null) ?: return false
+		return Hash.sha256(salt + pin) == hash
+	}
 
 	var pendingExtensionDownloads: Set<Long>
 		get() = prefs.getStringSet(KEY_PENDING_EXTENSION_DOWNLOADS, emptySet())
@@ -1064,7 +1093,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_READER_CROP = "reader_crop"
 		const val KEY_PROTECT_APP = "protect_app"
 		const val KEY_PROTECT_APP_TIMEOUT = "protect_app_timeout"
-		private const val KEY_APP_PASSWORD_OLD = "app_password"
+		const val KEY_APP_PASSWORD = "app_password"
+		const val KEY_APP_PASSWORD_SALT = "app_password_salt"
 		private const val KEY_APP_PASSWORD_NUMERIC_OLD = "app_password_num"
 		private const val KEY_PROTECT_APP_BIOMETRIC_OLD = "protect_app_bio"
 		const val KEY_ZOOM_MODE = "zoom_mode"
@@ -1172,7 +1202,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		 * Stripped from local backups and cloud sync, both when writing and when applying.
 		 */
 		val SENSITIVE_BACKUP_KEYS = setOf(
-			KEY_APP_PASSWORD_OLD,
+			KEY_APP_PASSWORD,
+			KEY_APP_PASSWORD_SALT,
 			KEY_APP_PASSWORD_NUMERIC_OLD,
 			KEY_PROTECT_APP,
 			KEY_PROTECT_APP_TIMEOUT,

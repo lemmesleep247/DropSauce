@@ -267,15 +267,26 @@ class DetailsLoadUseCase @Inject constructor(
 		}
 	}
 
-	private suspend fun String.parseAsHtml(withImages: Boolean): CharSequence? = if (withImages) {
-		runInterruptible(Dispatchers.IO) {
-			parseAsHtml(imageGetter = imageGetter)
-		}.filterSpans()
-	} else {
-		runInterruptible(Dispatchers.Default) {
-			parseAsHtml()
-		}.filterSpans().sanitize()
-	}.trim().nullIfEmpty()
+	private suspend fun String.parseAsHtml(withImages: Boolean): CharSequence? {
+		// Many sources deliver plain-text descriptions using literal newlines for paragraphs and
+		// " - " for lists. Html.fromHtml collapses that whitespace into single spaces, producing one
+		// run-on blob. Promote line breaks to <br> unless the text already uses block tags, so real
+		// HTML descriptions are untouched. ponytail: cheap heuristic, mirrors Mihon's eol-as-newline.
+		val html = if (contains("<br", ignoreCase = true) || contains("<p", ignoreCase = true)) {
+			this
+		} else {
+			replace("\n", "<br>")
+		}
+		return if (withImages) {
+			runInterruptible(Dispatchers.IO) {
+				html.parseAsHtml(imageGetter = imageGetter)
+			}.filterSpans()
+		} else {
+			runInterruptible(Dispatchers.Default) {
+				html.parseAsHtml()
+			}.filterSpans().sanitize()
+		}.trim().nullIfEmpty()
+	}
 
 	private companion object {
 		// Don't auto-refresh details more often than this; pull-to-refresh always bypasses

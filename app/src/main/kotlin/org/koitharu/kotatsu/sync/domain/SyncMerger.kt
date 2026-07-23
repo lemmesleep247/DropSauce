@@ -105,7 +105,12 @@ object SyncMerger {
 	 * Feed ids are local-only. Events are instead identified by manga plus their normalized chapter
 	 * titles, so the same update detected independently on two devices still becomes one row.
 	 */
-	fun mergeFeed(local: List<SyncFeedEntry>, remote: List<SyncFeedEntry>): List<SyncFeedEntry> {
+	fun mergeFeed(
+		local: List<SyncFeedEntry>,
+		remote: List<SyncFeedEntry>,
+		deletedHere: Set<String> = emptySet(),
+		propagateDeletions: Boolean = true,
+	): List<SyncFeedEntry> {
 		val merged = LinkedHashMap<String, SyncFeedEntry>(local.size + remote.size)
 		for (item in local + remote) {
 			val key = feedIdentity(item)
@@ -124,6 +129,11 @@ object SyncMerger {
 					manga = if (item.createdAt > existing.createdAt) item.manga else existing.manga,
 				)
 			}
+		}
+		// Feed has no tombstones, so union alone resurrects anything deleted locally that still exists
+		// remotely. When deletions propagate, drop the entries this device deleted since the last sync.
+		if (propagateDeletions && deletedHere.isNotEmpty()) {
+			merged.keys.removeAll(deletedHere)
 		}
 		return merged.values.toList()
 	}

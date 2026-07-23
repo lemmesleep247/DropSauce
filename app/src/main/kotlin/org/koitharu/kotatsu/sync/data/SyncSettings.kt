@@ -89,6 +89,14 @@ class SyncSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getString(KEY_CONFIG_HASH, null)
 		set(value) = prefs.edit { putString(KEY_CONFIG_HASH, value) }
 
+	// Feed rows (track_logs) have no soft-delete column, so a locally-deleted feed item is
+	// indistinguishable from a not-yet-seen remote one during merge. This per-device baseline records
+	// the feed identities present at the last successful sync; the diff against the current local set
+	// tells us what was deleted here, so deletions can be honoured instead of resurrected.
+	var lastSyncedFeedIds: Set<String>
+		get() = prefs.getStringSet(KEY_FEED_BASELINE, null).orEmpty()
+		set(value) = prefs.edit { putStringSet(KEY_FEED_BASELINE, value) }
+
 	fun clearAccount() = prefs.edit {
 		remove(KEY_ACCOUNT_EMAIL)
 		remove(KEY_ACCOUNT_NAME)
@@ -97,6 +105,7 @@ class SyncSettings @Inject constructor(@ApplicationContext context: Context) {
 		remove(KEY_LAST_ERROR)
 		remove(KEY_CONFIG_REVISION)
 		remove(KEY_CONFIG_HASH)
+		remove(KEY_FEED_BASELINE)
 	}
 
 	companion object {
@@ -116,5 +125,6 @@ class SyncSettings @Inject constructor(@ApplicationContext context: Context) {
 		private const val KEY_LAST_ERROR = "last_error"
 		private const val KEY_CONFIG_REVISION = "config_revision"
 		private const val KEY_CONFIG_HASH = "config_hash"
+		private const val KEY_FEED_BASELINE = "feed_baseline"
 	}
 }

@@ -11,6 +11,10 @@ class ExternalExtensionRepoNameTest {
 			"keiyoushi/extensions",
 			getExternalExtensionRepoDisplayName("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"),
 		)
+		assertEquals(
+			"keiyoushi/extensions",
+			getExternalExtensionRepoDisplayName("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb"),
+		)
 	}
 
 	@Test

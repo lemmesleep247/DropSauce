@@ -49,7 +49,7 @@ fun getExternalExtensionLanguageAutonym(langCode: String): String {
 fun getExternalExtensionRepoDisplayName(repoUrl: String): String {
 	val uri = runCatching { java.net.URI(repoUrl.trim()) }.getOrNull()
 	val host = uri?.host?.removePrefix("www.") ?: return repoUrl.trim()
-	val segments = uri.path.orEmpty().split('/').filter { it.isNotBlank() && !it.endsWith(".json") }
+	val segments = uri.path.orEmpty().split('/').filter { it.isNotBlank() && !it.endsWith(".json") && !it.endsWith(".pb") }
 	return when {
 		host.endsWith("githubusercontent.com") -> segments.take(2).joinToString("/").ifEmpty { host }
 		host.endsWith("github.io") -> {

@@ -14,25 +14,51 @@ import javax.inject.Singleton
 class ActivityRecreationHandle @Inject constructor() : DefaultActivityLifecycleCallbacks {
 
 	private val activities = WeakHashMap<Activity, Unit>()
+	private val resumedActivities = WeakHashMap<Activity, Unit>()
+	private val pendingRecreate = WeakHashMap<Activity, Unit>()
 
 	override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
 		activities[activity] = Unit
 	}
 
+	override fun onActivityResumed(activity: Activity) {
+		resumedActivities[activity] = Unit
+		if (pendingRecreate.remove(activity) != null) {
+			ActivityCompat.recreate(activity)
+		}
+	}
+
+	override fun onActivityPaused(activity: Activity) {
+		resumedActivities.remove(activity)
+	}
+
 	override fun onActivityDestroyed(activity: Activity) {
 		activities.remove(activity)
+		resumedActivities.remove(activity)
+		pendingRecreate.remove(activity)
 	}
 
 	fun recreateAll() {
 		beginAnimatedRecreate()
-		val snapshot = activities.keys.toList()
-		snapshot.forEach { ActivityCompat.recreate(it) }
+		val currentResumed = resumedActivities.keys.toList()
+		val allActivities = activities.keys.toList()
+		for (activity in allActivities) {
+			if (currentResumed.contains(activity)) {
+				ActivityCompat.recreate(activity)
+			} else {
+				pendingRecreate[activity] = Unit
+			}
+		}
 	}
 
 	fun recreate(cls: Class<out Activity>) {
 		val activity = activities.keys.find { x -> x.javaClass == cls } ?: return
 		beginAnimatedRecreate()
-		ActivityCompat.recreate(activity)
+		if (resumedActivities.containsKey(activity)) {
+			ActivityCompat.recreate(activity)
+		} else {
+			pendingRecreate[activity] = Unit
+		}
 	}
 
 	/**

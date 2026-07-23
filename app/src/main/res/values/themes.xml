@@ -103,11 +103,15 @@
 		<item name="recyclerViewStyle">@style/Widget.Kotatsu.RecyclerView</item>
 		<item name="android:dropDownSpinnerStyle">@style/Widget.Kotatsu.Spinner.DropDown</item>
 		<item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat.M3</item>
+		<item name="android:popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
+		<item name="android:actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+		<item name="android:listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
 		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
 		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
 		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="android:popupBackground">@drawable/m3_menu_background</item>
 		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
 		<item name="actionBarPopupTheme">@style/ThemeOverlay.Kotatsu.ActionMode.Popup</item>
 		<item name="circularProgressIndicatorStyle">@style/Widget.Kotatsu.CircularProgressIndicator</item>
@@ -171,11 +175,15 @@
 
 	<!-- Base ThemeOverlay -->
 	<style name="ThemeOverlay.Kotatsu" parent="ThemeOverlay.Material3.Light">
+		<item name="android:popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
+		<item name="android:actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+		<item name="android:listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
 		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
 		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
 		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="android:popupBackground">@drawable/m3_menu_background</item>
 		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
 	</style>
 
@@ -196,11 +204,15 @@
 		<item name="toolbarStyle">@style/Widget.Kotatsu.Toolbar</item>
 		<item name="toolbarSurfaceStyle">@style/Widget.Material3Expressive.Toolbar.Surface</item>
 
+		<item name="android:popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
 		<item name="popupMenuStyle">@style/Widget.Kotatsu.PopupMenu</item>
+		<item name="android:actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
 		<item name="actionOverflowMenuStyle">@style/Widget.Kotatsu.PopupMenu.Overflow</item>
+		<item name="android:listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
 		<item name="listPopupWindowStyle">@style/Widget.Kotatsu.PopupMenu.ListPopupWindow</item>
 		<item name="dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
 		<item name="android:dropDownListViewStyle">@style/Widget.Kotatsu.PopupMenu.ListView</item>
+		<item name="android:popupBackground">@drawable/m3_menu_background</item>
 		<item name="popupMenuBackground">@drawable/m3_menu_background</item>
 	</style>
 

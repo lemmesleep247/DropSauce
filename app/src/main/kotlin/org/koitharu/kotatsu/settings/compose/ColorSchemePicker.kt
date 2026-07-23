@@ -42,6 +42,13 @@ import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import com.google.android.material.R as materialR
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.getValue
+
 /**
  * Inline horizontal color-scheme picker that mirrors the legacy ThemeChooserPreference:
  * each entry is a small themed preview card (with a tiny "Abc" + primary/secondary swatches),
@@ -64,6 +71,7 @@ fun ColorSchemePickerRow(
 	val previews = remember(schemes) {
 		schemes.map { it to resolveSchemeColors(context, it.styleResId) }
 	}
+	val listState = rememberLazyListState()
 
 	Surface(
 		modifier = Modifier.fillMaxWidth(),
@@ -80,6 +88,7 @@ fun ColorSchemePickerRow(
 				modifier = Modifier.padding(horizontal = 16.dp),
 			)
 			LazyRow(
+				state = listState,
 				contentPadding = PaddingValues(horizontal = 12.dp),
 				horizontalArrangement = Arrangement.spacedBy(8.dp),
 			) {
@@ -109,11 +118,12 @@ private fun ColorSchemeCard(
 	onClick: () -> Unit,
 ) {
 	val cardShape = RoundedCornerShape(16.dp)
-	val border = if (selected) {
-		BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-	} else {
-		BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-	}
+	val borderColor by animateColorAsState(
+		targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+		label = "cardBorderColor",
+	)
+	val border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor)
+
 	Column(
 		modifier = Modifier
 			.width(96.dp)

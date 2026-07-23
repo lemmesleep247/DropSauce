@@ -62,7 +62,6 @@ class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_setti
 			DropSauceTheme {
 				ReaderScreen(
 					onTapActions = router::openReaderTapGridSettings,
-					onTitleTapToReadChanged = { activityRecreationHandle.recreateAll() },
 				)
 			}
 		}
@@ -77,7 +76,6 @@ class ReaderSettingsFragment : BaseComposeSettingsFragment(R.string.reader_setti
 @Composable
 private fun ReaderScreen(
 	onTapActions: () -> Unit,
-	onTitleTapToReadChanged: () -> Unit,
 ) {
 	val ctx = LocalContext.current
 	val colors = CategoryPalette.forKey("reader")
@@ -180,10 +178,7 @@ private fun ReaderScreen(
 						title = stringResource(R.string.title_tap_to_read),
 						subtitle = stringResource(R.string.title_tap_to_read_summary),
 						checked = titleTapToRead,
-						onCheckedChange = {
-							titleTapToRead = it
-							onTitleTapToReadChanged()
-						},
+						onCheckedChange = { titleTapToRead = it },
 						icon = R.drawable.ic_read,
 
 						shape = pos.shape,

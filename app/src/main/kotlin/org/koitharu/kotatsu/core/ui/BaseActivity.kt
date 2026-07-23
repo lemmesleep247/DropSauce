@@ -128,7 +128,7 @@ abstract class BaseActivity<B : ViewBinding> :
 			return
 		}
 		val decor = window.decorView
-		decor.alpha = 0f
+		decor.alpha = 0.4f
 		decor.animate()
 			.alpha(1f)
 			.setDuration(RECREATE_FADE_DURATION_MS)
@@ -292,7 +292,7 @@ abstract class BaseActivity<B : ViewBinding> :
 
 	private companion object {
 
-		private const val RECREATE_FADE_DURATION_MS = 220L
+		private const val RECREATE_FADE_DURATION_MS = 100L
 	}
 }
 

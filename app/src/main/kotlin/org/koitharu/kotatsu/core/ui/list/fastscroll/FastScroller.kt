@@ -299,7 +299,7 @@ class FastScroller @JvmOverloads constructor(
 				// FragmentContainerView), it isn't a direct child of this CoordinatorLayout — anchoring
 				// to its own id crashes resolveAnchorView, so fall back to plain END gravity.
 				val anchorViewId = recyclerView?.let { rv ->
-					if (rv.parent === viewGroup) {
+					val rawId = if (rv.parent === viewGroup) {
 						rv.id
 					} else {
 						rv.ancestors
@@ -307,6 +307,7 @@ class FastScroller @JvmOverloads constructor(
 							.firstOrNull { v -> v.parent === viewGroup }
 							?.id
 					}
+					rawId?.takeIf { it != View.NO_ID && viewGroup.findViewById<View>(it) != null }
 				} ?: View.NO_ID
 				updateLayoutParams<CoordinatorLayout.LayoutParams> {
 					height = LayoutParams.MATCH_PARENT

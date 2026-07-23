@@ -24,6 +24,19 @@ class ExternalExtensionRepoRepositoryTest {
 	}
 
 	@Test
+	fun `resolveApkUrl works with index pb url`() {
+		val repository = ExternalExtensionRepoRepository(OkHttpClient())
+		val resolved = repository.resolveApkUrl(
+			repoUrl = "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb",
+			apkName = "tachiyomi-all.ahottie-v1.4.2.apk",
+		)
+		assertEquals(
+			"https://raw.githubusercontent.com/keiyoushi/extensions/repo/apk/tachiyomi-all.ahottie-v1.4.2.apk",
+			resolved,
+		)
+	}
+
+	@Test
 	fun `resolveApkUrl works with base url without index json`() {
 		val repository = ExternalExtensionRepoRepository(OkHttpClient())
 		val resolved = repository.resolveApkUrl(

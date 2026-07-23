@@ -381,7 +381,7 @@
     <string name="manage">Manage</string>
     <string name="manage_repo">Manage store index</string>
     <string name="add_repo">Add store index</string>
-    <string name="add_repo_hint">Add store index url (index.min.json)</string>
+    <string name="add_repo_hint">Add store index url (index.min.json or index.pb)</string>
     <string name="add_repo_confirmation">Add this store index url?\n\n%s</string>
     <string name="change_repo">Change store index</string>
     <string name="remove_repo">Remove store index</string>

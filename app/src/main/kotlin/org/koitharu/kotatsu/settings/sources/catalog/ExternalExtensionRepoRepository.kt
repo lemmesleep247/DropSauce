@@ -52,7 +52,16 @@ class ExternalExtensionRepoRepository @Inject constructor(
 				}
 			}
 			null -> emptyList()
-			else -> storeEntries(protoBuf.decodeFromByteArray<NetworkExtensionStore>(bytes), forceRefresh, depth)
+			else -> {
+				val store = runCatching { protoBuf.decodeFromByteArray<NetworkExtensionStore>(bytes) }.getOrNull()
+				if (store != null && (store.extensionList != null || store.extensionListUrl != null)) {
+					storeEntries(store, forceRefresh, depth)
+				} else {
+					val list = runCatching { protoBuf.decodeFromByteArray<NetworkExtensionStore.ExtensionList>(bytes) }.getOrNull()
+					list?.extensions?.map(NetworkExtensionStore.Extension::toRepoEntry)
+						?: storeEntries(store ?: NetworkExtensionStore(), forceRefresh, depth)
+				}
+			}
 		}
 	}
 
@@ -125,23 +134,25 @@ class ExternalExtensionRepoRepository @Inject constructor(
 	}
 
 	/**
-	 * Ensures the repo URL points to the index.min.json file.
+	 * Ensures the repo URL points to an index file (index.min.json or index.pb).
 	 * Accepts both the base URL and the full index URL.
 	 */
 	private fun buildIndexUrl(repoUrl: String): String {
 		val base = repoUrl.trimEnd('/')
-		return if (base.endsWith(".json")) base else "$base/index.min.json"
+		return when {
+			base.endsWith(".json") || base.endsWith(".pb") -> base
+			else -> "$base/index.min.json"
+		}
 	}
 
 	/**
-	 * Returns the base repo URL (without the trailing /index.min.json or other filename).
+	 * Returns the base repo URL (without the trailing /index.min.json, /index.pb or other filename).
 	 */
 	private fun getBaseUrl(repoUrl: String): String {
 		val trimmed = repoUrl.trimEnd('/')
-		return if (trimmed.endsWith(".json")) {
-			trimmed.substringBeforeLast('/')
-		} else {
-			trimmed
+		return when {
+			trimmed.endsWith(".json") || trimmed.endsWith(".pb") -> trimmed.substringBeforeLast('/')
+			else -> trimmed
 		}
 	}
 

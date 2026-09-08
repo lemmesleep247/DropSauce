@@ -23,7 +23,7 @@ android {
 		applicationId = 'org.haziffe.dropsauce'
 		minSdk = 26
 		targetSdk = 37
-		versionCode = 72
+		versionCode = 73
 		versionName = '0.9.6'
 		testInstrumentationRunner = 'org.koitharu.kotatsu.HiltTestRunner'
 		ksp {

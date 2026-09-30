@@ -118,8 +118,9 @@ class HistoryRepository @Inject constructor(
 		}
 		assert(manga.chapters != null)
 		db.withTransaction {
-			addOrUpdateLocked(manga, chapterId, page, scroll, percent, updateScrobblers = true)
+			addOrUpdateLocked(manga, chapterId, page, scroll, percent)
 		}
+		onHistoryChanged(manga, chapterId, updateScrobblers = true)
 	}
 
 	suspend fun advanceFromTracking(
@@ -130,22 +131,24 @@ class HistoryRepository @Inject constructor(
 		if (shouldSkip(manga) || targetIndex !in chapters.indices) {
 			return false
 		}
-		return db.withTransaction {
+		val advanced = db.withTransaction {
 			val history = db.getHistoryDao().findIncludingDeleted(manga.id)
 			if (!canAdvanceFromTracking(history, chapters, targetIndex, manga.chapters.orEmpty())) {
 				return@withTransaction false
 			}
-			val target = chapters[targetIndex]
 			addOrUpdateLocked(
 				manga = manga,
-				chapterId = target.id,
+				chapterId = chapters[targetIndex].id,
 				page = 0,
 				scroll = 0,
 				percent = (targetIndex + 1) / chapters.size.toFloat(),
-				updateScrobblers = false,
 			)
 			true
 		}
+		if (advanced) {
+			onHistoryChanged(manga, chapters[targetIndex].id, updateScrobblers = false)
+		}
+		return advanced
 	}
 
 	private suspend fun addOrUpdateLocked(
@@ -154,7 +157,6 @@ class HistoryRepository @Inject constructor(
 		page: Int,
 		scroll: Int,
 		percent: Float,
-		updateScrobblers: Boolean,
 	) {
 		// The reader passes a branch-filtered manga: persisting its chapter list would replace
 		// the cached chapters table with only the selected scanlator's chapters (or an empty
@@ -175,23 +177,16 @@ class HistoryRepository @Inject constructor(
 				deletedAt = 0L,
 			),
 		)
-		val unreadLogs = db.getTrackLogsDao().findUnreadByManga(manga.id)
-		if (unreadLogs.isNotEmpty()) {
-			val allChapters = db.getChaptersDao().findAll(manga.id)
-			val lastReadChapterIndex = allChapters.indexOfFirst { it.chapterId == chapterId }
-			if (lastReadChapterIndex != -1) {
-				for (log in unreadLogs) {
-					val logChapterIds = log.chapterIds.split('\n').mapNotNull { it.toLongOrNull() }
-					val allLogChaptersRead = logChapterIds.all { chId ->
-						val chIndex = allChapters.indexOfFirst { it.chapterId == chId }
-						chIndex != -1 && chIndex <= lastReadChapterIndex
-					}
-					if (allLogChaptersRead) {
-						db.getTrackLogsDao().markLogAsRead(log.id)
-					}
-				}
-			}
-		}
+		db.markFeedReadUpTo(manga.id, chapterId)
+	}
+
+	/**
+	 * Runs after the history transaction commits. Inside it, the new-chapters check waited for its
+	 * per-manga lock while holding the database - the background checker takes that lock first and
+	 * then needs the database, so the two could deadlock every write in the app. Scrobblers make
+	 * network calls, which also must not hold the database.
+	 */
+	private suspend fun onHistoryChanged(manga: Manga, chapterId: Long, updateScrobblers: Boolean) {
 		newChaptersUseCaseProvider.get()(manga, chapterId)
 		if (updateScrobblers) {
 			scrobblers.forEach { it.tryScrobble(manga, chapterId) }
@@ -290,6 +285,29 @@ class HistoryRepository @Inject constructor(
 	}
 
 	private fun HistoryWithManga.toManga() = manga.toManga(tags.toMangaTags(), null)
+}
+
+/** Marks feed entries whose chapters all lie at or before [chapterId] as read. DB-only. */
+suspend fun MangaDatabase.markFeedReadUpTo(mangaId: Long, chapterId: Long) {
+	val unreadLogs = getTrackLogsDao().findUnreadByManga(mangaId)
+	if (unreadLogs.isEmpty()) {
+		return
+	}
+	val allChapters = getChaptersDao().findAll(mangaId)
+	val lastReadChapterIndex = allChapters.indexOfFirst { it.chapterId == chapterId }
+	if (lastReadChapterIndex == -1) {
+		return
+	}
+	for (log in unreadLogs) {
+		val logChapterIds = log.chapterIds.split('\n').mapNotNull { it.toLongOrNull() }
+		val allLogChaptersRead = logChapterIds.all { chId ->
+			val chIndex = allChapters.indexOfFirst { it.chapterId == chId }
+			chIndex != -1 && chIndex <= lastReadChapterIndex
+		}
+		if (allLogChaptersRead) {
+			getTrackLogsDao().markLogAsRead(log.id)
+		}
+	}
 }
 
 internal fun canAdvanceFromTracking(

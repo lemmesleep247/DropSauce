@@ -18,7 +18,7 @@ Repo: https://github.com/HuzaifaKhalid1311/DropSauce.git
 
 Builds:
   - versionName: 1.1.4
-    versionCode: 82
+    versionCode: 83
     commit: v1.1.4
     subdir: app
     submodules: true
@@ -30,4 +30,4 @@ Builds:
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9.]+$
 CurrentVersion: 1.1.4
-CurrentVersionCode: 82
+CurrentVersionCode: 83

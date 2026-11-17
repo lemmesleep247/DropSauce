@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.4 (2026-11-17)
+
 ### New
 - Option to hide the line between chapters when reading novels in scroll mode
 - Up to 6 sections can be added to the navigation bar
